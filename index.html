@@ -599,6 +599,156 @@
     .terc-dashboard-hero .stat-card .num { font-size:27px; line-height:1; }
     .terc-dashboard-hero .stat-card .label { font-size:11px; line-height:1.25; }
   }
+
+  /* ===== CADASTRO DE FUNCIONÁRIOS: foto, filtros e pictogramas ===== */
+  .emp-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 14px;}
+  .emp-kpis .annual-kpi .num{font-size:24px;}
+  .emp-filter-row{display:grid;grid-template-columns:minmax(220px,1.6fr) repeat(3,minmax(150px,1fr)) minmax(170px,1fr);gap:10px;align-items:end;padding:14px 18px;}
+  .emp-filter-row label{display:block;font-size:11px;font-weight:600;color:var(--ink-dim);margin-bottom:5px;}
+  .emp-filter-row input,.emp-filter-row select{width:100%;}
+  .emp-count{font-size:12px;color:var(--ink-dim);display:flex;align-items:center;gap:10px;}
+  .emp-clear{cursor:pointer;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:6px;padding:4px 10px;font:inherit;font-size:12px;font-weight:600;}
+  .emp-clear:hover{border-color:var(--yellow);}
+  .emp-table-wrap{overflow-x:auto;}
+  .emp-table th .ico{margin-right:5px;}
+  .emp-table{table-layout:fixed;min-width:1000px;}
+  .emp-table th,.emp-table td{padding:12px 14px;}
+  .emp-table .c-name{width:28%;}.emp-table .c-cargo{width:17%;}.emp-table .c-setor{width:16%;}.emp-table .c-contato{width:21%;}.emp-table .c-adm{width:150px;}.emp-table .c-acoes{width:112px;}
+  .emp-contact a,.emp-contact span{overflow-wrap:anywhere;}
+  .emp-person{display:flex;align-items:center;gap:12px;}
+  .emp-person>div:last-child{min-width:0;}
+  .emp-avatar{flex:0 0 auto;width:48px;height:48px;border-radius:50%;object-fit:cover;border:2px solid var(--line);background:var(--panel-2);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;letter-spacing:.5px;overflow:hidden;padding:0;}
+  img.emp-avatar{display:block;}
+  button.emp-avatar-btn{all:unset;cursor:zoom-in;border-radius:50%;line-height:0;}
+  button.emp-avatar-btn:focus-visible{outline:2px solid var(--yellow);outline-offset:2px;}
+  button.emp-avatar-btn:hover .emp-avatar{border-color:var(--yellow);}
+  .emp-name{font-weight:700;line-height:1.25;overflow-wrap:anywhere;}
+  .emp-sub{font-size:11px;color:var(--ink-dim);margin-top:2px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .emp-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;line-height:1.2;white-space:nowrap;}
+  .emp-role{display:inline-flex;align-items:center;gap:8px;line-height:1.25;}
+  .emp-role .emp-role-ico{font-size:18px;width:26px;text-align:center;flex:0 0 auto;}
+  .emp-contact{display:flex;flex-direction:column;gap:4px;font-size:12px;}
+  .emp-contact a{color:var(--ink);text-decoration:none;display:inline-flex;align-items:center;gap:6px;word-break:break-word;}
+  .emp-contact a:hover{text-decoration:underline;color:var(--yellow);}
+  .emp-contact .none{color:var(--ink-dim);}
+  .emp-date{white-space:nowrap;}
+  .emp-date small{display:block;font-size:11px;color:var(--ink-dim);margin-top:2px;}
+  .emp-new{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#4E8B6233;color:var(--green);font-size:10px;font-weight:700;vertical-align:middle;}
+  .emp-actions{display:flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap;}
+  .emp-action{cursor:pointer;border:1px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:6px;width:36px;height:36px;padding:0;font:inherit;font-size:16px;display:inline-flex;align-items:center;justify-content:center;}
+  .emp-action:focus-visible{outline:2px solid var(--yellow);outline-offset:2px;}
+  .emp-action:hover{border-color:var(--yellow);}
+  .emp-action.danger:hover{border-color:var(--red);color:var(--red);}
+  .emp-photo-zoom{text-align:center;}
+  .emp-photo-zoom img{max-width:100%;max-height:65vh;border-radius:10px;border:1px solid var(--line);}
+  .emp-photo-zoom h3{margin:14px 0 4px;}
+  @media(max-width:1000px){.emp-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}.emp-filter-row{grid-template-columns:1fr 1fr;}}
+  @media(max-width:650px){.emp-filter-row{grid-template-columns:1fr;}.emp-person{min-width:190px;}}
+
+  /* ===== CADASTRO DE SETORES: cargos, filtros e pictogramas ===== */
+  .sec-filter-row{grid-template-columns:minmax(220px,1.6fr) repeat(3,minmax(150px,1fr));}
+  .sec-table{table-layout:fixed;min-width:880px;}
+  .sec-table th,.sec-table td{padding:14px;vertical-align:middle;}
+  .sec-table th .ico{margin-right:5px;}
+  .sec-table .c-setor{width:25%;}.sec-table .c-cargos{width:40%;}.sec-table .c-pessoas{width:21%;}.sec-table .c-acoes{width:112px;}
+  .sec-name{display:flex;align-items:center;gap:12px;font-weight:700;line-height:1.25;overflow-wrap:anywhere;}
+  .sec-ico{flex:0 0 auto;width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;}
+  .sec-cargos{display:flex;flex-wrap:wrap;gap:6px;}
+  .sec-cargo{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);font-size:12px;font-weight:600;line-height:1.2;}
+  .sec-cargo.match{border-color:var(--yellow);box-shadow:0 0 0 1px var(--yellow) inset;}
+  .sec-cargo .cnt{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--ink);color:var(--base);font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;}
+  .sec-none{font-size:12px;color:var(--ink-dim);display:inline-flex;align-items:center;gap:6px;}
+  .sec-people{display:flex;flex-direction:column;gap:6px;}
+  .sec-stack{display:flex;align-items:center;}
+  .sec-stack .sm{width:30px;height:30px;border-radius:50%;border:2px solid var(--panel);margin-left:-8px;object-fit:cover;display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;background:var(--panel-2);flex:0 0 auto;}
+  .sec-stack .sm:first-child{margin-left:0;}
+  .sec-stack .more{background:var(--panel-2);color:var(--ink);border-color:var(--line);}
+  .sec-count{font-size:12px;color:var(--ink-dim);}
+  @media(max-width:1000px){.sec-filter-row{grid-template-columns:1fr 1fr;}}
+  @media(max-width:650px){.sec-filter-row{grid-template-columns:1fr;}}
+
+  /* ===== CADASTRO DE CARGOS: filtros, setores e pictogramas ===== */
+  .job-table{table-layout:fixed;min-width:1020px;}
+  .job-table th,.job-table td{padding:14px;vertical-align:middle;}
+  .job-table th .ico{margin-right:5px;}
+  .job-table .c-cargo{width:20%;}.job-table .c-desc{width:31%;}.job-table .c-setores{width:19%;}.job-table .c-pessoas{width:17%;}.job-table .c-acoes{width:112px;}
+  .job-desc{font-size:12.5px;line-height:1.5;white-space:pre-line;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+  .job-desc.open{display:block;-webkit-line-clamp:unset;}
+  .job-more{all:unset;cursor:pointer;margin-top:4px;font-size:11px;font-weight:700;color:var(--ink-dim);text-decoration:underline;display:inline-block;}
+  .job-more:hover{color:var(--ink);}
+  .job-more:focus-visible{outline:2px solid var(--yellow);outline-offset:2px;}
+  .emp-chip .cnt{min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--ink);color:var(--base);font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;}
+  .job-chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .emp-chip.match{box-shadow:0 0 0 2px var(--yellow);}
+
+  /* ===== PGR: perigos cadastrados, EPIs e cargos por setor ===== */
+  .pgr-hint{font-size:11px;color:var(--ink-dim);margin-top:5px;line-height:1.4;}
+  .pgr-hint.warn{color:var(--amber);}
+  .pgr-row{display:flex;gap:8px;align-items:stretch;}
+  .pgr-row select{flex:1;min-width:0;}
+  .pgr-row .btn{white-space:nowrap;padding:0 12px;}
+  .pgr-inline{display:none;margin-top:8px;padding:12px;border:1px dashed var(--yellow);border-radius:8px;background:var(--panel-2);}
+  .pgr-inline.open{display:block;}
+  .pgr-inline .pgr-inline-grid{display:grid;grid-template-columns:1fr 150px;gap:8px;}
+  .pgr-inline .pgr-inline-actions{display:flex;gap:8px;margin-top:10px;justify-content:flex-end;}
+  .pgr-epi-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;max-height:190px;overflow-y:auto;padding:2px;}
+  .pgr-epi-opt{display:flex;align-items:center;gap:8px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);cursor:pointer;font-size:12px;line-height:1.25;margin:0;font-weight:500;}
+  .pgr-epi-opt:hover{border-color:var(--yellow);}
+  .pgr-epi-opt.on{border-color:var(--yellow);background:var(--panel-2);box-shadow:0 0 0 1px var(--yellow) inset;}
+  .pgr-epi-opt input{width:16px;height:16px;min-height:16px;margin:0;accent-color:var(--yellow);flex:0 0 auto;}
+  .pgr-epi-opt .ei{font-size:18px;flex:0 0 auto;}
+  .pgr-epi-opt small{display:block;color:var(--ink-dim);font-size:10px;}
+  .pgr-epi-chips{display:flex;flex-wrap:wrap;gap:5px;}
+  .pgr-epi{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);font-size:11.5px;font-weight:600;line-height:1.2;}
+  .pgr-medida-txt{font-size:12px;color:var(--ink-dim);margin-top:6px;line-height:1.4;}
+  .pgr-tipo{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;}
+  .hz-table{table-layout:fixed;min-width:1040px;}
+  .hz-table th,.hz-table td{padding:14px;vertical-align:middle;}
+  .hz-table th .ico{margin-right:5px;}
+  .hz-table .c-perigo{width:27%;}.hz-table .c-tipo{width:14%;}.hz-table .c-epis{width:29%;}.hz-table .c-uso{width:16%;}.hz-table .c-acoes{width:112px;}
+  .hz-desc{font-size:11.5px;color:var(--ink-dim);margin-top:3px;font-weight:400;line-height:1.35;}
+  .hz-filter-row{grid-template-columns:minmax(200px,1.5fr) repeat(4,minmax(140px,1fr));}
+  .pgr-link{all:unset;cursor:pointer;font-size:12px;font-weight:700;text-decoration:underline;color:var(--ink);margin-top:8px;display:inline-block;}
+  .pgr-link:focus-visible{outline:2px solid var(--yellow);outline-offset:2px;}
+  .pgr-save-link{display:flex;align-items:center;gap:8px;margin-top:10px;padding:8px 10px;border:1px dashed var(--yellow);border-radius:8px;font-size:12px;font-weight:500;cursor:pointer;line-height:1.3;}
+  .pgr-save-link input{width:16px;height:16px;min-height:16px;margin:0;accent-color:var(--yellow);flex:0 0 auto;}
+  .pgr-epi-opt .rel{color:var(--green);font-weight:700;}
+  @media(max-width:1000px){.hz-filter-row{grid-template-columns:1fr 1fr;}}
+  @media(max-width:650px){.hz-filter-row{grid-template-columns:1fr;}.pgr-inline .pgr-inline-grid{grid-template-columns:1fr;}}
+  .pgr-filter-row{display:grid;grid-template-columns:minmax(220px,1.7fr) repeat(3,minmax(150px,1fr)) auto;gap:10px;align-items:end;padding:14px 18px}.pgr-filter-row .field{margin:0}.pgr-filter-row input,.pgr-filter-row select{width:100%}.pgr-exposed-btn{border:1px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:999px;padding:5px 10px;font-weight:700;cursor:pointer;white-space:nowrap}.pgr-exposed-btn:hover{border-color:var(--yellow);color:var(--amber)}
+  @media(max-width:1000px){.pgr-filter-row{grid-template-columns:1fr 1fr}}@media(max-width:650px){.pgr-filter-row{grid-template-columns:1fr}}
+  .pgr-criteria-box{display:none;margin:0 0 16px;padding:14px;border:1px solid var(--line);border-left:4px solid var(--yellow);border-radius:6px;background:var(--panel-2);font-size:12px;line-height:1.5}.pgr-criteria-box.open{display:block}.pgr-criteria-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.pgr-criteria-box h4{margin:0 0 7px;font-size:13px}.pgr-criteria-box ol{margin:0;padding-left:20px}.pgr-criteria-result{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}@media(max-width:650px){.pgr-criteria-grid{grid-template-columns:1fr}}
+  .pgr-dashboard-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:20px}.pgr-kpi{display:flex;align-items:center;gap:14px;min-height:108px;position:relative;overflow:hidden}.pgr-kpi-icon{width:54px;height:54px;border-radius:14px;display:grid;place-items:center;font-size:27px;flex:none}.pgr-kpi.high .pgr-kpi-icon{background:#fee2e2}.pgr-kpi.medium .pgr-kpi-icon{background:#ffedd5}.pgr-kpi.mapped .pgr-kpi-icon{background:#e0f2fe}.pgr-kpi.people .pgr-kpi-icon{background:#dcfce7}.pgr-kpi .num{line-height:1}.pgr-kpi small{display:block;color:var(--ink-dim);font-size:11px;margin-top:5px}.pgr-dash-filter{margin-bottom:16px}.pgr-dash-filter .pgr-filter-row{grid-template-columns:minmax(220px,1.7fr) repeat(3,minmax(145px,1fr)) auto}
+  @media(max-width:1000px){.pgr-dashboard-cards{grid-template-columns:1fr 1fr}.pgr-dash-filter .pgr-filter-row{grid-template-columns:1fr 1fr}}@media(max-width:600px){.pgr-dashboard-cards,.pgr-dash-filter .pgr-filter-row{grid-template-columns:1fr}}
+
+  /* Cadastro de Perigos — modo compacto para manter o painel inteiro visível */
+  #main-content:has(#hz-new),#main-content:has(.hz-table){max-width:none;min-width:0;padding:20px 24px;}
+  #main-content:has(#hz-new) .page-head,#main-content:has(.hz-table) .page-head{margin-bottom:12px;align-items:center;}
+  #main-content:has(#hz-new) .page-head h2,#main-content:has(.hz-table) .page-head h2{font-size:22px;}
+  #main-content:has(#hz-new) .page-head .sub,#main-content:has(.hz-table) .page-head .sub{font-size:11.5px;}
+  #main-content:has(#hz-new) .page-head>.btn,#main-content:has(.hz-table) .page-head>.btn{padding:7px 11px;font-size:11.5px;white-space:nowrap;}
+  #main-content:has(#hz-new) .emp-kpis,#main-content:has(.hz-table) .emp-kpis{gap:7px;margin-bottom:9px;}
+  #main-content:has(#hz-new) .emp-kpis .annual-kpi,#main-content:has(.hz-table) .emp-kpis .annual-kpi{padding:8px 10px;gap:8px;border-radius:6px;}
+  #main-content:has(#hz-new) .emp-kpis .annual-kpi-icon,#main-content:has(.hz-table) .emp-kpis .annual-kpi-icon{width:34px;height:34px;flex-basis:34px;border-radius:8px;font-size:17px;}
+  #main-content:has(#hz-new) .emp-kpis .annual-kpi .num,#main-content:has(.hz-table) .emp-kpis .annual-kpi .num{font-size:20px;}
+  #main-content:has(#hz-new) .emp-kpis .annual-kpi .label,#main-content:has(.hz-table) .emp-kpis .annual-kpi .label{font-size:9.5px;margin-top:2px;}
+  #main-content:has(#hz-new) .annual-filter-panel,#main-content:has(.hz-table) .annual-filter-panel{margin-bottom:9px;}
+  #main-content:has(#hz-new) .annual-filter-panel .panel-head,#main-content:has(.hz-table) .annual-filter-panel .panel-head{padding:8px 12px;}
+  #main-content:has(#hz-new) .annual-filter-panel .panel-head h3,#main-content:has(.hz-table) .annual-filter-panel .panel-head h3{font-size:13px;}
+  #main-content:has(#hz-new) .hz-filter-row,#main-content:has(.hz-table) .hz-filter-row{grid-template-columns:minmax(170px,1.45fr) repeat(4,minmax(112px,1fr));gap:7px;padding:9px 12px;}
+  #main-content:has(#hz-new) .hz-filter-row label,#main-content:has(.hz-table) .hz-filter-row label{font-size:9.5px;margin-bottom:3px;}
+  #main-content:has(#hz-new) .hz-filter-row input,#main-content:has(#hz-new) .hz-filter-row select,#main-content:has(.hz-table) .hz-filter-row input,#main-content:has(.hz-table) .hz-filter-row select{min-height:34px;padding:6px 9px;font-size:11px;}
+  #main-content:has(.hz-table) .emp-table-wrap{overflow-x:auto;}
+  #main-content:has(.hz-table) .hz-table{min-width:780px;font-size:9.5px;}
+  #main-content:has(.hz-table) .hz-table th,#main-content:has(.hz-table) .hz-table td{padding:7px 8px;}
+  #main-content:has(.hz-table) .hz-table .c-perigo{width:25%}#main-content:has(.hz-table) .hz-table .c-tipo{width:13%}#main-content:has(.hz-table) .hz-table .c-epis{width:30%}#main-content:has(.hz-table) .hz-table .c-uso{width:20%}#main-content:has(.hz-table) .hz-table .c-acoes{width:76px}
+  #main-content:has(.hz-table) .sec-ico{width:34px;height:34px;font-size:17px;border-radius:8px;}
+  #main-content:has(.hz-table) .hz-desc{font-size:9px;line-height:1.2;}
+  #main-content:has(.hz-table) .pgr-tipo,#main-content:has(.hz-table) .pgr-epi{font-size:9.5px;padding:3px 7px;}
+  #main-content:has(.hz-table) .emp-actions{gap:4px;justify-content:flex-end;flex-wrap:nowrap;}
+  #main-content:has(.hz-table) .emp-action{width:30px;height:30px;padding:0;display:grid;place-items:center;}
+  @media(max-width:900px){#main-content:has(#hz-new),#main-content:has(.hz-table){padding:16px}#main-content:has(#hz-new) .hz-filter-row,#main-content:has(.hz-table) .hz-filter-row{grid-template-columns:1fr 1fr}}
+  @media(max-width:600px){#main-content:has(#hz-new) .emp-kpis,#main-content:has(.hz-table) .emp-kpis{grid-template-columns:1fr 1fr}#main-content:has(#hz-new) .hz-filter-row,#main-content:has(.hz-table) .hz-filter-row{grid-template-columns:1fr}}
 </style>
 <script type="module">
   // Configuração do Firebase (projeto: modulo-sst)
@@ -1310,6 +1460,7 @@ body.cipa-terminal-mode .urna-confirm{
   let selectedTargetUserId = "u3";
   let selectedPermissionRole = "Usuario";
   let currentVotacaoElectionId = null;
+  let selectedDossierEmployeeId = null;
 
   // Restaura a posição de navegação (módulo/aba) deste navegador, já que a
   // publicação via capacidade "artifact" recarrega a página a cada salvamento.
@@ -1350,7 +1501,8 @@ body.cipa-terminal-mode .urna-confirm{
     ],
     pgr: [
       { id: "pgr-dash", name: "📊 Dashboard PGR" },
-      { id: "pgr-list", name: "⚠️ Inventário de Riscos" }
+      { id: "pgr-list", name: "⚠️ Inventário de Riscos" },
+      { id: "pgr-hazards", name: "☣️ Cadastro de Perigos" }
     ],
     epi: [
       { id: "epi-dash", name: "📊 Dashboard EPI" },
@@ -1390,6 +1542,7 @@ body.cipa-terminal-mode .urna-confirm{
     ],
     geral: [
       { id: "employees", name: "👥 Funcionários" },
+      { id: "employee-dossier", name: "📁 Dossiê do Funcionário" },
       { id: "geral-setores", name: "🏢 Cadastro de Setores" },
       { id: "geral-cargos", name: "💼 Cadastro de Cargos" }
     ]
@@ -3691,9 +3844,13 @@ body.cipa-terminal-mode .urna-confirm{
   }
 
   function renderPgrDash(root){
-    const totalRiscos = state.pgrRisks.length;
-    const riscosAltos = state.pgrRisks.filter(r => calcRiskScore(r.severidade, r.probabilidade).class === "bad").length;
-    const riscosMedios = state.pgrRisks.filter(r => calcRiskScore(r.severidade, r.probabilidade).class === "warn").length;
+    const search=root.dataset.pgrDashSearch||"",setor=root.dataset.pgrDashSetor||"",tipo=root.dataset.pgrDashTipo||"",nivel=root.dataset.pgrDashNivel||"",q=normalizeText(search);
+    const setores=[...new Set((state.pgrRisks||[]).map(r=>r.setor).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+    const filtered=(state.pgrRisks||[]).filter(r=>{const info=calcRiskScore(r.severidade,r.probabilidade);return(!q||normalizeText([r.setor,r.atividade,r.perigo,r.tipo,r.medidaControle].join(" ")).includes(q))&&(!setor||r.setor===setor)&&(!tipo||r.tipo===tipo)&&(!nivel||info.class===nivel)});
+    const totalRiscos=filtered.length;
+    const riscosAltos=filtered.filter(r=>calcRiskScore(r.severidade,r.probabilidade).class==="bad").length;
+    const riscosMedios=filtered.filter(r=>calcRiskScore(r.severidade,r.probabilidade).class==="warn").length;
+    const pessoasExpostas=new Set(filtered.flatMap(r=>pgrExposedEmployees(r).map(e=>e.id))).size;
 
     root.innerHTML = `
       <div class="page-head">
@@ -3703,29 +3860,32 @@ body.cipa-terminal-mode .urna-confirm{
         </div>
       </div>
 
-      <div class="hero">
-        <div class="stat-card">
-          <div class="num" style="color:var(${riscosAltos>0?'--red':'--green'})">${riscosAltos}</div>
-          <div class="label">Riscos de Nível Alto</div>
-        </div>
-        <div class="stat-card">
-          <div class="num" style="color:var(${riscosMedios>0?'--amber':'--ink'})">${riscosMedios}</div>
-          <div class="label">Riscos de Nível Médio</div>
-        </div>
-        <div class="stat-card">
-          <div class="num">${totalRiscos}</div>
-          <div class="label">Perigos Mapeados</div>
-        </div>
+      <div class="pgr-dashboard-cards">
+        <div class="stat-card pgr-kpi high"><div class="pgr-kpi-icon">🚨</div><div><div class="num" style="color:var(${riscosAltos>0?'--red':'--green'})">${riscosAltos}</div><div class="label">Riscos de Nível Alto</div><small>Prioridade imediata</small></div></div>
+        <div class="stat-card pgr-kpi medium"><div class="pgr-kpi-icon">⚠️</div><div><div class="num" style="color:var(${riscosMedios>0?'--amber':'--ink'})">${riscosMedios}</div><div class="label">Riscos de Nível Médio</div><small>Requerem acompanhamento</small></div></div>
+        <div class="stat-card pgr-kpi mapped"><div class="pgr-kpi-icon">🗺️</div><div><div class="num">${totalRiscos}</div><div class="label">Perigos Mapeados</div><small>Conforme os filtros</small></div></div>
+        <div class="stat-card pgr-kpi people"><div class="pgr-kpi-icon">👥</div><div><div class="num" style="color:var(--green)">${pessoasExpostas}</div><div class="label">Pessoas Expostas</div><small>Sem duplicar funcionários</small></div></div>
       </div>
 
+      <div class="panel pgr-dash-filter"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${filtered.length} resultado${filtered.length===1?'':'s'}</span></div><div class="pgr-filter-row">
+        <div class="field"><label>Pesquisar</label><input id="pgr-dash-search" type="search" value="${empEsc(search)}" placeholder="Setor, cargo, perigo ou controle"></div>
+        <div class="field"><label>Setor</label><select id="pgr-dash-setor"><option value="">Todos</option>${setores.map(x=>`<option value="${empEsc(x)}" ${setor===x?'selected':''}>${empEsc(x)}</option>`).join('')}</select></div>
+        <div class="field"><label>Tipo</label><select id="pgr-dash-tipo"><option value="">Todos</option>${PGR_TIPOS.map(x=>`<option value="${x}" ${tipo===x?'selected':''}>${PGR_TIPO_ICON[x]} ${x}</option>`).join('')}</select></div>
+        <div class="field"><label>Nível</label><select id="pgr-dash-nivel"><option value="">Todos</option><option value="ok" ${nivel==='ok'?'selected':''}>🟢 Baixo</option><option value="warn" ${nivel==='warn'?'selected':''}>🟠 Médio</option><option value="bad" ${nivel==='bad'?'selected':''}>🔴 Alto</option></select></div>
+        <button type="button" class="btn secondary" id="pgr-dash-clear">Limpar</button>
+      </div></div>
+
       <div class="panel">
-        <div class="panel-head"><h3>Perigos de Maior Severidade / Prioridade</h3></div>
-        ${renderPgrTableList(state.pgrRisks.filter(r => calcRiskScore(r.severidade, r.probabilidade).class !== "ok"))}
+        <div class="panel-head"><h3>🎯 Riscos encontrados e prioridades</h3><span>Clique em 👥 para ver os expostos</span></div>
+        ${renderPgrTableList(filtered)}
       </div>
     `;
   }
 
   function renderPgrList(root){
+    const search=root.dataset.pgrSearch||"", setor=root.dataset.pgrSetor||"", tipo=root.dataset.pgrTipo||"", nivel=root.dataset.pgrNivel||"", q=normalizeText(search);
+    const setores=[...new Set((state.pgrRisks||[]).map(r=>r.setor).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+    const filtered=(state.pgrRisks||[]).filter(r=>{const info=calcRiskScore(r.severidade,r.probabilidade);return(!q||normalizeText([r.setor,r.atividade,r.perigo,r.tipo,r.medidaControle].join(" ")).includes(q))&&(!setor||r.setor===setor)&&(!tipo||r.tipo===tipo)&&(!nivel||info.class===nivel)});
     root.innerHTML = `
       <div class="page-head">
         <div>
@@ -3734,32 +3894,244 @@ body.cipa-terminal-mode .urna-confirm{
         </div>
         ${checkPermission("Master") ? `<button class="btn" id="btn-new-pgr">+ Mapear Novo Risco</button>` : ""}
       </div>
+      <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${filtered.length} resultado${filtered.length===1?'':'s'}</span></div><div class="pgr-filter-row">
+        <div class="field"><label>Pesquisar</label><input id="pgr-search" type="search" value="${empEsc(search)}" placeholder="Setor, cargo, perigo ou controle"></div>
+        <div class="field"><label>Setor</label><select id="pgr-filter-setor"><option value="">Todos</option>${setores.map(x=>`<option value="${empEsc(x)}" ${setor===x?'selected':''}>${empEsc(x)}</option>`).join('')}</select></div>
+        <div class="field"><label>Tipo</label><select id="pgr-filter-tipo"><option value="">Todos</option>${PGR_TIPOS.map(x=>`<option value="${x}" ${tipo===x?'selected':''}>${PGR_TIPO_ICON[x]} ${x}</option>`).join('')}</select></div>
+        <div class="field"><label>Nível</label><select id="pgr-filter-nivel"><option value="">Todos</option><option value="ok" ${nivel==='ok'?'selected':''}>Baixo</option><option value="warn" ${nivel==='warn'?'selected':''}>Médio</option><option value="bad" ${nivel==='bad'?'selected':''}>Alto</option></select></div><button type="button" class="btn secondary" id="pgr-clear-filters">Limpar</button>
+      </div></div>
       <div class="panel">
-        ${renderPgrTableList(state.pgrRisks, checkPermission("Administrador"))}
+        ${renderPgrTableList(filtered, checkPermission("Administrador"))}
       </div>
     `;
+  }
+
+  const PGR_TIPOS = ["Físico","Químico","Biológico","Ergonômico","Acidentes"];
+  const PGR_TIPO_ICON = {"Físico":"🔊","Químico":"🧪","Biológico":"🦠","Ergonômico":"🪑","Acidentes":"⚠️"};
+  const PGR_TIPO_HUE  = {"Físico":205,"Químico":280,"Biológico":130,"Ergonômico":32,"Acidentes":2};
+  const EPI_ICONS = [
+    [/capacete/, "⛑️"], [/luva/, "🧤"],
+    [/mascara|respirador|pff|semifacial|semi.?facial|peca facial|facial filtrante/, "😷"],
+    [/oculos|viseira|protetor facial|face shield/, "🥽"], [/auricular|abafador|ouvid/, "🎧"],
+    [/bota|calcado|sapato|botina/, "🥾"], [/cinto|talabarte|trava.?queda/, "🪢"],
+    [/avental|macacao|vestimenta|camisa|uniforme/, "🥼"], [/colete/, "🦺"], [/protetor solar|creme/, "🧴"]
+  ];
+  function pgrTipoChip(tipo){
+    const t = tipo || "—", h = PGR_TIPO_HUE[t] ?? 210;
+    return `<span class="pgr-tipo" style="background:hsla(${h},70%,50%,.16);border:1px solid hsla(${h},70%,50%,.38);">${PGR_TIPO_ICON[t]||"☣️"} ${empEsc(t)}</span>`;
+  }
+  function pgrEpiIcon(nome){ return empIcon(nome, EPI_ICONS, "🦺"); }
+  function pgrEpisOfRisk(r){
+    return (Array.isArray(r.epiIds) ? r.epiIds : []).map(id => (state.items||[]).find(i => i.id === id)).filter(Boolean);
+  }
+  function ensurePgrHazards(){
+    if(!Array.isArray(state.pgrHazards)) state.pgrHazards = [];
+    // Aproveita os perigos já usados no inventário.
+    (state.pgrRisks||[]).forEach(r => {
+      const nome = String(r.perigo||"").trim();
+      if(nome && !state.pgrHazards.some(h => normalizeText(h.nome) === normalizeText(nome))){
+        state.pgrHazards.push({id:uid("perigo"), nome, tipo: PGR_TIPOS.includes(r.tipo) ? r.tipo : "Físico", imported:true});
+      }
+    });
+  }
+  function pgrRisksUsingHazard(nome){
+    const key = normalizeText(nome);
+    return (state.pgrRisks||[]).filter(r => normalizeText(r.perigo) === key);
   }
 
   function renderPgrTableList(list, allowActions=false){
     if(list.length === 0) return `<div class="empty">Nenhum risco ou perigo cadastrado.</div>`;
     return `
       <table>
-        <thead><tr><th>Setor / Atividade</th><th>Perigo / Agente</th><th>Tipo</th><th>Medida de Controle</th><th>Nível Risco</th>${allowActions?'<th></th>':''}</tr></thead>
+        <thead><tr><th>Setor / Atividade</th><th>Perigo / Agente</th><th>Tipo</th><th>Medida de Controle</th><th>Expostos</th><th>Nível Risco</th>${allowActions?'<th>Ações</th>':''}</tr></thead>
         <tbody>
           ${list.map(r=>{
             const rInfo = calcRiskScore(r.severidade, r.probabilidade);
+            const epis = pgrEpisOfRisk(r);
+            const medida = epis.length || r.medidaControle
+              ? `${epis.length ? `<div class="pgr-epi-chips">${epis.map(i=>`<span class="pgr-epi" title="${i.ca?`CA ${empEsc(i.ca)}`:"EPI cadastrado"}">${pgrEpiIcon(i.nome)} ${empEsc(i.nome)}</span>`).join("")}</div>` : ""}${r.medidaControle ? `<div class="pgr-medida-txt" ${epis.length?"":'style="margin-top:0;color:inherit;font-size:inherit;"'}>${empEsc(r.medidaControle)}</div>` : ""}`
+              : "—";
             return `<tr>
-              <td><strong>${r.setor}</strong><br><span style="font-size:11px;color:var(--ink-dim);">${r.atividade}</span></td>
-              <td>${r.perigo}</td>
-              <td><span class="ca-tag">${r.tipo}</span></td>
-              <td>${r.medidaControle || "—"}</td>
+              <td><strong>${empEsc(r.setor)}</strong><br><span style="font-size:11px;color:var(--ink-dim);">${empEsc(r.atividade)}</span></td>
+              <td>${empEsc(r.perigo)}</td>
+              <td>${pgrTipoChip(r.tipo)}</td>
+              <td>${medida}</td>
+              <td><button type="button" class="pgr-exposed-btn" data-pgr-exposed="${r.id}" title="Ver pessoas expostas">👥 ${pgrExposedEmployees(r).length}</button></td>
               <td><span class="status-pill ${rInfo.class}"><span class="dot"></span>${rInfo.label} (${rInfo.score})</span></td>
-              ${allowActions ? `<td class="row-actions"><button class="action-link" data-del-pgr="${r.id}">Remover</button></td>` : ''}
+              ${allowActions ? `<td><div class="row-actions"><button class="action-link" data-edit-pgr="${r.id}">✏️ Editar</button><button class="action-link" data-del-pgr="${r.id}">Remover</button></div></td>` : ''}
             </tr>`;
           }).join("")}
         </tbody>
       </table>
     `;
+  }
+
+  function pgrExposedEmployees(r){const setor=normalizeText(r?.setor),cargo=normalizeText(r?.atividade);return(state.employees||[]).filter(e=>normalizeText(e.setor)===setor&&normalizeText(e.cargo||e.funcao)===cargo).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'))}
+  function openPgrExposedModal(id){const r=(state.pgrRisks||[]).find(x=>x.id===id);if(!r)return;const pessoas=pgrExposedEmployees(r);openModal(`<h3>👥 Pessoas expostas</h3><div class="sub" style="margin-bottom:14px"><strong>${empEsc(r.setor)}</strong> · ${empEsc(r.atividade)} · ${empEsc(r.perigo)}</div>${pessoas.length?`<div style="overflow:auto;max-height:60vh"><table><thead><tr><th>Nome</th><th>Matrícula</th><th>Cargo / Função</th><th>Setor</th></tr></thead><tbody>${pessoas.map(e=>`<tr><td><strong>${empEsc(e.nome||'—')}</strong></td><td>${empEsc(e.matricula||'—')}</td><td>${empEsc(e.cargo||e.funcao||'—')}</td><td>${empEsc(e.setor||'—')}</td></tr>`).join('')}</tbody></table></div>`:`<div class="empty">Nenhuma pessoa do Cadastro Geral está vinculada a este setor e cargo/função.</div>`}<div class="modal-actions"><button type="button" class="btn secondary" onclick="window.closeModal()">Fechar</button></div>`)}
+
+  // ===== Cadastro de Perigos =====
+  function renderPgrHazards(root){
+    ensurePgrHazards();
+    const fSearch = (root.dataset.hzSearch || "").trim();
+    const fTipo = root.dataset.hzTipo || "";
+    const fUso = root.dataset.hzUso || "";
+    const fSort = root.dataset.hzSort || "";
+    const hasFilter = !!(fSearch || fTipo || fUso || fSort || root.dataset.hzEpi);
+    const canNew = checkPermission("Master"), canEdit = checkPermission("Administrador");
+
+    const fEpi = root.dataset.hzEpi || "";
+    const catalogo = (state.items||[]).slice().sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"));
+    const episDoPerigo = h => (Array.isArray(h.epiIds) ? h.epiIds : []).map(id => catalogo.find(i => i.id === id)).filter(Boolean);
+    const all = state.pgrHazards.map(h => ({ h, uso: pgrRisksUsingHazard(h.nome).length, epis: episDoPerigo(h) }));
+    const episUsados = catalogo.filter(i => all.some(r => r.epis.some(e => e.id === i.id)));
+    const q = empPlain(fSearch);
+    let rows = all.filter(r => {
+      if(fTipo && r.h.tipo !== fTipo) return false;
+      if(fUso === "uso" && !r.uso) return false;
+      if(fUso === "livre" && r.uso) return false;
+      if(fEpi === "__none__" && r.epis.length) return false;
+      if(fEpi && fEpi !== "__none__" && !r.epis.some(e => e.id === fEpi)) return false;
+      if(q && !empPlain([r.h.nome, r.h.descricao, r.h.tipo, ...r.epis.map(e=>e.nome)].join(" ")).includes(q)) return false;
+      return true;
+    });
+    const byName = (a,b) => a.h.nome.localeCompare(b.h.nome,"pt-BR");
+    if(fSort === "nome-desc") rows.sort((a,b)=>byName(b,a));
+    else if(fSort === "tipo") rows.sort((a,b)=>PGR_TIPOS.indexOf(a.h.tipo)-PGR_TIPOS.indexOf(b.h.tipo) || byName(a,b));
+    else if(fSort === "uso") rows.sort((a,b)=>b.uso-a.uso || byName(a,b));
+    else rows.sort(byName);
+
+    const emUso = all.filter(r=>r.uso).length;
+    const semEpi = all.filter(r=>!r.epis.length).length;
+    const kpi = (icon, cls, num, label) => `<div class="annual-kpi"><div class="annual-kpi-icon ${cls}">${icon}</div><div><div class="num">${num}</div><div class="label">${label}</div></div></div>`;
+
+    const rowHtml = rows.map(({h, uso, epis}) => {
+      const hue = PGR_TIPO_HUE[h.tipo] ?? 210;
+      return `<tr>
+        <td><div class="sec-name"><span class="sec-ico" style="background:hsla(${hue},70%,50%,.16);border:1px solid hsla(${hue},70%,50%,.38);">${PGR_TIPO_ICON[h.tipo]||"☣️"}</span><div><div>${empEsc(h.nome)}</div>${h.descricao ? `<div class="hz-desc">${empEsc(h.descricao)}</div>` : ""}</div></div></td>
+        <td>${pgrTipoChip(h.tipo)}</td>
+        <td>${epis.length ? `<div class="pgr-epi-chips">${epis.map(i=>`<span class="pgr-epi" title="${i.ca?`CA ${empEsc(i.ca)}`:"EPI cadastrado"}">${pgrEpiIcon(i.nome)} ${empEsc(i.nome)}</span>`).join("")}</div>` : `<span class="sec-none">🚫 Nenhum EPI relacionado</span>`}</td>
+        <td>${uso ? `<span class="sec-count">⚠️ ${uso} risco${uso===1?"":"s"} mapeado${uso===1?"":"s"}</span>` : `<span class="sec-none">💤 Sem uso no inventário</span>`}</td>
+        <td>${canEdit ? `<div class="emp-actions">
+          <button type="button" class="emp-action hz-edit" data-id="${empEsc(h.id)}" title="Editar perigo" aria-label="Editar perigo ${empEsc(h.nome)}">✏️</button>
+          <button type="button" class="emp-action danger hz-del" data-id="${empEsc(h.id)}" title="Remover perigo" aria-label="Remover perigo ${empEsc(h.nome)}">🗑️</button>
+        </div>` : ""}</td>
+      </tr>`;
+    }).join("");
+
+    root.innerHTML = `
+      <div class="page-head">
+        <div><h2>☣️ Cadastro de Perigos</h2><div class="sub">Catálogo de perigos e agentes nocivos usado ao mapear riscos no Inventário.</div></div>
+        ${canNew ? `<button class="btn" id="hz-new">+ Novo Perigo</button>` : ""}
+      </div>
+      <div class="emp-kpis">
+        ${kpi("☣️","red",all.length,"Perigos cadastrados")}
+        ${kpi("⚠️","amber",emUso,"Em uso no inventário")}
+        ${kpi("💤","purple",all.length-emUso,"Sem uso no inventário")}
+        ${kpi("🦺","blue",semEpi,"Sem EPI relacionado")}
+      </div>
+      <div class="panel annual-filter-panel">
+        <div class="panel-head">
+          <h3>🔎 Filtros de pesquisa</h3>
+          <span class="emp-count">${rows.length} de ${all.length} perigo${all.length===1?"":"s"}${hasFilter ? `<button type="button" class="emp-clear" id="hz-clear">✖ Limpar filtros</button>` : ""}</span>
+        </div>
+        <div class="emp-filter-row hz-filter-row">
+          <div><label for="hz-search">🔍 Pesquisar</label><input id="hz-search" type="search" value="${empEsc(fSearch)}" placeholder="Perigo, descrição ou EPI..."></div>
+          <div><label for="hz-tipo">🧭 Tipo de risco</label><select id="hz-tipo"><option value="">Todos os tipos</option>${PGR_TIPOS.map(t=>`<option value="${t}" ${fTipo===t?"selected":""}>${PGR_TIPO_ICON[t]} ${t}</option>`).join("")}</select></div>
+          <div><label for="hz-epi">🦺 EPI</label><select id="hz-epi"><option value="">Todos</option><option value="__none__" ${fEpi==="__none__"?"selected":""}>Sem EPI relacionado</option>${episUsados.map(i=>`<option value="${empEsc(i.id)}" ${fEpi===i.id?"selected":""}>${empEsc(i.nome)}</option>`).join("")}</select></div>
+          <div><label for="hz-uso">⚠️ Uso</label><select id="hz-uso"><option value="">Todos</option><option value="uso" ${fUso==="uso"?"selected":""}>Em uso no inventário</option><option value="livre" ${fUso==="livre"?"selected":""}>Sem uso</option></select></div>
+          <div><label for="hz-sort">↕️ Ordenar por</label><select id="hz-sort">
+            <option value="">Nome (A–Z)</option>
+            <option value="nome-desc" ${fSort==="nome-desc"?"selected":""}>Nome (Z–A)</option>
+            <option value="tipo" ${fSort==="tipo"?"selected":""}>Tipo de risco</option>
+            <option value="uso" ${fSort==="uso"?"selected":""}>Mais usados</option>
+          </select></div>
+        </div>
+      </div>
+      <div class="panel">
+        ${all.length===0 ? `<div class="empty">Nenhum perigo cadastrado.${canNew ? " Use <strong>+ Novo Perigo</strong> para começar." : ""}</div>`
+        : rows.length===0 ? `<div class="empty">🔍 Nenhum perigo encontrado com os filtros atuais.</div>`
+        : `<div class="emp-table-wrap"><table class="hz-table">
+          <thead><tr>
+            <th class="c-perigo"><span class="ico">☣️</span>Perigo / Agente</th>
+            <th class="c-tipo"><span class="ico">🧭</span>Tipo</th>
+            <th class="c-epis"><span class="ico">🦺</span>EPIs relacionados</th>
+            <th class="c-uso"><span class="ico">⚠️</span>Uso no inventário</th>
+            <th class="c-acoes" style="text-align:right;"><span class="ico">⚙️</span>${canEdit?"Ações":""}</th>
+          </tr></thead>
+          <tbody>${rowHtml}</tbody>
+        </table></div>`}
+      </div>`;
+
+    const refresh = () => renderPgrHazards(root);
+    root.querySelector("#hz-new")?.addEventListener("click", () => openPgrHazardForm());
+    root.querySelector("#hz-search")?.addEventListener("input", ev => {
+      root.dataset.hzSearch = ev.target.value;
+      const pos = ev.target.selectionStart;
+      refresh();
+      const input = root.querySelector("#hz-search");
+      input?.focus(); input?.setSelectionRange(pos,pos);
+    });
+    [["#hz-tipo","hzTipo"],["#hz-epi","hzEpi"],["#hz-uso","hzUso"],["#hz-sort","hzSort"]].forEach(([sel,key]) => {
+      root.querySelector(sel)?.addEventListener("change", ev => { root.dataset[key] = ev.target.value; refresh(); });
+    });
+    root.querySelector("#hz-clear")?.addEventListener("click", () => {
+      ["hzSearch","hzTipo","hzEpi","hzUso","hzSort"].forEach(k => delete root.dataset[k]);
+      refresh();
+    });
+    root.querySelectorAll(".hz-edit").forEach(b => b.addEventListener("click", ev => openPgrHazardForm(ev.currentTarget.dataset.id)));
+    root.querySelectorAll(".hz-del").forEach(b => b.addEventListener("click", async ev => {
+      const h = state.pgrHazards.find(z => z.id === ev.currentTarget.dataset.id);
+      if(!h) return;
+      const n = pgrRisksUsingHazard(h.nome).length;
+      if(n){
+        alert(`Não é possível remover o perigo "${h.nome}": ele está em ${n} risco${n===1?"":"s"} do Inventário. Remova ou altere esses riscos antes.`);
+        return;
+      }
+      if(!confirm(`Remover o perigo "${h.nome}" do cadastro?`)) return;
+      state.pgrHazards = state.pgrHazards.filter(z => z.id !== h.id);
+      await saveState(); render();
+    }));
+  }
+  function openPgrHazardForm(id=""){
+    ensurePgrHazards();
+    const x = state.pgrHazards.find(z => z.id === id) || {};
+    const catalogo = (state.items||[]).slice().sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"));
+    const rel = new Set(x.epiIds || []);
+    openModal(`<h3>${id?"✏️ Editar":"➕ Novo"} Perigo / Agente Nocivo</h3>
+      <form id="pgr-hazard-form">
+        <div class="field"><label>Perigo / Agente nocivo *</label><input name="nome" required value="${empEsc(x.nome||"")}" placeholder="Ex.: Ruído contínuo"></div>
+        <div class="field"><label>Tipo de risco *</label><select name="tipo" required>${PGR_TIPOS.map(t=>`<option value="${t}" ${(x.tipo||"Físico")===t?"selected":""}>${PGR_TIPO_ICON[t]} ${t}</option>`).join("")}</select></div>
+        <div class="field"><label>Descrição / fontes geradoras (opcional)</label><textarea name="descricao" rows="3" placeholder="Ex.: Motores, compressores e máquinas de corte.">${empEsc(x.descricao||"")}</textarea></div>
+        <div class="field">
+          <label>🦺 EPIs relacionados a este perigo</label>
+          ${catalogo.length ? `<div class="pgr-epi-list">${catalogo.map(i=>`<label class="pgr-epi-opt ${rel.has(i.id)?"on":""}"><input type="checkbox" name="epi" value="${empEsc(i.id)}" ${rel.has(i.id)?"checked":""}><span class="ei">${pgrEpiIcon(i.nome)}</span><span><strong>${empEsc(i.nome)}</strong>${i.ca?`<small>CA ${empEsc(i.ca)}</small>`:""}</span></label>`).join("")}</div>
+            <div class="pgr-hint">Ao escolher este perigo em um novo risco, estes EPIs já aparecem selecionados.</div>`
+          : `<div class="pgr-hint warn">⚠️ Nenhum EPI cadastrado. Cadastre em EPIs (NR-6) → Catálogo EPIs para poder relacioná-los.</div>`}
+        </div>
+        <div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">💾 Salvar</button></div>
+      </form>`, ov => {
+      ov.querySelector(".pgr-epi-list")?.addEventListener("change", ev => ev.target.closest(".pgr-epi-opt")?.classList.toggle("on", ev.target.checked));
+      ov.querySelector("form").onsubmit = async e => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const nome = String(fd.get("nome")||"").trim(), tipo = String(fd.get("tipo")||""), descricao = String(fd.get("descricao")||"").trim();
+        const epiIds = fd.getAll("epi").map(String);
+        if(!nome) return;
+        if(state.pgrHazards.some(z => z.id!==id && normalizeText(z.nome)===normalizeText(nome))){ alert("Já existe um perigo com este nome."); return; }
+        if(id){
+          const h = state.pgrHazards.find(z => z.id === id);
+          const antigo = h.nome;
+          Object.assign(h, {nome, tipo, descricao, epiIds});
+          delete h.imported;
+          // Mantém o vínculo com os riscos já mapeados.
+          const key = normalizeText(antigo);
+          (state.pgrRisks||[]).forEach(r => { if(normalizeText(r.perigo)===key){ r.perigo = nome; r.tipo = tipo; } });
+        } else {
+          state.pgrHazards.push({id:uid("perigo"), nome, tipo, descricao, epiIds});
+        }
+        await saveState(); closeModal(); render();
+      };
+    });
   }
 
   function renderEpiDash(root){
@@ -3878,29 +4250,353 @@ body.cipa-terminal-mode .urna-confirm{
       if(cargo && !state.generalJobs.some(x=>normalizeText(x.nome)===normalizeText(cargo))) state.generalJobs.push({id:uid("cargo"),nome:cargo,imported:true});
     });
   }
+  function sectorEmployees(sectorName){
+    const key = normalizeText(sectorName);
+    return (state.employees||[]).filter(e => normalizeText(e.setor) === key);
+  }
   function renderGeneralSectors(root){
     ensureGeneralMasterData();
-    const rows=state.generalSectors.slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
-    root.innerHTML=`<div class="page-head"><div><h2>🏢 Cadastro de Setores</h2><div class="sub">Cadastro central utilizado em Funcionários, PGR e demais módulos.</div></div><button class="btn" id="new-sector">+ Novo Setor</button></div>
-    <div class="panel"><div class="panel-head"><h3>Setores cadastrados</h3><span>${rows.length} setor(es)</span></div><div class="table-wrap">${rows.length?`<table><thead><tr><th>Setor</th><th>Descrição</th><th>Ações</th></tr></thead><tbody>${rows.map(x=>`<tr><td><strong>${x.nome}</strong></td><td>${x.descricao||"—"}</td><td><button class="btn secondary master-edit-sector" data-id="${x.id}">✏️ Editar</button> <button class="btn secondary master-remove-sector" data-id="${x.id}">🗑️ Remover</button></td></tr>`).join("")}</tbody></table>`:`<div class="empty">Nenhum setor cadastrado.</div>`}</div></div>`;
-    root.querySelector("#new-sector").onclick=()=>openGeneralSectorForm();
-    root.addEventListener("click",async e=>{const ed=e.target.closest(".master-edit-sector");if(ed)return openGeneralSectorForm(ed.dataset.id);const rm=e.target.closest(".master-remove-sector");if(rm&&confirm("Remover este setor do cadastro geral?")){state.generalSectors=state.generalSectors.filter(x=>x.id!==rm.dataset.id);await saveState();render();}});
+    const allEmps = state.employees || [];
+    const fSearch = (root.dataset.secSearch || "").trim();
+    const fCargo  = root.dataset.secCargo || "";
+    const fSit    = root.dataset.secSit || "";
+    const fSort   = root.dataset.secSort || "";
+    const hasFilter = !!(fSearch || fCargo || fSit || fSort);
+
+    // Monta cada setor com seus colaboradores e os cargos exercidos nele.
+    const all = state.generalSectors.map(x => {
+      const emps = sectorEmployees(x.nome);
+      const map = new Map();
+      emps.forEach(e => { const c = String(e.cargo||"").trim(); if(c) map.set(c, (map.get(c)||0) + 1); });
+      const cargos = [...map.entries()].sort((a,b) => a[0].localeCompare(b[0],"pt-BR"));
+      return { s:x, emps, cargos };
+    });
+    const cargoOptions = [...new Set(all.flatMap(r => r.cargos.map(c => c[0])))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+
+    const q = empPlain(fSearch);
+    let rows = all.filter(r => {
+      if(fCargo && !r.cargos.some(c => c[0] === fCargo)) return false;
+      if(fSit === "com" && !r.emps.length) return false;
+      if(fSit === "sem" && r.emps.length) return false;
+      if(q){
+        const blob = empPlain([r.s.nome, ...r.cargos.map(c=>c[0]), ...r.emps.map(e=>e.nome)].join(" "));
+        if(!blob.includes(q)) return false;
+      }
+      return true;
+    });
+    const byName = (a,b) => a.s.nome.localeCompare(b.s.nome,"pt-BR");
+    if(fSort === "nome-desc") rows.sort((a,b)=>byName(b,a));
+    else if(fSort === "mais") rows.sort((a,b)=>b.emps.length-a.emps.length || byName(a,b));
+    else if(fSort === "menos") rows.sort((a,b)=>a.emps.length-b.emps.length || byName(a,b));
+    else rows.sort(byName);
+
+    const totalAlocados = all.reduce((n,r)=>n+r.emps.length,0);
+    const vazios = all.filter(r=>!r.emps.length).length;
+    const kpi = (icon, cls, num, label) => `<div class="annual-kpi"><div class="annual-kpi-icon ${cls}">${icon}</div><div><div class="num">${num}</div><div class="label">${label}</div></div></div>`;
+
+    const rowHtml = rows.map(({s:x, emps, cargos}) => {
+      const hue = empHue(x.nome);
+      const stack = emps.slice(0,4).map(e => e.foto
+        ? `<img class="sm" src="${empEsc(e.foto)}" alt="${empEsc(e.nome)}" title="${empEsc(e.nome)}" loading="lazy">`
+        : `<div class="sm" style="background:hsl(${empHue(e.nome)},42%,42%);" title="${empEsc(e.nome)}">${empEsc(empInitials(e.nome))}</div>`).join("")
+        + (emps.length>4 ? `<div class="sm more" title="${emps.slice(4).map(e=>empEsc(e.nome)).join(", ")}">+${emps.length-4}</div>` : "");
+      return `<tr>
+        <td><div class="sec-name"><span class="sec-ico" style="background:hsla(${hue},65%,50%,.16);border:1px solid hsla(${hue},65%,50%,.35);">${empIcon(x.nome, EMP_SECTOR_ICONS, "🏢")}</span><span>${empEsc(x.nome)}</span></div></td>
+        <td>${cargos.length ? `<div class="sec-cargos">${cargos.map(([c,n]) => `<span class="sec-cargo ${fCargo===c?"match":""}" title="${n} colaborador${n===1?"":"es"} neste cargo">${empIcon(c, EMP_ROLE_ICONS, "💼")} ${empEsc(c)}<span class="cnt">${n}</span></span>`).join("")}</div>` : `<span class="sec-none">💤 Nenhum cargo ainda</span>`}</td>
+        <td>${emps.length ? `<div class="sec-people"><div class="sec-stack">${stack}</div><div class="sec-count">👥 ${emps.length} colaborador${emps.length===1?"":"es"}</div></div>` : `<span class="sec-none">👥 Sem colaboradores</span>`}</td>
+        <td><div class="emp-actions">
+          <button type="button" class="emp-action master-edit-sector" data-id="${empEsc(x.id)}" title="Editar setor" aria-label="Editar setor ${empEsc(x.nome)}">✏️</button>
+          <button type="button" class="emp-action danger master-remove-sector" data-id="${empEsc(x.id)}" title="Remover setor" aria-label="Remover setor ${empEsc(x.nome)}">🗑️</button>
+        </div></td>
+      </tr>`;
+    }).join("");
+
+    root.innerHTML = `
+      <div class="page-head"><div><h2>🏢 Cadastro de Setores</h2><div class="sub">Cadastro central utilizado em Funcionários, PGR e demais módulos.</div></div><button class="btn" id="new-sector">+ Novo Setor</button></div>
+
+      <div class="emp-kpis">
+        ${kpi("🏢","purple",all.length,"Setores cadastrados")}
+        ${kpi("👥","blue",totalAlocados,"Colaboradores alocados")}
+        ${kpi("💼","green",cargoOptions.length,"Cargos em uso nos setores")}
+        ${kpi("💤","amber",vazios,"Setores sem colaboradores")}
+      </div>
+
+      <div class="panel annual-filter-panel">
+        <div class="panel-head">
+          <h3>🔎 Filtros de pesquisa</h3>
+          <span class="emp-count">${rows.length} de ${all.length} setor${all.length===1?"":"es"}${hasFilter ? `<button type="button" class="emp-clear" id="sec-clear">✖ Limpar filtros</button>` : ""}</span>
+        </div>
+        <div class="emp-filter-row sec-filter-row">
+          <div><label for="sec-search">🔍 Pesquisar</label><input id="sec-search" type="search" value="${empEsc(fSearch)}" placeholder="Setor, cargo ou colaborador..."></div>
+          <div><label for="sec-cargo">💼 Cargo</label><select id="sec-cargo"><option value="">Todos os cargos</option>${cargoOptions.map(c=>`<option value="${empEsc(c)}" ${fCargo===c?"selected":""}>${empEsc(c)}</option>`).join("")}</select></div>
+          <div><label for="sec-sit">👥 Colaboradores</label><select id="sec-sit"><option value="">Todos os setores</option><option value="com" ${fSit==="com"?"selected":""}>Com colaboradores</option><option value="sem" ${fSit==="sem"?"selected":""}>Sem colaboradores</option></select></div>
+          <div><label for="sec-sort">↕️ Ordenar por</label><select id="sec-sort">
+            <option value="">Nome (A–Z)</option>
+            <option value="nome-desc" ${fSort==="nome-desc"?"selected":""}>Nome (Z–A)</option>
+            <option value="mais" ${fSort==="mais"?"selected":""}>Mais colaboradores</option>
+            <option value="menos" ${fSort==="menos"?"selected":""}>Menos colaboradores</option>
+          </select></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        ${all.length===0 ? `<div class="empty">Nenhum setor cadastrado. Use <strong>+ Novo Setor</strong> para começar.</div>`
+        : rows.length===0 ? `<div class="empty">🔍 Nenhum setor encontrado com os filtros atuais.</div>`
+        : `<div class="emp-table-wrap"><table class="sec-table">
+          <thead><tr>
+            <th class="c-setor"><span class="ico">🏢</span>Setor</th>
+            <th class="c-cargos"><span class="ico">💼</span>Cargos no setor</th>
+            <th class="c-pessoas"><span class="ico">👥</span>Colaboradores</th>
+            <th class="c-acoes" style="text-align:right;"><span class="ico">⚙️</span>Ações</th>
+          </tr></thead>
+          <tbody>${rowHtml}</tbody>
+        </table></div>`}
+      </div>`;
+
+    // ---- eventos (ligados direto nos elementos, sem acumular ouvintes no container) ----
+    const refresh = () => renderGeneralSectors(root);
+    root.querySelector("#new-sector").onclick = () => openGeneralSectorForm();
+    root.querySelector("#sec-search")?.addEventListener("input", ev => {
+      root.dataset.secSearch = ev.target.value;
+      const pos = ev.target.selectionStart;
+      refresh();
+      const input = root.querySelector("#sec-search");
+      input?.focus(); input?.setSelectionRange(pos,pos);
+    });
+    [["#sec-cargo","secCargo"],["#sec-sit","secSit"],["#sec-sort","secSort"]].forEach(([sel,key]) => {
+      root.querySelector(sel)?.addEventListener("change", ev => { root.dataset[key] = ev.target.value; refresh(); });
+    });
+    root.querySelector("#sec-clear")?.addEventListener("click", () => {
+      ["secSearch","secCargo","secSit","secSort"].forEach(k => delete root.dataset[k]);
+      refresh();
+    });
+    root.querySelectorAll(".master-edit-sector").forEach(b => b.addEventListener("click", ev => openGeneralSectorForm(ev.currentTarget.dataset.id)));
+    root.querySelectorAll(".master-remove-sector").forEach(b => b.addEventListener("click", async ev => {
+      const sector = state.generalSectors.find(z => z.id === ev.currentTarget.dataset.id);
+      if(!sector) return;
+      const n = sectorEmployees(sector.nome).length;
+      if(n){
+        alert(`Não é possível remover o setor "${sector.nome}": há ${n} colaborador${n===1?"":"es"} vinculado${n===1?"":"s"}. Mude o setor deles em Funcionários antes de remover.`);
+        return;
+      }
+      if(!confirm(`Remover o setor "${sector.nome}" do cadastro geral?`)) return;
+      state.generalSectors = state.generalSectors.filter(z => z.id !== sector.id);
+      await saveState(); render();
+    }));
   }
   function openGeneralSectorForm(id=""){
-    ensureGeneralMasterData(); const x=state.generalSectors.find(z=>z.id===id)||{};
-    openModal(`<h3>${id?"✏️ Editar":"➕ Novo"} Setor</h3><form id="general-sector-form"><div class="field"><label>Nome do setor *</label><input name="nome" required value="${x.nome||""}"></div><div class="field"><label>Descrição</label><textarea name="descricao" rows="3">${x.descricao||""}</textarea></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">💾 Salvar</button></div></form>`,ov=>{ov.querySelector("form").onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));if(id){Object.assign(state.generalSectors.find(z=>z.id===id),d);}else state.generalSectors.push({id:uid("setor"),...d});await saveState();closeModal();render();};});
+    ensureGeneralMasterData();
+    const x = state.generalSectors.find(z=>z.id===id) || {};
+    openModal(`<h3>${id?"✏️ Editar":"➕ Novo"} Setor</h3>
+      <form id="general-sector-form">
+        <div class="field"><label>Nome do setor *</label><input name="nome" required value="${empEsc(x.nome||"")}" placeholder="Ex.: Almoxarifado"></div>
+        <div style="font-size:11px;color:var(--ink-dim);margin:-4px 0 12px;">💼 Os cargos do setor aparecem automaticamente conforme os colaboradores são cadastrados em Funcionários.</div>
+        <div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">💾 Salvar</button></div>
+      </form>`, ov => {
+      ov.querySelector("form").onsubmit = async e => {
+        e.preventDefault();
+        const nome = String(new FormData(e.target).get("nome")||"").trim();
+        if(!nome) return;
+        if(state.generalSectors.some(z => z.id!==id && normalizeText(z.nome)===normalizeText(nome))){
+          alert("Já existe um setor com este nome."); return;
+        }
+        if(id){
+          const sector = state.generalSectors.find(z=>z.id===id);
+          const antigo = sector.nome;
+          sector.nome = nome;
+          // Mantém o vínculo: quem usava o nome antigo passa a usar o novo.
+          if(normalizeText(antigo) !== normalizeText(nome) || antigo !== nome){
+            const troca = arr => (arr||[]).forEach(r => { if(normalizeText(r.setor)===normalizeText(antigo)) r.setor = nome; });
+            troca(state.employees); troca(state.pgrRisks); troca(state.pcmsoFunctionExams);
+          }
+        } else {
+          state.generalSectors.push({id:uid("setor"), nome});
+        }
+        await saveState(); closeModal(); render();
+      };
+    });
+  }
+  function jobEmployees(jobName){
+    const key = normalizeText(jobName);
+    return (state.employees||[]).filter(e => normalizeText(e.cargo||e.funcao) === key);
   }
   function renderGeneralJobs(root){
     ensureGeneralMasterData();
-    const rows=state.generalJobs.slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
-    root.innerHTML=`<div class="page-head"><div><h2>💼 Cadastro de Cargos</h2><div class="sub">Cadastro central de cargos/funções utilizado em Funcionários, PGR e PCMSO.</div></div><button class="btn" id="new-job">+ Novo Cargo</button></div>
-    <div class="panel"><div class="panel-head"><h3>Cargos cadastrados</h3><span>${rows.length} cargo(s)</span></div><div class="table-wrap">${rows.length?`<table><thead><tr><th>Cargo / Função</th><th>Descrição</th><th>Ações</th></tr></thead><tbody>${rows.map(x=>`<tr><td><strong>${x.nome}</strong></td><td>${x.descricao||"—"}</td><td><button class="btn secondary master-edit-job" data-id="${x.id}">✏️ Editar</button> <button class="btn secondary master-remove-job" data-id="${x.id}">🗑️ Remover</button></td></tr>`).join("")}</tbody></table>`:`<div class="empty">Nenhum cargo cadastrado.</div>`}</div></div>`;
-    root.querySelector("#new-job").onclick=()=>openGeneralJobForm();
-    root.addEventListener("click",async e=>{const ed=e.target.closest(".master-edit-job");if(ed)return openGeneralJobForm(ed.dataset.id);const rm=e.target.closest(".master-remove-job");if(rm&&confirm("Remover este cargo do cadastro geral?")){state.generalJobs=state.generalJobs.filter(x=>x.id!==rm.dataset.id);await saveState();render();}});
+    const fSearch = (root.dataset.jobSearch || "").trim();
+    const fSetor  = root.dataset.jobSetor || "";
+    const fSit    = root.dataset.jobSit || "";
+    const fDesc   = root.dataset.jobDesc || "";
+    const fSort   = root.dataset.jobSort || "";
+    const hasFilter = !!(fSearch || fSetor || fSit || fDesc || fSort);
+
+    const all = state.generalJobs.map(x => {
+      const emps = jobEmployees(x.nome);
+      const map = new Map();
+      emps.forEach(e => { const st = String(e.setor||"").trim(); if(st) map.set(st, (map.get(st)||0) + 1); });
+      const setores = [...map.entries()].sort((a,b) => a[0].localeCompare(b[0],"pt-BR"));
+      return { j:x, emps, setores, desc:String(x.descricao||"").trim() };
+    });
+    const setorOptions = [...new Set(all.flatMap(r => r.setores.map(c => c[0])))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+
+    const q = empPlain(fSearch);
+    let rows = all.filter(r => {
+      if(fSetor && !r.setores.some(c => c[0] === fSetor)) return false;
+      if(fSit === "com" && !r.emps.length) return false;
+      if(fSit === "sem" && r.emps.length) return false;
+      if(fDesc === "com" && !r.desc) return false;
+      if(fDesc === "sem" && r.desc) return false;
+      if(q){
+        const blob = empPlain([r.j.nome, r.desc, ...r.setores.map(c=>c[0]), ...r.emps.map(e=>e.nome)].join(" "));
+        if(!blob.includes(q)) return false;
+      }
+      return true;
+    });
+    const byName = (a,b) => a.j.nome.localeCompare(b.j.nome,"pt-BR");
+    if(fSort === "nome-desc") rows.sort((a,b)=>byName(b,a));
+    else if(fSort === "mais") rows.sort((a,b)=>b.emps.length-a.emps.length || byName(a,b));
+    else if(fSort === "menos") rows.sort((a,b)=>a.emps.length-b.emps.length || byName(a,b));
+    else rows.sort(byName);
+
+    const totalAlocados = all.reduce((n,r)=>n+r.emps.length,0);
+    const vazios = all.filter(r=>!r.emps.length).length;
+    const semDesc = all.filter(r=>!r.desc).length;
+    const kpi = (icon, cls, num, label) => `<div class="annual-kpi"><div class="annual-kpi-icon ${cls}">${icon}</div><div><div class="num">${num}</div><div class="label">${label}</div></div></div>`;
+
+    const rowHtml = rows.map(({j:x, emps, setores, desc}) => {
+      const hue = empHue(x.nome);
+      const stack = emps.slice(0,4).map(e => e.foto
+        ? `<img class="sm" src="${empEsc(e.foto)}" alt="${empEsc(e.nome)}" title="${empEsc(e.nome)}" loading="lazy">`
+        : `<div class="sm" style="background:hsl(${empHue(e.nome)},42%,42%);" title="${empEsc(e.nome)}">${empEsc(empInitials(e.nome))}</div>`).join("")
+        + (emps.length>4 ? `<div class="sm more" title="${emps.slice(4).map(e=>empEsc(e.nome)).join(", ")}">+${emps.length-4}</div>` : "");
+      return `<tr>
+        <td><div class="sec-name"><span class="sec-ico" style="background:hsla(${hue},65%,50%,.16);border:1px solid hsla(${hue},65%,50%,.35);">${empIcon(x.nome, EMP_ROLE_ICONS, "💼")}</span><span>${empEsc(x.nome)}</span></div></td>
+        <td>${desc ? `<div class="job-desc">${empEsc(desc)}</div>${desc.length>140 ? `<button type="button" class="job-more" aria-expanded="false">Ver mais</button>` : ""}` : `<span class="sec-none">📝 Sem descrição</span>`}</td>
+        <td>${setores.length ? `<div class="job-chips">${setores.map(([st,n]) => { const h = empHue(st); return `<span class="emp-chip ${fSetor===st?"match":""}" style="background:hsla(${h},65%,50%,.16);border:1px solid hsla(${h},65%,50%,.35);" title="${n} colaborador${n===1?"":"es"} neste setor">${empIcon(st, EMP_SECTOR_ICONS, "🏢")} ${empEsc(st)}<span class="cnt">${n}</span></span>`; }).join("")}</div>` : `<span class="sec-none">💤 Nenhum setor ainda</span>`}</td>
+        <td>${emps.length ? `<div class="sec-people"><div class="sec-stack">${stack}</div><div class="sec-count">👥 ${emps.length} colaborador${emps.length===1?"":"es"}</div></div>` : `<span class="sec-none">👥 Sem colaboradores</span>`}</td>
+        <td><div class="emp-actions">
+          <button type="button" class="emp-action master-edit-job" data-id="${empEsc(x.id)}" title="Editar cargo" aria-label="Editar cargo ${empEsc(x.nome)}">✏️</button>
+          <button type="button" class="emp-action danger master-remove-job" data-id="${empEsc(x.id)}" title="Remover cargo" aria-label="Remover cargo ${empEsc(x.nome)}">🗑️</button>
+        </div></td>
+      </tr>`;
+    }).join("");
+
+    root.innerHTML = `
+      <div class="page-head"><div><h2>💼 Cadastro de Cargos</h2><div class="sub">Cadastro central de cargos/funções utilizado em Funcionários, PGR e PCMSO.</div></div><button class="btn" id="new-job">+ Novo Cargo</button></div>
+
+      <div class="emp-kpis">
+        ${kpi("💼","blue",all.length,"Cargos cadastrados")}
+        ${kpi("👥","green",totalAlocados,"Colaboradores em cargos")}
+        ${kpi("💤","amber",vazios,"Cargos sem colaboradores")}
+        ${kpi("📝","purple",semDesc,"Cargos sem descrição")}
+      </div>
+
+      <div class="panel annual-filter-panel">
+        <div class="panel-head">
+          <h3>🔎 Filtros de pesquisa</h3>
+          <span class="emp-count">${rows.length} de ${all.length} cargo${all.length===1?"":"s"}${hasFilter ? `<button type="button" class="emp-clear" id="job-clear">✖ Limpar filtros</button>` : ""}</span>
+        </div>
+        <div class="emp-filter-row">
+          <div><label for="job-search">🔍 Pesquisar</label><input id="job-search" type="search" value="${empEsc(fSearch)}" placeholder="Cargo, descrição, setor ou colaborador..."></div>
+          <div><label for="job-setor">🏢 Setor</label><select id="job-setor"><option value="">Todos os setores</option>${setorOptions.map(c=>`<option value="${empEsc(c)}" ${fSetor===c?"selected":""}>${empEsc(c)}</option>`).join("")}</select></div>
+          <div><label for="job-sit">👥 Colaboradores</label><select id="job-sit"><option value="">Todos os cargos</option><option value="com" ${fSit==="com"?"selected":""}>Com colaboradores</option><option value="sem" ${fSit==="sem"?"selected":""}>Sem colaboradores</option></select></div>
+          <div><label for="job-desc">📝 Descrição</label><select id="job-desc"><option value="">Todos</option><option value="com" ${fDesc==="com"?"selected":""}>Com descrição</option><option value="sem" ${fDesc==="sem"?"selected":""}>Sem descrição</option></select></div>
+          <div><label for="job-sort">↕️ Ordenar por</label><select id="job-sort">
+            <option value="">Nome (A–Z)</option>
+            <option value="nome-desc" ${fSort==="nome-desc"?"selected":""}>Nome (Z–A)</option>
+            <option value="mais" ${fSort==="mais"?"selected":""}>Mais colaboradores</option>
+            <option value="menos" ${fSort==="menos"?"selected":""}>Menos colaboradores</option>
+          </select></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        ${all.length===0 ? `<div class="empty">Nenhum cargo cadastrado. Use <strong>+ Novo Cargo</strong> para começar.</div>`
+        : rows.length===0 ? `<div class="empty">🔍 Nenhum cargo encontrado com os filtros atuais.</div>`
+        : `<div class="emp-table-wrap"><table class="job-table">
+          <thead><tr>
+            <th class="c-cargo"><span class="ico">💼</span>Cargo / Função</th>
+            <th class="c-desc"><span class="ico">📝</span>Descrição</th>
+            <th class="c-setores"><span class="ico">🏢</span>Setores</th>
+            <th class="c-pessoas"><span class="ico">👥</span>Colaboradores</th>
+            <th class="c-acoes" style="text-align:right;"><span class="ico">⚙️</span>Ações</th>
+          </tr></thead>
+          <tbody>${rowHtml}</tbody>
+        </table></div>`}
+      </div>`;
+
+    // ---- eventos (ligados direto nos elementos, sem acumular ouvintes no container) ----
+    const refresh = () => renderGeneralJobs(root);
+    root.querySelector("#new-job").onclick = () => openGeneralJobForm();
+    root.querySelector("#job-search")?.addEventListener("input", ev => {
+      root.dataset.jobSearch = ev.target.value;
+      const pos = ev.target.selectionStart;
+      refresh();
+      const input = root.querySelector("#job-search");
+      input?.focus(); input?.setSelectionRange(pos,pos);
+    });
+    [["#job-setor","jobSetor"],["#job-sit","jobSit"],["#job-desc","jobDesc"],["#job-sort","jobSort"]].forEach(([sel,key]) => {
+      root.querySelector(sel)?.addEventListener("change", ev => { root.dataset[key] = ev.target.value; refresh(); });
+    });
+    root.querySelector("#job-clear")?.addEventListener("click", () => {
+      ["jobSearch","jobSetor","jobSit","jobDesc","jobSort"].forEach(k => delete root.dataset[k]);
+      refresh();
+    });
+    root.querySelectorAll(".job-more").forEach(btn => btn.addEventListener("click", () => {
+      const box = btn.previousElementSibling;
+      const open = box.classList.toggle("open");
+      btn.textContent = open ? "Ver menos" : "Ver mais";
+      btn.setAttribute("aria-expanded", open ? "true" : "false");
+    }));
+    root.querySelectorAll(".master-edit-job").forEach(b => b.addEventListener("click", ev => openGeneralJobForm(ev.currentTarget.dataset.id)));
+    root.querySelectorAll(".master-remove-job").forEach(b => b.addEventListener("click", async ev => {
+      const job = state.generalJobs.find(z => z.id === ev.currentTarget.dataset.id);
+      if(!job) return;
+      const n = jobEmployees(job.nome).length;
+      if(n){
+        alert(`Não é possível remover o cargo "${job.nome}": há ${n} colaborador${n===1?"":"es"} vinculado${n===1?"":"s"}. Mude o cargo deles em Funcionários antes de remover.`);
+        return;
+      }
+      if(!confirm(`Remover o cargo "${job.nome}" do cadastro geral?`)) return;
+      state.generalJobs = state.generalJobs.filter(z => z.id !== job.id);
+      await saveState(); render();
+    }));
   }
   function openGeneralJobForm(id=""){
-    ensureGeneralMasterData(); const x=state.generalJobs.find(z=>z.id===id)||{};
-    openModal(`<h3>${id?"✏️ Editar":"➕ Novo"} Cargo / Função</h3><form id="general-job-form"><div class="field"><label>Cargo / Função *</label><input name="nome" required value="${x.nome||""}"></div><div class="field"><label>Descrição</label><textarea name="descricao" rows="3">${x.descricao||""}</textarea></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">💾 Salvar</button></div></form>`,ov=>{ov.querySelector("form").onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));if(id){Object.assign(state.generalJobs.find(z=>z.id===id),d);}else state.generalJobs.push({id:uid("cargo"),...d});await saveState();closeModal();render();};});
+    ensureGeneralMasterData();
+    const x = state.generalJobs.find(z=>z.id===id) || {};
+    openModal(`<h3>${id?"✏️ Editar":"➕ Novo"} Cargo / Função</h3>
+      <form id="general-job-form">
+        <div class="field"><label>Cargo / Função *</label><input name="nome" required value="${empEsc(x.nome||"")}" placeholder="Ex.: Almoxarife"></div>
+        <div class="field"><label>Descrição</label><textarea name="descricao" rows="4">${empEsc(x.descricao||"")}</textarea></div>
+        <div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">💾 Salvar</button></div>
+      </form>`, ov => {
+      ov.querySelector("form").onsubmit = async e => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        const nome = String(fd.get("nome")||"").trim();
+        const descricao = String(fd.get("descricao")||"").trim();
+        if(!nome) return;
+        if(state.generalJobs.some(z => z.id!==id && normalizeText(z.nome)===normalizeText(nome))){
+          alert("Já existe um cargo com este nome."); return;
+        }
+        if(id){
+          const job = state.generalJobs.find(z=>z.id===id);
+          const antigo = job.nome;
+          job.nome = nome; job.descricao = descricao;
+          // Mantém o vínculo: quem usava o nome antigo passa a usar o novo.
+          if(antigo !== nome){
+            const key = normalizeText(antigo);
+            (state.employees||[]).forEach(r => { if(normalizeText(r.cargo)===key) r.cargo = nome; });
+            (state.roleMatrix||[]).forEach(r => { if(normalizeText(r.cargo)===key) r.cargo = nome; });
+            (state.pcmsoFunctionExams||[]).forEach(r => { if(normalizeText(r.funcao)===key) r.funcao = nome; });
+            (state.pgrRisks||[]).forEach(r => { if(normalizeText(r.atividade)===key) r.atividade = nome; });
+          }
+        } else {
+          state.generalJobs.push({id:uid("cargo"), nome, descricao});
+        }
+        await saveState(); closeModal(); render();
+      };
+    });
   }
 
   function ensurePcmsoComplementaryExamCatalog(){
@@ -3939,15 +4635,35 @@ body.cipa-terminal-mode .urna-confirm{
   function renderPcmsoExamesComplementares(root){
     ensurePcmsoComplementaryExamCatalog();
     const list=state.pcmsoComplementaryExamCatalog||[];
+    const search=root.dataset.compSearch||"",group=root.dataset.compGroup||"",q=normalizeText(search);
+    const groups=[...new Set(list.map(x=>x.grupo).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+    const filtered=list.filter(x=>(!q||normalizeText([x.nome,x.grupo,x.observacoes].join(" ")).includes(q))&&(!group||x.grupo===group));
+    const examIcon=x=>{const t=normalizeText([x.nome,x.grupo].join(" "));if(/audio|acust|ouvid/.test(t))return"🎧";if(/raio|radio|imagem/.test(t))return"🩻";if(/espiro|respira|pulmon/.test(t))return"🫁";if(/sangue|laborat|hemograma/.test(t))return"🧫";if(/vis|oftalmo/.test(t))return"👁️";if(/cardio|eletrocard/.test(t))return"❤️";return"🧪"};
+    const shortObs=x=>{const t=String(x||"").trim();return t.length>115?t.slice(0,112).trim()+"…":t};
     root.innerHTML=`
-      <div class="page-head"><div><h2>🧪 Cadastro de Exames Complementares</h2><div class="sub">Catálogo de exames para utilização na matriz do PCMSO.</div></div><button class="btn" id="btn-new-comp-exam">+ Cadastrar Exame</button></div>
-      <div class="panel"><div class="panel-head"><h3>Exames cadastrados</h3><span>${list.length} exame(s)</span></div><div class="table-wrap">
-      ${list.length?`<table><thead><tr><th>Exame</th><th>Tipo / Grupo</th><th>Observações</th><th>Ações</th></tr></thead><tbody>${list.map(x=>`<tr><td><strong>${x.nome}</strong></td><td>${x.grupo||"—"}</td><td>${x.observacoes||"—"}</td><td><button class="btn secondary comp-exam-edit" data-id="${x.id}">✏️ Editar</button> <button class="btn secondary comp-exam-remove" data-id="${x.id}">🗑️ Remover</button></td></tr>`).join("")}</tbody></table>`:`<div class="empty">Nenhum exame complementar cadastrado.</div>`}</div></div>`;
+      <div class="page-head"><div><h2>🧪 Cadastro de Exames Complementares</h2><div class="sub">Catálogo de exames para utilização na matriz do PCMSO.</div></div><button class="btn" id="btn-new-comp-exam">➕ Cadastrar Exame</button></div>
+      <div class="emp-kpis" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+        <div class="annual-kpi"><div class="annual-kpi-icon blue">🧪</div><div><div class="num">${list.length}</div><div class="label">Exames cadastrados</div></div></div>
+        <div class="annual-kpi"><div class="annual-kpi-icon purple">🗂️</div><div><div class="num">${groups.length}</div><div class="label">Tipos / grupos</div></div></div>
+        <div class="annual-kpi"><div class="annual-kpi-icon green">🔎</div><div><div class="num">${filtered.length}</div><div class="label">Resultados encontrados</div></div></div>
+      </div>
+      <div class="panel annual-filter-panel"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${filtered.length} de ${list.length}</span></div><div class="annual-filter-row" style="grid-template-columns:minmax(260px,2fr) minmax(180px,1fr) auto">
+        <div><label>Pesquisar nas observações</label><input id="comp-exam-search" type="search" value="${empEsc(search)}" placeholder="Exame, grupo ou texto das observações"></div>
+        <div><label>🗂️ Tipo / Grupo</label><select id="comp-exam-group"><option value="">Todos</option>${groups.map(g=>`<option value="${empEsc(g)}" ${group===g?"selected":""}>${empEsc(g)}</option>`).join("")}</select></div>
+        <button type="button" class="btn secondary" id="comp-exam-clear">Limpar</button>
+      </div></div>
+      <div class="panel"><div class="panel-head"><h3>🧪 Exames cadastrados</h3><span>${filtered.length} exame(s)</span></div><div class="table-wrap">
+      ${filtered.length?`<table><thead><tr><th>🧪 Exame</th><th>🗂️ Tipo / Grupo</th><th>📝 Observações</th><th>⚙️ Ações</th></tr></thead><tbody>${filtered.map(x=>`<tr><td><div style="display:flex;align-items:center;gap:10px"><span style="width:38px;height:38px;border-radius:9px;background:var(--panel-2);display:grid;place-items:center;font-size:20px">${examIcon(x)}</span><strong>${empEsc(x.nome)}</strong></div></td><td><span class="pgr-tipo" style="background:var(--panel-2)">${examIcon(x)} ${empEsc(x.grupo||"Sem grupo")}</span></td><td><div style="max-width:430px;line-height:1.35">${empEsc(shortObs(x.observacoes)||"—")}</div>${String(x.observacoes||"").length>115?`<button type="button" class="pgr-link comp-exam-more" data-id="${x.id}" style="margin-top:4px">Ver mais</button>`:""}</td><td><div class="row-actions"><button class="btn secondary comp-exam-edit" data-id="${x.id}">✏️ Editar</button><button class="btn secondary comp-exam-remove" data-id="${x.id}">🗑️ Remover</button></div></td></tr>`).join("")}</tbody></table>`:`<div class="empty">🔍 Nenhum exame encontrado com os filtros selecionados.</div>`}</div></div>`;
     root.querySelector("#btn-new-comp-exam").onclick=()=>openPcmsoComplementaryExamForm();
-    root.addEventListener("click",async e=>{
+    const refresh=()=>renderPcmsoExamesComplementares(root);
+    root.querySelector("#comp-exam-search")?.addEventListener("input",e=>{root.dataset.compSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;refresh();const i=root.querySelector("#comp-exam-search");i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#comp-exam-group")?.addEventListener("change",e=>{root.dataset.compGroup=e.currentTarget.value;refresh()});
+    root.querySelector("#comp-exam-clear")?.addEventListener("click",()=>{delete root.dataset.compSearch;delete root.dataset.compGroup;refresh()});
+    root.onclick=async e=>{
+      const more=e.target.closest(".comp-exam-more");if(more){const x=state.pcmsoComplementaryExamCatalog.find(z=>z.id===more.dataset.id);if(x)openModal(`<h3>${examIcon(x)} ${empEsc(x.nome)}</h3><div class="pgr-tipo" style="margin-bottom:12px;background:var(--panel-2)">🗂️ ${empEsc(x.grupo||"Sem grupo")}</div><div style="white-space:pre-wrap;line-height:1.6;padding:14px;border:1px solid var(--line);border-radius:7px;background:var(--panel-2)">${empEsc(x.observacoes||"Sem observações.")}</div><div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Fechar</button></div>`);return;}
       const ed=e.target.closest(".comp-exam-edit");if(ed){openPcmsoComplementaryExamForm(ed.dataset.id);return;}
       const rm=e.target.closest(".comp-exam-remove");if(rm&&confirm("Remover este exame complementar?")){state.pcmsoComplementaryExamCatalog=state.pcmsoComplementaryExamCatalog.filter(x=>x.id!==rm.dataset.id);await saveState();render();}
-    });
+    };
   }
   function openPcmsoComplementaryExamForm(id=""){
     ensurePcmsoComplementaryExamCatalog();
@@ -4197,19 +4913,11 @@ function renderPcmsoDash(root){
         </div>
       </div>
 
-      <div class="hero">
-        <div class="stat-card">
-          <div class="num" style="color:var(${vencidos>0?'--red':'--green'})">${vencidos}</div>
-          <div class="label">Exames Vencidos</div>
-        </div>
-        <div class="stat-card">
-          <div class="num" style="color:var(${inaptos>0?'--red':'--ink'})">${inaptos}</div>
-          <div class="label">Colaboradores Inaptos</div>
-        </div>
-        <div class="stat-card">
-          <div class="num">${totalAso}</div>
-          <div class="label">Total de Exames Registrados</div>
-        </div>
+      <div class="pgr-dashboard-cards">
+        <div class="stat-card pgr-kpi high"><div class="pgr-kpi-icon">⏰</div><div><div class="num" style="color:var(${vencidos>0?'--red':'--green'})">${vencidos}</div><div class="label">Exames vencidos</div><small>Exigem regularização</small></div></div>
+        <div class="stat-card pgr-kpi medium"><div class="pgr-kpi-icon">🩺</div><div><div class="num" style="color:var(${inaptos>0?'--red':'--ink'})">${inaptos}</div><div class="label">Colaboradores inaptos</div><small>Acompanhamento ocupacional</small></div></div>
+        <div class="stat-card pgr-kpi mapped"><div class="pgr-kpi-icon">📋</div><div><div class="num">${totalAso}</div><div class="label">ASOs registrados</div><small>Histórico total</small></div></div>
+        <div class="stat-card pgr-kpi people"><div class="pgr-kpi-icon">🧪</div><div><div class="num">${state.pcmso.reduce((n,p)=>n+pcmsoRecordExams(p).length,0)}</div><div class="label">Exames realizados</div><small>Clínicos e complementares</small></div></div>
       </div>
 
       <div class="panel">
@@ -4220,37 +4928,60 @@ function renderPcmsoDash(root){
   }
 
   function renderPcmsoList(root){
+    const search=root.dataset.pcmsoSearch||"",tipo=root.dataset.pcmsoTipo||"",resultado=root.dataset.pcmsoResultado||"",situacao=root.dataset.pcmsoSituacao||"",q=normalizeText(search);
+    const filtered=(state.pcmso||[]).filter(p=>{const emp=(state.employees||[]).find(e=>e.id===p.employeeId),st=pcmsoStatus(p);return(!q||normalizeText([emp?.nome,emp?.matricula,p.funcao,emp?.cargo,p.tipoExame,...pcmsoRecordExams(p)].join(" ")).includes(q))&&(!tipo||p.tipoExame===tipo)&&(!resultado||p.resultado===resultado)&&(!situacao||st===situacao)});
+    const tipos=[...new Set((state.pcmso||[]).map(p=>p.tipoExame).filter(Boolean))].sort();
     root.innerHTML = `
       <div class="page-head">
         <div>
-          <h2>Registros de ASO / PCMSO</h2>
+          <h2>🏥 Registros de ASO / PCMSO</h2>
           <div class="sub">Atestados de Saúde Ocupacional emitidos.</div>
         </div>
-        ${checkPermission("Master") ? `<button class="btn" id="btn-new-pcmso">+ Novo ASO</button>` : ""}
+        ${checkPermission("Master") ? `<button class="btn" id="btn-new-pcmso">➕ Novo ASO</button>` : ""}
       </div>
+      <div class="panel annual-filter-panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${filtered.length} registro(s)</span></div><div class="annual-filter-row" style="grid-template-columns:minmax(220px,1.5fr) repeat(3,minmax(145px,1fr)) auto">
+        <div><label>Pesquisar</label><input id="pcmso-search" type="search" value="${empEsc(search)}" placeholder="Funcionário, matrícula, função ou exame"></div>
+        <div><label>🗂️ Tipo</label><select id="pcmso-filter-type"><option value="">Todos</option>${tipos.map(x=>`<option ${tipo===x?'selected':''}>${empEsc(x)}</option>`).join("")}</select></div>
+        <div><label>✅ Resultado</label><select id="pcmso-filter-result"><option value="">Todos</option><option ${resultado==='Apto'?'selected':''}>Apto</option><option ${resultado==='Inapto'?'selected':''}>Inapto</option></select></div>
+        <div><label>📅 Situação</label><select id="pcmso-filter-status"><option value="">Todas</option><option value="ok" ${situacao==='ok'?'selected':''}>Em dia</option><option value="warn" ${situacao==='warn'?'selected':''}>Próximo do vencimento</option><option value="bad" ${situacao==='bad'?'selected':''}>Vencido</option></select></div>
+        <button type="button" class="btn secondary" id="pcmso-clear-filters">Limpar</button>
+      </div></div>
       <div class="panel">
-        ${renderPcmsoTableList(state.pcmso, checkPermission("Administrador"))}
+        ${renderPcmsoTableList(filtered, checkPermission("Administrador"))}
       </div>
     `;
+  }
+
+  function pcmsoRecordExams(p){
+    const direct=Array.isArray(p.examesSolicitados)?p.examesSolicitados:[...(Array.isArray(p.examesClinicos)?p.examesClinicos:[]),...(Array.isArray(p.examesComplementares)?p.examesComplementares:[])];
+    if(direct.length)return [...new Set(direct.filter(Boolean))];
+    const emp=(state.employees||[]).find(e=>e.id===p.employeeId),fn=normalizeText(p.funcao||emp?.cargo||emp?.funcao);
+    const lines=v=>String(v||"").split(/\n|;|,/).map(x=>x.trim()).filter(Boolean);
+    return [...new Set((state.pcmsoFunctionExams||[]).filter(x=>normalizeText(x.funcao)===fn).flatMap(x=>[...lines(x.examesClinicos),...lines(x.examesComplementares)]))];
+  }
+  function openPcmsoExamsModal(id){
+    const p=(state.pcmso||[]).find(x=>x.id===id);if(!p)return;const exams=pcmsoRecordExams(p),emp=(state.employees||[]).find(e=>e.id===p.employeeId);
+    openModal(`<h3>🧪 Exames realizados</h3><div class="sub" style="margin-bottom:14px"><strong>${empEsc(emp?.nome||"—")}</strong> · ${empEsc(p.funcao||emp?.cargo||"Função não informada")} · ${empEsc(p.tipoExame||"ASO")}</div>${exams.length?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px">${exams.map((x,i)=>`<div style="padding:10px;border:1px solid var(--line);border-radius:7px;background:var(--panel-2)"><strong>${i===0?"🩺":"🧪"} ${empEsc(x)}</strong><div class="pgr-hint">Realizado no ASO de ${fmtDate(p.dataRealizacao)}</div></div>`).join("")}</div>`:'<div class="empty">Nenhum exame detalhado foi vinculado a este registro.</div>'}<div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Fechar</button></div>`);
   }
 
   function renderPcmsoTableList(list, allowActions=false){
     if(list.length === 0) return `<div class="empty">Nenhum exame médico cadastrado neste filtro.</div>`;
     return `
       <table>
-        <thead><tr><th>Funcionário</th><th>Tipo Exame</th><th>Validade</th><th>Resultado</th><th>Situação</th>${allowActions?'<th></th>':''}</tr></thead>
+        <thead><tr><th>👤 Funcionário / Função</th><th>🗂️ Tipo</th><th>🧪 Exames feitos</th><th>📅 Validade</th><th>✅ Resultado</th><th>⏱️ Situação</th>${allowActions?'<th>⚙️ Ações</th>':''}</tr></thead>
         <tbody>
           ${list.map(p=>{
             const st = pcmsoStatus(p);
             const dleft = daysUntil(p.dataVencimento);
             const stLabel = st==="ok" ? "Em dia" : st==="bad" ? `Vencido ${Math.abs(dleft)}d` : `${dleft}d restantes`;
             return `<tr>
-              <td>${employeeName(p.employeeId)}</td>
+              <td><strong>${employeeName(p.employeeId)}</strong><br><span class="muted">${empEsc(p.funcao||(state.employees||[]).find(e=>e.id===p.employeeId)?.cargo||"—")}</span></td>
               <td>${p.tipoExame}</td>
+              <td><button type="button" class="pgr-exposed-btn" data-view-pcmso-exams="${p.id}">🧪 ${pcmsoRecordExams(p).length}</button></td>
               <td>${fmtDate(p.dataVencimento)}</td>
               <td><span class="status-pill ${p.resultado==='Apto'?'ok':'bad'}"><span class="dot"></span>${p.resultado}</span></td>
               <td><span class="status-pill ${st}"><span class="dot"></span>${stLabel}</span></td>
-              ${allowActions ? `<td class="row-actions"><button class="action-link" data-del-pcmso="${p.id}">Remover</button></td>` : ''}
+              ${allowActions ? `<td><div class="row-actions"><button class="action-link" data-edit-pcmso="${p.id}">✏️ Editar</button><button class="action-link" data-del-pcmso="${p.id}">🗑️ Remover</button></div></td>` : ''}
             </tr>`;
           }).join("")}
         </tbody>
@@ -4406,34 +5137,255 @@ function renderPcmsoDash(root){
     `;
   }
 
+  // ---- Auxiliares visuais do cadastro de funcionários ----
+  const EMP_SECTOR_ICONS = [
+    [/produc|usinagem|fabric|industri/, "🏭"], [/manutenc/, "🔧"], [/seguranca|\bsst\b|ambiente/, "🦺"],
+    [/almoxarif|estoque/, "📦"], [/comercial|vendas/, "🤝"], [/controlad|financ|contab|fiscal/, "📊"],
+    [/\brh\b|recursos humanos|pessoal|\bdp\b/, "🧑‍🤝‍🧑"], [/\bti\b|tecnologia|informatic/, "💻"],
+    [/logistic|expedic|transporte/, "🚚"], [/qualidade/, "✅"], [/engenharia|projetos/, "📐"],
+    [/compras|suprimentos/, "🛒"], [/administrativ|diretoria|gerencia/, "🗂️"], [/limpeza|servicos gerais/, "🧹"],
+    [/saude|medic|enfermag/, "🩺"], [/juridic/, "⚖️"], [/marketing/, "📣"]
+  ];
+  const EMP_ROLE_ICONS = [
+    [/supervis|coordenad|gerente|diretor|lider/, "👔"], [/contador|contab/, "🧮"], [/analista/, "📈"],
+    [/almoxarif/, "📦"], [/operador|operac/, "⚙️"], [/vigia/, "👁️"], [/engenheir/, "📐"],
+    [/eletricist/, "⚡"], [/mecanic|manutenc/, "🔧"], [/motorista/, "🚚"], [/tecnic/, "🛠️"],
+    [/vendedor|comercial/, "🤝"], [/seguranca/, "🦺"], [/enfermeir|medic/, "🩺"], [/soldador/, "🔥"],
+    [/auxiliar|assistente/, "🗒️"]
+  ];
+  function empPlain(v){ return String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase(); }
+  function empEsc(v){ return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function empIcon(text, table, fallback){
+    const t = empPlain(text);
+    const hit = table.find(([re]) => re.test(t));
+    return hit ? hit[1] : fallback;
+  }
+  function empHue(text){
+    let h = 0; const t = empPlain(text);
+    for(let i=0;i<t.length;i++) h = (h*31 + t.charCodeAt(i)) % 360;
+    return h;
+  }
+  function empInitials(nome){
+    const parts = String(nome||"").trim().split(/\s+/).filter(Boolean);
+    if(!parts.length) return "?";
+    return (parts[0][0] + (parts.length>1 ? parts[parts.length-1][0] : "")).toUpperCase();
+  }
+  function empAvatar(e){
+    if(e.foto){
+      return `<button type="button" class="emp-avatar-btn" data-emp-photo="${empEsc(e.id)}" title="Ampliar foto"><img class="emp-avatar" src="${empEsc(e.foto)}" alt="Foto de ${empEsc(e.nome)}" loading="lazy"></button>`;
+    }
+    return `<div class="emp-avatar" style="background:hsl(${empHue(e.nome)},42%,42%);" title="Sem foto cadastrada" aria-label="Sem foto">${empEsc(empInitials(e.nome))}</div>`;
+  }
+  function empTenure(dateStr){
+    if(!dateStr) return "";
+    const days = -daysUntil(dateStr);
+    if(days < 0) return `admissão em ${-days} dia${-days===1?"":"s"}`;
+    if(days === 0) return "admitido(a) hoje";
+    if(days < 30) return `há ${days} dia${days===1?"":"s"}`;
+    if(days < 365){ const m = Math.floor(days/30); return `há ${m} ${m===1?"mês":"meses"}`; }
+    const y = Math.floor(days/365), m = Math.floor((days%365)/30);
+    return `há ${y} ano${y===1?"":"s"}${m?` e ${m} ${m===1?"mês":"meses"}`:""}`;
+  }
+  function empWhatsLink(tel){
+    const d = String(tel||"").replace(/\D/g,"");
+    if(d.length < 10) return null;
+    return "https://wa.me/" + (d.startsWith("55") && d.length >= 12 ? d : "55" + d);
+  }
+
+  function employeeDossierEvents(emp){
+    const out=[]; const add=(module,icon,title,detail,date,status="")=>out.push({module,icon,title,detail:detail||"—",date:date||"",status});
+    if(emp.admissao) add("Cadastro Geral","👤","Admissão na empresa",`${emp.cargo||"Função não informada"} · ${emp.setor||"Setor não informado"}`,emp.admissao,"Ativo");
+    (state.trainings||[]).filter(x=>x.employeeId===emp.id).forEach(x=>add("Treinamentos","🎓",x.curso||"Treinamento",`${x.cargaHoraria||"—"} · ${x.entidade||"Entidade não informada"}`,x.dataRealizacao,x.dataVencimento?`Válido até ${fmtDate(x.dataVencimento)}`:""));
+    (state.annualTrainingPlan||[]).filter(x=>(x.participantIds||x.employeeIds||x.funcionariosIds||[]).includes(emp.id)).forEach(x=>add("Plano Anual","📅",x.curso||x.treinamento||x.titulo||"Treinamento planejado",x.status||"Planejado",x.dataInicio||x.data||x.createdAt?.slice(0,10),x.status||""));
+    (state.deliveries||[]).filter(x=>x.employeeId===emp.id).forEach(x=>{const item=(state.items||[]).find(i=>i.id===x.itemId);add("EPIs","⛑️",item?.nome||"Entrega de EPI",item?.ca?`CA ${item.ca}`:"Equipamento entregue",x.dataEntrega,x.dataValidade?`Validade ${fmtDate(x.dataValidade)}`:"");});
+    (state.pcmso||[]).filter(x=>x.employeeId===emp.id).forEach(x=>add("PCMSO","🏥",`ASO ${x.tipoExame||"ocupacional"}`,`${x.resultado||"—"} · ${pcmsoRecordExams(x).length} exame(s) realizado(s)`,x.dataRealizacao,x.dataVencimento?`Validade ${fmtDate(x.dataVencimento)}`:""));
+    (state.pgrRisks||[]).filter(x=>normalizeText(x.setor)===normalizeText(emp.setor)&&normalizeText(x.atividade)===normalizeText(emp.cargo||emp.funcao)).forEach(x=>{const ri=calcRiskScore(x.severidade,x.probabilidade);add("PGR","⚠️",x.perigo||"Risco ocupacional",`${x.tipo||"—"} · ${x.medidaControle||"Sem medida informada"}`,x.createdAt?.slice(0,10),`${ri.label} (${ri.score})`);});
+    (state.pets||[]).filter(x=>x.supervisorId===emp.id||x.vigiaId===emp.id||String(x.trabalhadores||"").toLowerCase().includes(String(emp.nome||"").toLowerCase())).forEach(x=>add("Espaço Confinado","🚧",x.numeroPet||"PET",x.trabalhoExecutar||"Participação em espaço confinado",x.dataEmissao,x.status||""));
+    (state.cipaMembers||[]).filter(x=>x.employeeId===emp.id).forEach(x=>add("CIPA","🦺",`${x.funcaoComissao||"Membro"} · ${x.tipo||""}`,`Gestão ${x.gestao||"—"} · ${x.representacao||"—"}`,x.mandatoInicio,x.ativo===false?"Encerrado":"Ativo"));
+    (state.cipaActions||[]).filter(x=>x.responsavelId===emp.id).forEach(x=>add("CIPA","🎯",x.descricao||"Ação CIPA",x.origem||"Plano de ação",x.prazo,x.status||""));
+    (state.cipaCATs||[]).filter(x=>x.employeeId===emp.id).forEach(x=>add("CIPA / CAT","🩹",x.numeroInterno||"Registro CAT",x.tipoAcidente||x.tipoCat||"Ocorrência registrada",x.dataAcidente,x.status||""));
+    (state.tercEmpresas||[]).filter(x=>x.responsavelInternoId===emp.id).forEach(x=>add("Terceiros","🏢",`Responsável por ${x.razaoSocial||"empresa contratada"}`,x.servico||"Serviço contratado",x.dataInicioContrato,x.status||""));
+    return out.sort((a,b)=>String(b.date||"").localeCompare(String(a.date||"")));
+  }
+
+  function renderEmployeeDossier(root){
+    const employees=(state.employees||[]).slice().sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"));
+    if(!employees.length){root.innerHTML='<div class="empty">Cadastre um funcionário para gerar o dossiê.</div>';return;}
+    const employeeId=root.dataset.dossierEmployee||selectedDossierEmployeeId||employees[0].id,emp=employees.find(e=>e.id===employeeId)||employees[0];
+    const moduleFilter=root.dataset.dossierModule||"",search=root.dataset.dossierSearch||"",q=normalizeText(search),all=employeeDossierEvents(emp);
+    const modules=[...new Set(all.map(x=>x.module))].sort();
+    const events=all.filter(x=>(!moduleFilter||x.module===moduleFilter)&&(!q||normalizeText([x.module,x.title,x.detail,x.status].join(" ")).includes(q)));
+    const counts={};all.forEach(x=>counts[x.module]=(counts[x.module]||0)+1);
+    root.innerHTML=`<div class="page-head"><div><h2>📁 Dossiê do Funcionário</h2><div class="sub">Histórico consolidado dos registros vinculados em todos os módulos do sistema.</div></div></div>
+      <div class="panel annual-filter-panel"><div class="panel-head"><h3>🔎 Seleção e filtros</h3><span>${events.length} de ${all.length} registro(s)</span></div><div class="annual-filter-row" style="grid-template-columns:minmax(240px,1.4fr) minmax(220px,1.4fr) minmax(170px,1fr) auto">
+        <div><label>👤 Funcionário</label><select id="dossier-employee">${employees.map(e=>`<option value="${e.id}" ${e.id===emp.id?"selected":""}>${empEsc(e.nome)} · ${empEsc(e.matricula||"—")}</option>`).join("")}</select></div>
+        <div><label>🔍 Pesquisar no histórico</label><input id="dossier-search" value="${empEsc(search)}" placeholder="Treinamento, exame, EPI, risco..."></div>
+        <div><label>🗂️ Módulo</label><select id="dossier-module"><option value="">Todos os módulos</option>${modules.map(m=>`<option ${moduleFilter===m?"selected":""}>${empEsc(m)}</option>`).join("")}</select></div><button type="button" class="btn secondary" id="dossier-clear" title="Limpar funcionário, pesquisa e módulo">🧹 Limpar filtros</button>
+      </div></div>
+      <div class="panel" style="margin-bottom:14px"><div style="display:flex;align-items:center;gap:14px;padding:16px">${empAvatar(emp)}<div><h3 style="margin:0 0 4px">${empEsc(emp.nome)}</h3><div class="muted">🆔 ${empEsc(emp.matricula||"—")} · 💼 ${empEsc(emp.cargo||"—")} · 🏢 ${empEsc(emp.setor||"—")} · 📅 Admissão ${fmtDate(emp.admissao)}</div></div></div></div>
+      <div class="emp-kpis" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">${Object.entries(counts).map(([m,n])=>`<div class="annual-kpi"><div class="annual-kpi-icon blue">${all.find(x=>x.module===m)?.icon||"📄"}</div><div><div class="num">${n}</div><div class="label">${empEsc(m)}</div></div></div>`).join("")||'<div class="empty">Sem registros vinculados.</div>'}</div>
+      <div class="panel"><div class="panel-head"><h3>🕘 Linha do tempo completa</h3></div>${events.length?`<div style="padding:8px 16px">${events.map(x=>`<div style="display:grid;grid-template-columns:90px 42px minmax(0,1fr) auto;gap:10px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)"><div class="muted">${x.date?fmtDate(x.date):"Sem data"}</div><div style="font-size:23px">${x.icon}</div><div><strong>${empEsc(x.title)}</strong><div class="muted">${empEsc(x.module)} · ${empEsc(x.detail)}</div></div>${x.status?`<span class="status-pill ok">${empEsc(x.status)}</span>`:""}</div>`).join("")}</div>`:'<div class="empty">Nenhum registro encontrado com os filtros atuais.</div>'}</div>`;
+    const refresh=()=>renderEmployeeDossier(root);
+    root.querySelector("#dossier-employee")?.addEventListener("change",e=>{selectedDossierEmployeeId=e.currentTarget.value;root.dataset.dossierEmployee=selectedDossierEmployeeId;refresh()});
+    root.querySelector("#dossier-module")?.addEventListener("change",e=>{root.dataset.dossierModule=e.currentTarget.value;refresh()});
+    root.querySelector("#dossier-search")?.addEventListener("input",e=>{root.dataset.dossierSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;refresh();const i=root.querySelector("#dossier-search");i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#dossier-clear")?.addEventListener("click",e=>{
+      e.preventDefault();
+      selectedDossierEmployeeId=null;
+      delete root.dataset.dossierEmployee;
+      delete root.dataset.dossierSearch;
+      delete root.dataset.dossierModule;
+      refresh();
+    });
+  }
+
   function renderEmployees(root){
+    const all = state.employees || [];
+    const fSearch = (root.dataset.empSearch || "").trim();
+    const fSetor  = root.dataset.empSetor || "";
+    const fCargo  = root.dataset.empCargo || "";
+    const fFoto   = root.dataset.empFoto || "";
+    const fSort   = root.dataset.empSort || "";
+    const hasFilter = !!(fSearch || fSetor || fCargo || fFoto || fSort);
+    const canEdit = checkPermission("Administrador");
+
+    const distinct = (key) => [...new Set(all.map(e => String(e[key]||"").trim()).filter(Boolean))]
+      .sort((a,b) => a.localeCompare(b,"pt-BR"));
+    const setores = distinct("setor"), cargos = distinct("cargo");
+
+    const q = empPlain(fSearch);
+    let list = all.filter(e => {
+      if(fSetor && String(e.setor||"").trim() !== fSetor) return false;
+      if(fCargo && String(e.cargo||"").trim() !== fCargo) return false;
+      if(fFoto === "com" && !e.foto) return false;
+      if(fFoto === "sem" && e.foto) return false;
+      if(q){
+        const blob = empPlain([e.nome,e.matricula,e.cargo,e.setor,e.email,e.telefone,String(e.telefone||"").replace(/\D/g,"")].join(" "));
+        if(!blob.includes(q)) return false;
+      }
+      return true;
+    });
+    const byName = (a,b) => String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR");
+    if(fSort === "nome-asc") list.sort(byName);
+    else if(fSort === "nome-desc") list.sort((a,b)=>byName(b,a));
+    else if(fSort === "adm-desc") list.sort((a,b)=>String(b.admissao||"").localeCompare(String(a.admissao||"")));
+    else if(fSort === "adm-asc") list.sort((a,b)=>String(a.admissao||"9999").localeCompare(String(b.admissao||"9999")));
+    else if(fSort === "matricula") list.sort((a,b)=>String(a.matricula||"").localeCompare(String(b.matricula||""),"pt-BR",{numeric:true}));
+
+    const novos = all.filter(e => e.admissao && -daysUntil(e.admissao) >= 0 && -daysUntil(e.admissao) <= 30).length;
+    const semFoto = all.filter(e => !e.foto).length;
+
+    const rowsHtml = list.map(e => {
+      const setorTxt = String(e.setor||"").trim(), cargoTxt = String(e.cargo||"").trim();
+      const hue = empHue(setorTxt);
+      const dias = e.admissao ? -daysUntil(e.admissao) : null;
+      const wa = empWhatsLink(e.telefone);
+      const contact = [
+        e.telefone ? (wa ? `<a href="${wa}" target="_blank" rel="noopener" title="Abrir conversa no WhatsApp">📱 ${empEsc(e.telefone)}</a>` : `<span>📱 ${empEsc(e.telefone)}</span>`) : "",
+        e.email ? `<a href="mailto:${empEsc(e.email)}" title="Enviar e-mail">✉️ ${empEsc(e.email)}</a>` : ""
+      ].filter(Boolean).join("") || `<span class="none">— sem contato</span>`;
+      return `
+        <tr>
+          <td>
+            <div class="emp-person">
+              ${empAvatar(e)}
+              <div><div class="emp-name">${empEsc(e.nome)}</div>
+              <div class="emp-sub">🆔 ${empEsc(e.matricula||"—")}</div></div>
+            </div>
+          </td>
+          <td>${cargoTxt ? `<span class="emp-role"><span class="emp-role-ico">${empIcon(cargoTxt, EMP_ROLE_ICONS, "💼")}</span>${empEsc(cargoTxt)}</span>` : "—"}</td>
+          <td>${setorTxt ? `<span class="emp-chip" style="background:hsla(${hue},65%,50%,.16);border:1px solid hsla(${hue},65%,50%,.35);">${empIcon(setorTxt, EMP_SECTOR_ICONS, "🏢")} ${empEsc(setorTxt)}</span>` : "—"}</td>
+          <td><div class="emp-contact">${contact}</div></td>
+          <td class="emp-date">📅 ${fmtDate(e.admissao)}${dias!==null && dias>=0 && dias<=30 ? `<span class="emp-new">NOVO</span>` : ""}${e.admissao ? `<small>${empTenure(e.admissao)}</small>` : ""}</td>
+          ${canEdit ? `<td><div class="emp-actions">
+            <button type="button" class="emp-action" data-emp-dossier="${empEsc(e.id)}" title="Abrir dossiê do funcionário" aria-label="Dossiê de ${empEsc(e.nome)}">📁</button>
+            <button type="button" class="emp-action" data-edit-emp="${empEsc(e.id)}" title="Editar funcionário" aria-label="Editar ${empEsc(e.nome)}">✏️</button>
+            <button type="button" class="emp-action danger" data-del-emp="${empEsc(e.id)}" title="Remover funcionário" aria-label="Remover ${empEsc(e.nome)}">🗑️</button>
+          </div></td>` : ""}
+        </tr>`;
+    }).join("");
+
+    const kpi = (icon, cls, num, label) => `<div class="annual-kpi"><div class="annual-kpi-icon ${cls}">${icon}</div><div><div class="num">${num}</div><div class="label">${label}</div></div></div>`;
+
     root.innerHTML = `
       <div class="page-head">
-        <div><h2>Cadastro de Funcionários</h2><div class="sub">Base de colaboradores da empresa.</div></div>
+        <div><h2>👥 Cadastro de Funcionários</h2><div class="sub">Base de colaboradores da empresa.</div></div>
         ${checkPermission("Master") ? `<button class="btn" id="btn-new-emp">+ Novo Colaborador</button>` : ""}
       </div>
+
+      <div class="emp-kpis">
+        ${kpi("👥","blue",all.length,"Colaboradores cadastrados")}
+        ${kpi("🏢","purple",setores.length,"Setores com pessoas")}
+        ${kpi("🆕","green",novos,"Admitidos nos últimos 30 dias")}
+        ${kpi("📷","amber",semFoto,"Sem foto cadastrada")}
+      </div>
+
+      <div class="panel annual-filter-panel">
+        <div class="panel-head">
+          <h3>🔎 Filtros de pesquisa</h3>
+          <span class="emp-count">${list.length} de ${all.length} colaborador${all.length===1?"":"es"}${hasFilter ? `<button type="button" class="emp-clear" id="emp-clear">✖ Limpar filtros</button>` : ""}</span>
+        </div>
+        <div class="emp-filter-row">
+          <div><label for="emp-search">🔍 Pesquisar</label><input id="emp-search" type="search" value="${empEsc(fSearch)}" placeholder="Nome, matrícula, cargo, e-mail, telefone..."></div>
+          <div><label for="emp-setor">🏢 Setor</label><select id="emp-setor"><option value="">Todos os setores</option>${setores.map(x=>`<option value="${empEsc(x)}" ${fSetor===x?"selected":""}>${empEsc(x)}</option>`).join("")}</select></div>
+          <div><label for="emp-cargo">💼 Cargo</label><select id="emp-cargo"><option value="">Todos os cargos</option>${cargos.map(x=>`<option value="${empEsc(x)}" ${fCargo===x?"selected":""}>${empEsc(x)}</option>`).join("")}</select></div>
+          <div><label for="emp-foto">📷 Foto</label><select id="emp-foto"><option value="">Todos</option><option value="com" ${fFoto==="com"?"selected":""}>Com foto</option><option value="sem" ${fFoto==="sem"?"selected":""}>Sem foto</option></select></div>
+          <div><label for="emp-sort">↕️ Ordenar por</label><select id="emp-sort">
+            <option value="">Ordem de cadastro</option>
+            <option value="nome-asc" ${fSort==="nome-asc"?"selected":""}>Nome (A–Z)</option>
+            <option value="nome-desc" ${fSort==="nome-desc"?"selected":""}>Nome (Z–A)</option>
+            <option value="matricula" ${fSort==="matricula"?"selected":""}>Matrícula</option>
+            <option value="adm-desc" ${fSort==="adm-desc"?"selected":""}>Admissão (mais recentes)</option>
+            <option value="adm-asc" ${fSort==="adm-asc"?"selected":""}>Admissão (mais antigas)</option>
+          </select></div>
+        </div>
+      </div>
+
       <div class="panel">
-        ${state.employees.length===0 ? `<div class="empty">Nenhum colaborador cadastrado.</div>` : `
-        <table>
-          <thead><tr><th>Nome</th><th>Matrícula</th><th>Cargo</th><th>Setor</th><th>Contato</th><th>Admissão</th>${checkPermission("Administrador")?'<th>Ações</th>':''}</tr></thead>
-          <tbody>
-            ${state.employees.map(e=>`
-              <tr>
-                <td><strong>${e.nome}</strong></td>
-                <td>${e.matricula||"—"}</td>
-                <td>${e.cargo||"—"}</td>
-                <td>${e.setor||"—"}</td>
-                <td style="font-size:11px;">${e.telefone ? `📱 ${e.telefone}<br>` : ''}${e.email ? `✉️ ${e.email}` : ''}${!e.telefone && !e.email ? '—' : ''}</td>
-                <td>${fmtDate(e.admissao)}</td>
-                ${checkPermission("Administrador") ? `<td class="row-actions">
-                  <button class="action-link" data-edit-emp="${e.id}">Editar</button>
-                  <button class="action-link" data-del-emp="${e.id}">Remover</button>
-                </td>` : ''}
-              </tr>`).join("")}
-          </tbody>
-        </table>`}
+        ${all.length===0 ? `<div class="empty">Nenhum colaborador cadastrado.</div>`
+        : list.length===0 ? `<div class="empty">🔍 Nenhum colaborador encontrado com os filtros atuais.</div>`
+        : `<div class="emp-table-wrap"><table class="emp-table">
+          <thead><tr>
+            <th class="c-name"><span class="ico">👤</span>Colaborador</th>
+            <th class="c-cargo"><span class="ico">💼</span>Cargo</th>
+            <th class="c-setor"><span class="ico">🏢</span>Setor</th>
+            <th class="c-contato"><span class="ico">📞</span>Contato</th>
+            <th class="c-adm"><span class="ico">📅</span>Admissão</th>
+            ${canEdit ? '<th class="c-acoes" style="text-align:right;"><span class="ico">⚙️</span>Ações</th>' : ''}
+          </tr></thead>
+          <tbody>${rowsHtml}</tbody>
+        </table></div>`}
       </div>
     `;
+
+    // ---- filtros (mantêm o foco ao digitar) ----
+    const refresh = () => { renderEmployees(root); attachMainListeners(root); };
+    root.querySelector("#emp-search")?.addEventListener("input", ev => {
+      root.dataset.empSearch = ev.target.value;
+      const pos = ev.target.selectionStart;
+      refresh();
+      const input = root.querySelector("#emp-search");
+      input?.focus(); input?.setSelectionRange(pos, pos);
+    });
+    [["#emp-setor","empSetor"],["#emp-cargo","empCargo"],["#emp-foto","empFoto"],["#emp-sort","empSort"]].forEach(([sel,key]) => {
+      root.querySelector(sel)?.addEventListener("change", ev => { root.dataset[key] = ev.target.value; refresh(); });
+    });
+    root.querySelector("#emp-clear")?.addEventListener("click", () => {
+      ["empSearch","empSetor","empCargo","empFoto","empSort"].forEach(k => delete root.dataset[k]);
+      refresh();
+    });
+
+    // ---- ampliar foto ----
+    root.querySelectorAll("[data-emp-photo]").forEach(b => b.addEventListener("click", ev => {
+      const emp = all.find(x => x.id === ev.currentTarget.dataset.empPhoto);
+      if(!emp?.foto) return;
+      openModal(`<div class="emp-photo-zoom">
+        <img src="${empEsc(emp.foto)}" alt="Foto de ${empEsc(emp.nome)}">
+        <h3>${empEsc(emp.nome)}</h3>
+        <div class="emp-sub" style="justify-content:center;">${empIcon(emp.cargo, EMP_ROLE_ICONS, "💼")} ${empEsc(emp.cargo||"—")} · ${empIcon(emp.setor, EMP_SECTOR_ICONS, "🏢")} ${empEsc(emp.setor||"—")}</div>
+        <div class="modal-actions"><button type="button" class="btn secondary" onclick="window.closeModal()">Fechar</button></div>
+      </div>`);
+    }));
   }
 
   // ===================== MÓDULO: CONTROLE DE TERCEIROS =====================
@@ -7474,27 +8426,46 @@ function renderPcmsoDash(root){
     });
   }
 
-  function openPgrModal(){
+  function openPgrModal(riskId=""){
+    ensureGeneralMasterData();
+    ensurePgrHazards();
+    const atual=(state.pgrRisks||[]).find(x=>x.id===riskId)||null;
+    const setores = state.generalSectors.slice().sort((x,y)=>x.nome.localeCompare(y.nome,"pt-BR"));
+    const epis = (state.items||[]).slice().sort((x,y)=>String(x.nome||"").localeCompare(String(y.nome||""),"pt-BR"));
+
     openModal(`
-      <h3>Mapear Novo Risco (PGR)</h3>
+      <h3>${atual?'Editar Risco':'Mapear Novo Risco'} (PGR)</h3>
       <form id="pgr-form">
         <div class="field-row">
-          <div class="field"><label>Setor</label><select required name="setor" id="pgr-sector-select"><option value="">Selecione o setor</option>${(ensureGeneralMasterData(),state.generalSectors).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")).map(x=>`<option value="${x.nome}">${x.nome}</option>`).join("")}</select></div>
-          <div class="field"><label>Cargo / Função</label><select required name="atividade" id="pgr-job-select"><option value="">Selecione o cargo / função</option>${(ensureGeneralMasterData(),state.generalJobs).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")).map(x=>`<option value="${x.nome}">${x.nome}</option>`).join("")}</select></div>
+          <div class="field"><label>🏢 Setor</label><select required name="setor" id="pgr-sector-select"><option value="">Selecione o setor</option>${setores.map(x=>`<option value="${empEsc(x.nome)}" ${atual?.setor===x.nome?'selected':''}>${empEsc(x.nome)}</option>`).join("")}</select></div>
+          <div class="field"><label>💼 Cargo / Função</label><select required name="atividade" id="pgr-job-select" disabled><option value="">Selecione primeiro o setor</option></select><div class="pgr-hint" id="pgr-job-hint"></div></div>
         </div>
+
         <div class="field-row">
-          <div class="field"><label>Perigo / Agente Nocivo</label><input required name="perigo" placeholder="Ex: Ruído / Poeira"></div>
           <div class="field">
-            <label>Tipo de Risco</label>
-            <select name="tipo">
-              <option>Físico</option>
-              <option>Químico</option>
-              <option>Biológico</option>
-              <option>Ergonômico</option>
-              <option>Acidentes</option>
-            </select>
+            <label>☣️ Perigo / Agente Nocivo</label>
+            <div class="pgr-row">
+              <select required id="pgr-hazard-select"></select>
+              <button type="button" class="btn secondary" id="pgr-hazard-add" title="Cadastrar um novo perigo">➕ Novo</button>
+            </div>
+            <div class="pgr-inline" id="pgr-hazard-inline">
+              <div class="pgr-inline-grid">
+                <input id="pgr-nh-name" placeholder="Nome do perigo (ex.: Ruído contínuo)">
+                <select id="pgr-nh-tipo">${PGR_TIPOS.map(t=>`<option value="${t}">${PGR_TIPO_ICON[t]} ${t}</option>`).join("")}</select>
+              </div>
+              <div class="pgr-inline-actions">
+                <button type="button" class="btn secondary" id="pgr-nh-cancel">Cancelar</button>
+                <button type="button" class="btn" id="pgr-nh-save">💾 Salvar perigo</button>
+              </div>
+            </div>
+          </div>
+          <div class="field">
+            <label>🧭 Tipo de Risco</label>
+            <select name="tipo" id="pgr-tipo-select">${PGR_TIPOS.map(t=>`<option value="${t}">${PGR_TIPO_ICON[t]} ${t}</option>`).join("")}</select>
+            <div class="pgr-hint">Preenchido automaticamente pelo perigo escolhido.</div>
           </div>
         </div>
+
         <div class="field-row">
           <div class="field">
             <label>Severidade (1 a 4)</label>
@@ -7515,19 +8486,172 @@ function renderPcmsoDash(root){
             </select>
           </div>
         </div>
+        <div style="margin-top:-4px;margin-bottom:12px"><button type="button" class="btn secondary" id="pgr-criteria-toggle">❓ Como escolher a severidade e a probabilidade?</button></div>
+        <div class="pgr-criteria-box" id="pgr-criteria-box">
+          <div class="pgr-criteria-grid">
+            <div><h4>Severidade — tamanho da consequência</h4><ol><li><strong>1 · Leve:</strong> efeito pequeno, reversível e sem afastamento.</li><li><strong>2 · Moderada:</strong> lesão ou adoecimento com atendimento e possível afastamento curto.</li><li><strong>3 · Alta:</strong> consequência grave, incapacidade temporária prolongada ou doença ocupacional relevante.</li><li><strong>4 · Crítica:</strong> fatalidade, incapacidade permanente ou várias pessoas gravemente atingidas.</li></ol></div>
+            <div><h4>Probabilidade — chance de acontecer</h4><ol><li><strong>1 · Rara:</strong> exposição excepcional e controles confiáveis.</li><li><strong>2 · Improvável:</strong> exposição ocasional; pode ocorrer, mas não é esperado.</li><li><strong>3 · Provável:</strong> exposição frequente ou controles parcialmente eficazes.</li><li><strong>4 · Frequente:</strong> exposição contínua, ocorrência recorrente ou controles ausentes/ineficazes.</li></ol></div>
+          </div>
+          <div class="pgr-criteria-result"><strong>Cálculo:</strong> Severidade × Probabilidade. Resultado de <strong>1 a 5 = Baixo</strong>, <strong>6 a 11 = Médio</strong> e <strong>12 a 16 = Alto</strong>. A avaliação deve considerar a atividade real, o tempo e a frequência de exposição, o número de pessoas expostas, os controles existentes e os registros de incidentes. Em caso de dúvida, valide com o profissional responsável por SST.</div>
+        </div>
+
         <div class="field">
-          <label>Medida de Controle / Prevenção</label>
-          <textarea name="medidaControle" rows="2" placeholder="Ex: Uso obrigatório de EPI, exaustor local..."></textarea>
+          <label>🦺 EPIs relacionados ao perigo <span style="font-weight:400;color:var(--ink-dim);">(do catálogo do módulo EPIs)</span></label>
+          ${epis.length ? `
+            <div id="pgr-epi-tools" style="display:none;margin-bottom:8px;"><input type="search" id="pgr-epi-search" placeholder="Filtrar EPIs..."></div>
+            <div class="pgr-epi-list" id="pgr-epi-list" style="display:none;"></div>
+            <div class="pgr-hint" id="pgr-epi-count">Selecione um perigo para ver os EPIs relacionados.</div>
+            <button type="button" class="pgr-link" id="pgr-epi-toggle" style="display:none;"></button>
+            <label class="pgr-save-link" id="pgr-epi-save-wrap" style="display:none;"><input type="checkbox" id="pgr-epi-save"><span id="pgr-epi-save-text"></span></label>`
+          : `<div class="pgr-hint warn">⚠️ Nenhum EPI cadastrado. Cadastre em EPIs (NR-6) → Catálogo EPIs para poder relacioná-los aos perigos.</div>`}
+        </div>
+
+        <div class="field">
+          <label>🛠️ Outras medidas de controle / prevenção</label>
+          <textarea name="medidaControle" rows="2" placeholder="Ex: exaustor local, enclausuramento da fonte, rodízio de tarefas...">${empEsc(atual?.medidaControle||'')}</textarea>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn secondary" onclick="window.closeModal()">Cancelar</button>
-          <button type="submit" class="btn">Cadastrar Risco</button>
+          <button type="submit" class="btn">${atual?'Salvar Alterações':'Cadastrar Risco'}</button>
         </div>
       </form>
     `, (ov)=>{
+      const setorSel = ov.querySelector("#pgr-sector-select");
+      const jobSel = ov.querySelector("#pgr-job-select");
+      const jobHint = ov.querySelector("#pgr-job-hint");
+      const hzSel = ov.querySelector("#pgr-hazard-select");
+      const tipoSel = ov.querySelector("#pgr-tipo-select");
+      if(atual){ov.querySelector('[name="severidade"]').value=String(atual.severidade||3);ov.querySelector('[name="probabilidade"]').value=String(atual.probabilidade||3)}
+      const criteriaBtn=ov.querySelector("#pgr-criteria-toggle"),criteriaBox=ov.querySelector("#pgr-criteria-box");criteriaBtn?.addEventListener("click",()=>{const open=criteriaBox.classList.toggle("open");criteriaBtn.textContent=open?"✖ Fechar explicação":"❓ Como escolher a severidade e a probabilidade?"});
+
+      // ---- Setor -> só os cargos vinculados a ele no cadastro geral ----
+      const fillJobs = () => {
+        const setor = setorSel.value;
+        jobHint.classList.remove("warn"); jobHint.textContent = "";
+        if(!setor){ jobSel.innerHTML = '<option value="">Selecione primeiro o setor</option>'; jobSel.disabled = true; return; }
+        const map = new Map();
+        sectorEmployees(setor).forEach(e => { const c = String(e.cargo||"").trim(); if(c) map.set(c,(map.get(c)||0)+1); });
+        const cargos = [...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],"pt-BR"));
+        if(!cargos.length){
+          jobSel.innerHTML = '<option value="">Nenhum cargo neste setor</option>'; jobSel.disabled = true;
+          jobHint.classList.add("warn");
+          jobHint.textContent = "⚠️ Este setor ainda não tem cargos vinculados. Cadastre funcionários nele em Geral / Pessoas → Funcionários.";
+          return;
+        }
+        jobSel.disabled = false;
+        jobSel.innerHTML = '<option value="">Selecione o cargo / função</option>' + cargos.map(([c,n]) => `<option value="${empEsc(c)}">${empEsc(c)} (${n})</option>`).join("");
+        if(atual&&atual.setor===setor)jobSel.value=atual.atividade||'';
+        jobHint.textContent = `${cargos.length} cargo${cargos.length===1?"":"s"} vinculado${cargos.length===1?"":"s"} a este setor.`;
+      };
+      setorSel.addEventListener("change", fillJobs);if(setorSel.value)fillJobs();
+
+      // ---- Perigos cadastrados (agrupados por tipo) ----
+      const fillHazards = (selectId="") => {
+        const hs = state.pgrHazards.slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+        if(!hs.length){ hzSel.innerHTML = '<option value="">Nenhum perigo cadastrado — clique em ➕ Novo</option>'; return; }
+        const tipos = [...PGR_TIPOS, ...new Set(hs.map(h=>h.tipo).filter(t=>!PGR_TIPOS.includes(t)))];
+        hzSel.innerHTML = '<option value="">Selecione o perigo</option>' + tipos.map(t => {
+          const g = hs.filter(h=>h.tipo===t);
+          return g.length ? `<optgroup label="${empEsc((PGR_TIPO_ICON[t]||"☣️")+" "+t)}">${g.map(h=>`<option value="${empEsc(h.id)}" ${h.id===selectId?"selected":""}>${empEsc(h.nome)}</option>`).join("")}</optgroup>` : "";
+        }).join("");
+      };
+      const syncTipo = () => {
+        const h = state.pgrHazards.find(z => z.id === hzSel.value);
+        if(h && [...tipoSel.options].some(o => o.value === h.tipo)) tipoSel.value = h.tipo;
+      };
+      fillHazards(atual?.perigoId||state.pgrHazards.find(h=>normalizeText(h.nome)===normalizeText(atual?.perigo))?.id||"");
+      hzSel.addEventListener("change", () => onHazardChange());
+
+      // ---- Cadastro rápido de perigo, sem sair do formulário ----
+      const inline = ov.querySelector("#pgr-hazard-inline"), nhName = ov.querySelector("#pgr-nh-name"), nhTipo = ov.querySelector("#pgr-nh-tipo");
+      const closeInline = () => { inline.classList.remove("open"); nhName.value = ""; };
+      ov.querySelector("#pgr-hazard-add").addEventListener("click", () => { inline.classList.add("open"); nhName.focus(); });
+      ov.querySelector("#pgr-nh-cancel").addEventListener("click", closeInline);
+      const saveHazard = async () => {
+        const nome = nhName.value.trim();
+        if(!nome){ nhName.focus(); return; }
+        const existente = state.pgrHazards.find(h => normalizeText(h.nome) === normalizeText(nome));
+        if(existente){ fillHazards(existente.id); onHazardChange(); closeInline(); return; }
+        const h = {id:uid("perigo"), nome, tipo:nhTipo.value};
+        state.pgrHazards.push(h);
+        await saveState();
+        fillHazards(h.id); onHazardChange(); closeInline();
+      };
+      ov.querySelector("#pgr-nh-save").addEventListener("click", saveHazard);
+      nhName.addEventListener("keydown", ev => { if(ev.key === "Enter"){ ev.preventDefault(); saveHazard(); } });
+
+      // ---- EPIs: aparecem os relacionados ao perigo escolhido ----
+      const epiList = ov.querySelector("#pgr-epi-list"), epiCount = ov.querySelector("#pgr-epi-count");
+      const epiToggle = ov.querySelector("#pgr-epi-toggle"), epiTools = ov.querySelector("#pgr-epi-tools"), epiSearch = ov.querySelector("#pgr-epi-search");
+      const saveWrap = ov.querySelector("#pgr-epi-save-wrap"), saveChk = ov.querySelector("#pgr-epi-save"), saveTxt = ov.querySelector("#pgr-epi-save-text");
+      let selected = new Set(), showAll = false;
+      const currentHazard = () => state.pgrHazards.find(z => z.id === hzSel.value);
+      const relatedSet = () => new Set((currentHazard()?.epiIds || []).filter(id => epis.some(i => i.id === id)));
+      const sameSet = (a,b) => a.size === b.size && [...a].every(x => b.has(x));
+      const filterEpis = () => {
+        if(!epiList) return;
+        const q = empPlain(epiSearch?.value || "");
+        epiList.querySelectorAll(".pgr-epi-opt").forEach(l => { l.style.display = !q || l.dataset.name.includes(q) ? "" : "none"; });
+      };
+      const paintMeta = () => {
+        if(!epiList) return;
+        const h = currentHazard(), rel = relatedSet();
+        if(!h){
+          epiToggle.style.display = "none"; epiTools.style.display = "none"; saveWrap.style.display = "none";
+          epiCount.textContent = "Selecione um perigo para ver os EPIs relacionados."; return;
+        }
+        const n = selected.size;
+        if(n) epiCount.textContent = `${n} EPI${n===1?"":"s"} selecionado${n===1?"":"s"}.`;
+        else if(!rel.size && !showAll) epiCount.textContent = "Nenhum EPI relacionado a este perigo ainda. Use “Ver todos os EPIs” para escolher.";
+        else epiCount.textContent = "Nenhum EPI selecionado.";
+        const temOutros = epis.some(i => !rel.has(i.id));
+        epiToggle.style.display = temOutros ? "" : "none";
+        epiToggle.textContent = showAll ? "Mostrar só os relacionados" : "＋ Ver todos os EPIs";
+        epiTools.style.display = showAll && epis.length > 6 ? "" : "none";
+        const mudou = !sameSet(selected, rel) && n > 0;
+        saveWrap.style.display = mudou ? "" : "none";
+        if(mudou) saveTxt.textContent = `💾 Salvar esta seleção como EPIs relacionados ao perigo “${h.nome}”`;
+      };
+      const paintEpis = () => {
+        if(!epiList) return;
+        const h = currentHazard(), rel = relatedSet();
+        const visible = !h ? [] : (showAll ? epis : epis.filter(i => rel.has(i.id) || selected.has(i.id)));
+        epiList.style.display = visible.length ? "" : "none";
+        epiList.innerHTML = visible.map(i => `<label class="pgr-epi-opt ${selected.has(i.id)?"on":""}" data-name="${empEsc(empPlain(i.nome))}"><input type="checkbox" value="${empEsc(i.id)}" ${selected.has(i.id)?"checked":""}><span class="ei">${pgrEpiIcon(i.nome)}</span><span><strong>${empEsc(i.nome)}</strong><small>${i.ca?`CA ${empEsc(i.ca)}`:"&nbsp;"}${rel.has(i.id)?' <span class="rel">· ★ do perigo</span>':""}</small></span></label>`).join("");
+        filterEpis(); paintMeta();
+      };
+      const onHazardChange = () => {
+        syncTipo();
+        showAll = false;
+        selected = relatedSet();
+        if(saveChk) saveChk.checked = false;
+        if(epiSearch) epiSearch.value = "";
+        paintEpis();
+      };
+      epiList?.addEventListener("change", ev => {
+        const cb = ev.target.closest("input[type=checkbox]"); if(!cb) return;
+        if(cb.checked) selected.add(cb.value); else selected.delete(cb.value);
+        cb.closest(".pgr-epi-opt").classList.toggle("on", cb.checked);
+        paintMeta();
+      });
+      epiToggle?.addEventListener("click", () => { showAll = !showAll; paintEpis(); });
+      epiSearch?.addEventListener("input", filterEpis);
+      if(atual){selected=new Set(Array.isArray(atual.epiIds)?atual.epiIds:[]);tipoSel.value=atual.tipo||tipoSel.value}paintEpis();
+
       ov.querySelector("#pgr-form").addEventListener("submit", async(e)=>{
         e.preventDefault();
-        state.pgrRisks.push({id:uid("pgr"), ...Object.fromEntries(new FormData(e.target))});
+        const fd = Object.fromEntries(new FormData(e.target));
+        const hazard = state.pgrHazards.find(z => z.id === hzSel.value);
+        if(!hazard){ alert("Selecione um perigo. Se ele não existir, clique em ➕ Novo para cadastrá-lo."); return; }
+        if(!jobSel.value){ alert("Selecione o cargo / função do setor."); return; }
+        const epiIds = [...selected].filter(id => epis.some(i => i.id === id));
+        if(saveChk?.checked) hazard.epiIds = epiIds.slice();
+        const registro={
+          id:atual?.id||uid("pgr"), setor:fd.setor, atividade:jobSel.value,
+          perigo:hazard.nome, perigoId:hazard.id, tipo:fd.tipo,
+          severidade:fd.severidade, probabilidade:fd.probabilidade,
+          epiIds, medidaControle:String(fd.medidaControle||"").trim()
+        };if(atual)Object.assign(atual,registro);else state.pgrRisks.push(registro);
         await saveState(); window.closeModal(); render();
       });
     });
@@ -8086,31 +9210,63 @@ function renderPcmsoDash(root){
     });
   }
 
-  function openPcmsoModal(){
+  function openPcmsoModal(recordId=""){
     if(state.employees.length===0){ alert("Cadastre ao menos um funcionário antes."); return; }
+    const atual=(state.pcmso||[]).find(x=>x.id===recordId)||null;
     openModal(`
-      <h3>Registrar ASO / PCMSO</h3>
+      <h3>${atual?"✏️ Editar":"➕ Registrar"} ASO / PCMSO</h3>
       <form id="pcmso-form">
-        <div class="field"><label>Funcionário</label><select required name="employeeId">${state.employees.map(e=>`<option value="${e.id}">${e.nome}</option>`).join("")}</select></div>
+        <div class="field"><label>👤 Funcionário</label><select required name="employeeId" id="pcmso-aso-employee">${state.employees.map(e=>`<option value="${e.id}" ${atual?.employeeId===e.id?"selected":""}>${empEsc(e.nome)} · ${empEsc(e.cargo||e.funcao||"Função não informada")}</option>`).join("")}</select></div>
         <div class="field-row">
-          <div class="field"><label>Tipo de Exame</label><select name="tipoExame"><option>Admissional</option><option selected>Periódico</option><option>Demissional</option></select></div>
-          <div class="field"><label>Resultado</label><select name="resultado"><option>Apto</option><option>Inapto</option></select></div>
+          <div class="field"><label>🗂️ Tipo de Exame</label><select name="tipoExame" id="pcmso-aso-type">${["Admissional","Periódico","Retorno ao Trabalho","Mudança de Risco","Demissional"].map(x=>`<option ${(atual?.tipoExame||"Periódico")===x?"selected":""}>${x}</option>`).join("")}</select></div>
+          <div class="field"><label>✅ Resultado</label><select name="resultado"><option ${atual?.resultado!=="Inapto"?"selected":""}>Apto</option><option ${atual?.resultado==="Inapto"?"selected":""}>Inapto</option></select></div>
         </div>
+        <div id="pcmso-aso-function-exams" style="margin:2px 0 14px;padding:12px;border:1px solid var(--line);border-left:4px solid var(--yellow);border-radius:7px;background:var(--panel-2);"></div>
         <div class="field-row">
-          <div class="field"><label>Data Realização</label><input type="date" required name="dataRealizacao" value="${new Date().toISOString().slice(0,10)}"></div>
-          <div class="field"><label>Periodicidade (Meses)</label><select name="periodicidadeMeses"><option value="12">12 Meses</option><option value="24">24 Meses</option></select></div>
+          <div class="field"><label>📅 Data Realização</label><input type="date" required name="dataRealizacao" value="${atual?.dataRealizacao||new Date().toISOString().slice(0,10)}"></div>
+          <div class="field"><label>🔁 Periodicidade (Meses)</label><select name="periodicidadeMeses" id="pcmso-aso-period">${[6,12,24].map(x=>`<option value="${x}" ${Number(atual?.periodicidadeMeses||12)===x?"selected":""}>${x} Meses</option>`).join("")}</select></div>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn secondary" onclick="window.closeModal()">Cancelar</button>
-          <button type="submit" class="btn">Salvar ASO</button>
+          <button type="submit" class="btn">💾 ${atual?"Salvar alterações":"Salvar ASO"}</button>
         </div>
       </form>
     `, (ov)=>{
-      ov.querySelector("#pcmso-form").addEventListener("submit", async(e)=>{
+      const form=ov.querySelector("#pcmso-form"),employeeSel=ov.querySelector("#pcmso-aso-employee"),typeSel=ov.querySelector("#pcmso-aso-type"),box=ov.querySelector("#pcmso-aso-function-exams"),periodSel=ov.querySelector("#pcmso-aso-period");
+      let linkedData={funcao:"",setor:"",riscos:"",examesClinicos:[],examesComplementares:[],examesSolicitados:[]};
+      const lines=value=>String(value||"").split(/\n|;|,/).map(x=>x.trim()).filter(Boolean);
+      const unique=list=>[...new Set(list)];
+      const examTypeKey=()=>({"Admissional":"admissional","Periódico":"periodico","Retorno ao Trabalho":"retorno","Mudança de Risco":"mudancaRisco","Demissional":"demissional"}[typeSel.value]||"");
+      const loadFunctionExams=()=>{
+        const emp=(state.employees||[]).find(x=>x.id===employeeSel.value);
+        const funcao=String(emp?.cargo||emp?.funcao||"").trim(),key=normalizeText(funcao),typeKey=examTypeKey();
+        const configs=(state.pcmsoFunctionExams||[]).filter(x=>normalizeText(x.funcao)===key && (!typeKey||x[typeKey]!==false));
+        const clinical=unique(configs.flatMap(x=>lines(x.examesClinicos||"Avaliação clínica ocupacional")));
+        const complementary=unique(configs.flatMap(x=>lines(x.examesComplementares)));
+        const riscos=unique(configs.flatMap(x=>lines(x.riscos)));
+        const interval=configs.map(x=>Number(x.intervaloMeses)).find(Boolean);
+        if(interval){
+          if(![...periodSel.options].some(o=>Number(o.value)===interval)) periodSel.add(new Option(`${interval} Meses`,String(interval)));
+          periodSel.value=String(interval);
+        }
+        linkedData={funcao,setor:emp?.setor||"",riscos:riscos.join("\n"),examesClinicos:clinical,examesComplementares:complementary,examesSolicitados:[...clinical,...complementary]};
+        if(!funcao){
+          box.innerHTML='<strong>⚠️ Função não informada</strong><div class="pgr-hint">Cadastre a função deste funcionário em Geral / Pessoas para carregar os exames.</div>';return;
+        }
+        if(!configs.length){
+          box.innerHTML=`<strong>🧬 Exames da função: ${empEsc(funcao)}</strong><div class="pgr-hint warn">Nenhum exame foi cadastrado para esta função e tipo de ASO. Configure em PCMSO → Exames por Função.</div>`;return;
+        }
+        const chips=(items,icon)=>items.length?`<div style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px">${items.map(x=>`<span class="pgr-epi">${icon} ${empEsc(x)}</span>`).join("")}</div>`:'<div class="pgr-hint">Nenhum exame cadastrado neste grupo.</div>';
+        box.innerHTML=`<div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><strong>🧬 Exames da função: ${empEsc(funcao)}</strong><span class="pgr-hint" style="margin:0">${configs.length} configuração(ões) encontrada(s)</span></div><div style="margin-top:9px"><strong style="font-size:11px">🩺 Exames clínicos</strong>${chips(clinical,"🩺")}</div><div style="margin-top:10px"><strong style="font-size:11px">🧪 Exames complementares</strong>${chips(complementary,"🧪")}</div>`;
+      };
+      employeeSel.addEventListener("change",loadFunctionExams);typeSel.addEventListener("change",loadFunctionExams);loadFunctionExams();
+      form.addEventListener("submit", async(e)=>{
         e.preventDefault();
         const data = Object.fromEntries(new FormData(e.target));
+        data.funcao=linkedData.funcao;data.setor=linkedData.setor;data.riscos=linkedData.riscos;
+        data.examesClinicos=linkedData.examesClinicos;data.examesComplementares=linkedData.examesComplementares;data.examesSolicitados=linkedData.examesSolicitados;
         data.dataVencimento = addMonths(data.dataRealizacao, data.periodicidadeMeses);
-        state.pcmso.push({id:uid("pcmso"), ...data});
+        if(atual)Object.assign(atual,data,{updatedAt:new Date().toISOString()});else state.pcmso.push({id:uid("pcmso"), ...data});
         await saveState(); window.closeModal(); render();
       });
     });
@@ -8354,6 +9510,7 @@ function renderPcmsoDash(root){
     } else if(currentModule === "pgr"){
       if(currentTab === "pgr-dash") renderPgrDash(main);
       else if(currentTab === "pgr-list") renderPgrList(main);
+      else if(currentTab === "pgr-hazards") renderPgrHazards(main);
     } else if(currentModule === "epi"){
       if(currentTab === "epi-dash") renderEpiDash(main);
       else if(currentTab === "epi-items") renderEpiItems(main);
@@ -8387,6 +9544,7 @@ function renderPcmsoDash(root){
       else if(currentTab === "terc-docs") renderTercDocumentos(main);
     } else if(currentModule === "geral"){
       if(currentTab === "employees") renderEmployees(main);
+      else if(currentTab === "employee-dossier") renderEmployeeDossier(main);
       else if(currentTab === "geral-setores") renderGeneralSectors(main);
       else if(currentTab === "geral-cargos") renderGeneralJobs(main);
     }
@@ -8551,10 +9709,27 @@ function renderPcmsoDash(root){
     root.querySelector("#btn-new-ec")?.addEventListener("click", openEcModal);
     root.querySelector("#btn-new-pet")?.addEventListener("click", openPetModal);
     root.querySelector("#btn-new-pgr")?.addEventListener("click", openPgrModal);
+    const applyPgrDashFilters=()=>{renderPgrDash(root);attachMainListeners(root)};
+    root.querySelector("#pgr-dash-search")?.addEventListener("input",e=>{root.dataset.pgrDashSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;applyPgrDashFilters();const i=root.querySelector('#pgr-dash-search');i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#pgr-dash-setor")?.addEventListener("change",e=>{root.dataset.pgrDashSetor=e.currentTarget.value;applyPgrDashFilters()});
+    root.querySelector("#pgr-dash-tipo")?.addEventListener("change",e=>{root.dataset.pgrDashTipo=e.currentTarget.value;applyPgrDashFilters()});
+    root.querySelector("#pgr-dash-nivel")?.addEventListener("change",e=>{root.dataset.pgrDashNivel=e.currentTarget.value;applyPgrDashFilters()});
+    root.querySelector("#pgr-dash-clear")?.addEventListener("click",()=>{delete root.dataset.pgrDashSearch;delete root.dataset.pgrDashSetor;delete root.dataset.pgrDashTipo;delete root.dataset.pgrDashNivel;applyPgrDashFilters()});
+    const applyPgrFilters=()=>{renderPgrList(root);attachMainListeners(root)};
+    root.querySelector("#pgr-search")?.addEventListener("input",e=>{root.dataset.pgrSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;applyPgrFilters();const i=root.querySelector('#pgr-search');i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#pgr-filter-setor")?.addEventListener("change",e=>{root.dataset.pgrSetor=e.currentTarget.value;applyPgrFilters()});root.querySelector("#pgr-filter-tipo")?.addEventListener("change",e=>{root.dataset.pgrTipo=e.currentTarget.value;applyPgrFilters()});root.querySelector("#pgr-filter-nivel")?.addEventListener("change",e=>{root.dataset.pgrNivel=e.currentTarget.value;applyPgrFilters()});root.querySelector("#pgr-clear-filters")?.addEventListener("click",()=>{delete root.dataset.pgrSearch;delete root.dataset.pgrSetor;delete root.dataset.pgrTipo;delete root.dataset.pgrNivel;applyPgrFilters()});root.querySelectorAll("[data-pgr-exposed]").forEach(b=>b.addEventListener("click",e=>openPgrExposedModal(e.currentTarget.dataset.pgrExposed)));root.querySelectorAll("[data-edit-pgr]").forEach(b=>b.addEventListener("click",e=>openPgrModal(e.currentTarget.dataset.editPgr)));
     root.querySelector("#btn-new-emp")?.addEventListener("click", openEmployeeModal);
     root.querySelector("#btn-new-item")?.addEventListener("click", openItemModal);
     root.querySelector("#btn-new-delivery")?.addEventListener("click", openDeliveryModal);
     root.querySelector("#btn-new-pcmso")?.addEventListener("click", openPcmsoModal);
+    const applyPcmsoFilters=()=>{renderPcmsoList(root);attachMainListeners(root)};
+    root.querySelector("#pcmso-search")?.addEventListener("input",e=>{root.dataset.pcmsoSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;applyPcmsoFilters();const i=root.querySelector("#pcmso-search");i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#pcmso-filter-type")?.addEventListener("change",e=>{root.dataset.pcmsoTipo=e.currentTarget.value;applyPcmsoFilters()});
+    root.querySelector("#pcmso-filter-result")?.addEventListener("change",e=>{root.dataset.pcmsoResultado=e.currentTarget.value;applyPcmsoFilters()});
+    root.querySelector("#pcmso-filter-status")?.addEventListener("change",e=>{root.dataset.pcmsoSituacao=e.currentTarget.value;applyPcmsoFilters()});
+    root.querySelector("#pcmso-clear-filters")?.addEventListener("click",()=>{delete root.dataset.pcmsoSearch;delete root.dataset.pcmsoTipo;delete root.dataset.pcmsoResultado;delete root.dataset.pcmsoSituacao;applyPcmsoFilters()});
+    root.querySelectorAll("[data-view-pcmso-exams]").forEach(b=>b.addEventListener("click",e=>openPcmsoExamsModal(e.currentTarget.dataset.viewPcmsoExams)));
+    root.querySelectorAll("[data-edit-pcmso]").forEach(b=>b.addEventListener("click",e=>openPcmsoModal(e.currentTarget.dataset.editPcmso)));
     root.querySelector("#btn-new-fire")?.addEventListener("click", openFireModal);
     root.querySelector("#btn-new-fire-insp")?.addEventListener("click", () => openFireInspectionModal());
     root.querySelector("#btn-new-cipa-membro")?.addEventListener("click", openCipaMemberModal);
@@ -8923,6 +10098,7 @@ function renderPcmsoDash(root){
     }));
 
     root.querySelectorAll("[data-del-pcmso]").forEach(b => b.addEventListener("click", async e => {
+      if(!confirm("Remover este registro de ASO?")) return;
       state.pcmso = state.pcmso.filter(x => x.id !== e.target.dataset.delPcmso);
       await saveState(); render();
     }));
@@ -8943,6 +10119,12 @@ function renderPcmsoDash(root){
 
     root.querySelectorAll("[data-edit-emp]").forEach(b => b.addEventListener("click", e => {
       openEmployeeModal(e.currentTarget.dataset.editEmp);
+    }));
+
+    root.querySelectorAll("[data-emp-dossier]").forEach(b => b.addEventListener("click", e => {
+      selectedDossierEmployeeId = e.currentTarget.dataset.empDossier;
+      currentTab = "employee-dossier";
+      renderShell();
     }));
 
     root.querySelectorAll("[data-del-emp]").forEach(b => b.addEventListener("click", async e => {
