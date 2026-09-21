@@ -1390,6 +1390,15 @@ body.cipa-terminal-mode .urna-confirm{
 }
 </style>
 
+<style>
+/* Módulo EPI: filtros, estoque e ações responsivas */
+.epi-filter{padding:14px 18px}.epi-filter-grid{display:grid;grid-template-columns:minmax(240px,2fr) minmax(180px,1fr) auto;gap:12px;align-items:end}.epi-filter-grid .field{margin:0}.epi-filter-grid .btn{margin-bottom:0;min-height:38px}.row-actions{white-space:nowrap}.row-actions .btn{font-size:11px;padding:6px 9px}.hero{grid-template-columns:repeat(4,minmax(0,1fr))}
+.epi-dashboard-filter-grid{display:grid;grid-template-columns:minmax(230px,2fr) minmax(170px,1fr) minmax(145px,1fr) minmax(145px,1fr) auto;gap:12px;align-items:end}.epi-dashboard-filter-grid .field{margin:0}.epi-dashboard-filter-grid .btn{min-height:38px}
+@media(max-width:900px){.hero{grid-template-columns:repeat(2,1fr)}.epi-filter-grid{grid-template-columns:1fr 1fr}.epi-filter-grid .btn{grid-column:1/-1}main .panel{overflow-x:auto}main table{min-width:760px}}
+@media(max-width:1100px){.epi-dashboard-filter-grid{grid-template-columns:1fr 1fr}.epi-dashboard-filter-grid .btn{grid-column:1/-1}}
+@media(max-width:560px){.hero,.epi-filter-grid,.epi-dashboard-filter-grid{grid-template-columns:1fr}.epi-filter-grid .btn,.epi-dashboard-filter-grid .btn{grid-column:auto}.page-head{align-items:stretch}.page-head>.btn{width:100%}}
+</style>
+
 </head>
 <body>
 <div id="app"></div>
@@ -1507,6 +1516,7 @@ body.cipa-terminal-mode .urna-confirm{
     epi: [
       { id: "epi-dash", name: "📊 Dashboard EPI" },
       { id: "epi-items", name: "📦 Catálogo EPIs" },
+      { id: "epi-stock", name: "📦 Controle de Estoque" },
       { id: "epi-deliveries", name: "📝 Entregas EPI" }
     ],
     pcmso: [
@@ -1987,11 +1997,18 @@ body.cipa-terminal-mode .urna-confirm{
     }
   }
 
-  const DEFAULT_STATE_SHAPE = {usersDb:[], employees:[],items:[],deliveries:[],pcmso:[],fireEquip:[],fireInspections:[],pgrRisks:[],confinedSpaces:[],pets:[],trainings:[],roleMatrix:[],roleTrainingCompliance:[],annualTrainingPlan:[],cipaMembers:[],cipaElections:[],cipaMeetings:[],cipaActions:[],tercEmpresas:[],tercFuncionarios:[],tercIntegracoes:[],tercTiposDocumento:[],tercDocumentos:[],modulePermissions:{master:[],usuario:[]},userSpecificPermissions:{},roleActionPermissions:{},roleSubitemPermissions:{Master:{}}};
+  const DEFAULT_STATE_SHAPE = {usersDb:[], employees:[],items:[],deliveries:[],stockMovements:[],pcmso:[],fireEquip:[],fireInspections:[],pgrRisks:[],confinedSpaces:[],pets:[],trainings:[],roleMatrix:[],roleTrainingCompliance:[],annualTrainingPlan:[],cipaMembers:[],cipaElections:[],cipaMeetings:[],cipaActions:[],tercEmpresas:[],tercFuncionarios:[],tercIntegracoes:[],tercTiposDocumento:[],tercDocumentos:[],modulePermissions:{master:[],usuario:[]},userSpecificPermissions:{},roleActionPermissions:{},roleSubitemPermissions:{Master:{}}};
 
   // Aplica migrações/valores-padrão em uma base carregada (de qualquer origem)
   // para manter compatibilidade com estados salvos por versões anteriores.
   function applyStateMigrations(){
+    if(!Array.isArray(state.stockMovements)) state.stockMovements=[];
+    (state.items||[]).forEach(item=>{
+      delete item.vidaUtilDias;
+      if(item.validadeCA===undefined) item.validadeCA="";
+      item.estoque=Number(item.estoque)||0;
+      item.estoqueMinimo=Number(item.estoqueMinimo)||0;
+    });
     if(!state.usersDb || state.usersDb.length === 0) {
       state.usersDb = [
         { id: "u1", username: "admin",   pass: "admin123",  role: "Administrador", name: "Administrador Geral", trialExpires: null, mustChangePassword: false, employeeId: null },
@@ -4135,44 +4152,74 @@ body.cipa-terminal-mode .urna-confirm{
   }
 
   function renderEpiDash(root){
+    if(!Array.isArray(state.stockMovements)) state.stockMovements=[];
+    const epiDashSearch=normalizeText(root.dataset.epiDashSearch||"");
+    const epiDashStatus=root.dataset.epiDashStatus||"todos";
+    const epiDashStart=root.dataset.epiDashStart||"";
+    const epiDashEnd=root.dataset.epiDashEnd||"";
+    const epiDashRows=state.deliveries.filter(d=>{
+      const st=deliveryStatus(d);
+      const texto=normalizeText(`${employeeName(d.employeeId)} ${itemById(d.itemId)?.nome||''} ${itemById(d.itemId)?.ca||''}`);
+      const okTexto=!epiDashSearch||texto.includes(epiDashSearch);
+      const okStatus=epiDashStatus==='todos'||st===epiDashStatus;
+      const data=d.dataEntrega||'';
+      const okInicio=!epiDashStart||data>=epiDashStart;
+      const okFim=!epiDashEnd||data<=epiDashEnd;
+      return okTexto&&okStatus&&okInicio&&okFim;
+    }).slice().reverse();
     const totalItens = state.items.length;
     const entregasVencidas = state.deliveries.filter(d=>deliveryStatus(d)==="bad").length;
     const estoqueBaixo = state.items.filter(i=>i.estoque <= i.estoqueMinimo).length;
+    const caVencidos = state.items.filter(i=>i.validadeCA && new Date(i.validadeCA+'T23:59:59') < new Date()).length;
 
     root.innerHTML = `
       <div class="page-head">
         <div>
-          <h2>Módulo EPI · Painel Geral</h2>
+          <h2>⛑️ Módulo EPI · Painel Geral</h2>
           <div class="sub">Gestão de Equipamentos de Proteção Individual e histórico de entregas.</div>
         </div>
       </div>
 
       <div class="hero">
         <div class="stat-card">
-          <div class="num" style="color:var(${entregasVencidas>0?'--red':'--green'})">${entregasVencidas}</div>
-          <div class="label">EPIs Vencidos em Uso</div>
+          <div class="num" style="color:var(${entregasVencidas>0?'--red':'--green'})">🕒 ${entregasVencidas}</div>
+          <div class="label">Entregas Vencidas</div>
         </div>
         <div class="stat-card">
-          <div class="num" style="color:var(${estoqueBaixo>0?'--amber':'--ink'})">${estoqueBaixo}</div>
+          <div class="num" style="color:var(${estoqueBaixo>0?'--amber':'--ink'})">📉 ${estoqueBaixo}</div>
           <div class="label">Itens com Estoque Baixo</div>
         </div>
         <div class="stat-card">
-          <div class="num">${totalItens}</div>
+          <div class="num">📦 ${totalItens}</div>
           <div class="label">Modelos Cadastrados</div>
+        </div>
+        <div class="stat-card"><div class="num" style="color:var(${caVencidos?'--red':'--green'})">🛡️ ${caVencidos}</div><div class="label">CAs Vencidos</div></div>
+      </div>
+
+      <div class="panel epi-filter">
+        <div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span class="emp-count">${epiDashRows.length} resultado${epiDashRows.length===1?'':'s'}</span></div>
+        <div class="epi-dashboard-filter-grid">
+          <div class="field"><label>👤 Funcionário, EPI ou CA</label><input id="epi-dash-search" value="${empEsc(root.dataset.epiDashSearch||'')}" placeholder="Digite para pesquisar"></div>
+          <div class="field"><label>🚦 Situação</label><select id="epi-dash-status"><option value="todos">Todas</option><option value="ok" ${epiDashStatus==='ok'?'selected':''}>Em dia</option><option value="warn" ${epiDashStatus==='warn'?'selected':''}>Próximo do vencimento</option><option value="bad" ${epiDashStatus==='bad'?'selected':''}>Vencido</option></select></div>
+          <div class="field"><label>📅 Entrega inicial</label><input id="epi-dash-start" type="date" value="${epiDashStart}"></div>
+          <div class="field"><label>📅 Entrega final</label><input id="epi-dash-end" type="date" value="${epiDashEnd}"></div>
+          <button class="btn secondary" id="epi-dash-clear">🧹 Limpar</button>
         </div>
       </div>
 
       <div class="panel">
-        <div class="panel-head"><h3>Últimas Entregas Registradas</h3></div>
-        ${state.deliveries.length===0 ? `<div class="empty">Nenhuma entrega registrada.</div>` : `
+        <div class="panel-head"><h3>📝 Entregas encontradas</h3></div>
+        ${epiDashRows.length===0 ? `<div class="empty">🔍 Nenhuma entrega encontrada com os filtros informados.</div>` : `
         <table>
-          <thead><tr><th>Funcionário</th><th>Item</th><th>Validade</th><th>Situação</th></tr></thead>
+          <thead><tr><th>👤 Funcionário</th><th>🦺 Item</th><th>🔢 Quantidade</th><th>📅 Entrega</th><th>🛡️ Validade</th><th>🚦 Situação</th></tr></thead>
           <tbody>
-            ${state.deliveries.slice(-5).map(d=>{
+            ${epiDashRows.map(d=>{
               const st = deliveryStatus(d);
               return `<tr>
-                <td>${employeeName(d.employeeId)}</td>
+                <td>${employeeName(d.employeeId)}${d.pgrLinked?'<br><span class="status-pill ok">🛡️ Vinculado ao PGR</span>':''}</td>
                 <td>${itemById(d.itemId)?.nome || "—"}</td>
+                <td><strong>${Number(d.quantidade)||1}</strong></td>
+                <td>${fmtDate(d.dataEntrega)}</td>
                 <td>${fmtDate(d.dataValidade)}</td>
                 <td><span class="status-pill ${st}"><span class="dot"></span>${st==='bad'?'Vencido':st==='warn'?'Próx. Vencimento':'Em dia'}</span></td>
               </tr>`;
@@ -4181,59 +4228,105 @@ body.cipa-terminal-mode .urna-confirm{
         </table>`}
       </div>
     `;
+    const update=(key,value)=>{root.dataset[key]=value;renderEpiDash(root)};
+    root.querySelector('#epi-dash-search')?.addEventListener('input',e=>update('epiDashSearch',e.target.value));
+    root.querySelector('#epi-dash-status')?.addEventListener('change',e=>update('epiDashStatus',e.target.value));
+    root.querySelector('#epi-dash-start')?.addEventListener('change',e=>update('epiDashStart',e.target.value));
+    root.querySelector('#epi-dash-end')?.addEventListener('change',e=>update('epiDashEnd',e.target.value));
+    root.querySelector('#epi-dash-clear')?.addEventListener('click',()=>{root.dataset.epiDashSearch='';root.dataset.epiDashStatus='todos';root.dataset.epiDashStart='';root.dataset.epiDashEnd='';renderEpiDash(root)});
   }
 
   function renderEpiItems(root){
+    const q=normalizeText(root.dataset.epiSearch||"");
+    const status=root.dataset.epiStatus||"todos";
+    const rows=state.items.filter(i=>{
+      const hit=!q||normalizeText(`${i.nome} ${i.ca}`).includes(q);
+      const expired=i.validadeCA && new Date(i.validadeCA+'T23:59:59')<new Date();
+      const low=Number(i.estoque)<=Number(i.estoqueMinimo);
+      return hit&&(status==='todos'||(status==='baixo'&&low)||(status==='vencido'&&expired)||(status==='regular'&&!low&&!expired));
+    });
     root.innerHTML = `
       <div class="page-head">
-        <div><h2>Catálogo de EPIs</h2><div class="sub">Cadastro de itens e níveis de estoque.</div></div>
-        ${checkPermission("Master") ? `<button class="btn" id="btn-new-item">+ Novo EPI</button>` : ""}
+        <div><h2>🦺 Catálogo de EPIs</h2><div class="sub">Cadastro, validade do CA e níveis de estoque.</div></div>
+        ${checkPermission("Master") ? `<button class="btn" id="btn-new-item">➕ Novo EPI</button>` : ""}
       </div>
+      <div class="panel epi-filter"><div class="epi-filter-grid"><div class="field"><label>🔎 Pesquisar</label><input id="epi-search" placeholder="Nome ou número do CA" value="${empEsc(root.dataset.epiSearch||'')}"></div><div class="field"><label>🏷️ Situação</label><select id="epi-status"><option value="todos">Todos</option><option value="regular" ${status==='regular'?'selected':''}>Regular</option><option value="baixo" ${status==='baixo'?'selected':''}>Estoque baixo</option><option value="vencido" ${status==='vencido'?'selected':''}>CA vencido</option></select></div><button class="btn secondary" id="epi-clear">🧹 Limpar</button></div></div>
       <div class="panel">
-        ${state.items.length === 0 ? `<div class="empty">Nenhum EPI cadastrado.</div>` : `
+        ${rows.length === 0 ? `<div class="empty">🔍 Nenhum EPI encontrado.</div>` : `
         <table>
-          <thead><tr><th>Item</th><th>C.A.</th><th>Vida Útil</th><th>Estoque</th><th>Mínimo</th>${checkPermission("Administrador")?'<th></th>':''}</tr></thead>
+          <thead><tr><th>🦺 Item</th><th>🛡️ C.A.</th><th>📅 Validade do CA</th><th>📦 Estoque</th><th>⚠️ Mínimo</th>${checkPermission("Administrador")?'<th>⚙️ Ações</th>':''}</tr></thead>
           <tbody>
-            ${state.items.map(i=>`
+            ${rows.map(i=>`
               <tr>
-                <td><strong>${i.nome}</strong></td>
+                <td><strong>${pgrEpiIcon(i.nome)} ${empEsc(i.nome)}</strong></td>
                 <td><span class="ca-tag">CA ${i.ca}</span></td>
-                <td>${i.vidaUtilDias} dias</td>
+                <td>${i.validadeCA?fmtDate(i.validadeCA):'<span class="status-pill warn">Não informada</span>'}</td>
                 <td style="color:${i.estoque<=i.estoqueMinimo?'var(--red)':'inherit'}">${i.estoque}</td>
                 <td>${i.estoqueMinimo}</td>
-                ${checkPermission("Administrador") ? `<td class="row-actions"><button class="action-link" data-del-item="${i.id}">Remover</button></td>` : ''}
+                ${checkPermission("Administrador") ? `<td class="row-actions"><button class="btn secondary" data-edit-item="${i.id}">✏️ Editar</button> <button class="action-link" data-del-item="${i.id}">🗑️ Remover</button></td>` : ''}
               </tr>`).join("")}
           </tbody>
         </table>`}
       </div>
     `;
+    root.querySelector('#epi-search')?.addEventListener('input',e=>{root.dataset.epiSearch=e.target.value;renderEpiItems(root)});
+    root.querySelector('#epi-status')?.addEventListener('change',e=>{root.dataset.epiStatus=e.target.value;renderEpiItems(root)});
+    root.querySelector('#epi-clear')?.addEventListener('click',()=>{root.dataset.epiSearch='';root.dataset.epiStatus='todos';renderEpiItems(root)});
+    root.querySelector('#btn-new-item')?.addEventListener('click',()=>openItemModal());
+    root.querySelectorAll('[data-edit-item]').forEach(b=>b.addEventListener('click',()=>openItemModal(b.dataset.editItem)));
+  }
+
+  function renderEpiStock(root){
+    if(!Array.isArray(state.stockMovements)) state.stockMovements=[];
+    const q=normalizeText(root.dataset.stockSearch||"");
+    const rows=state.items.filter(i=>!q||normalizeText(`${i.nome} ${i.ca}`).includes(q));
+    const filteredMovements=state.stockMovements.filter(m=>{
+      if(!q)return true;
+      const item=itemById(m.itemId);
+      return normalizeText(`${item?.nome||'EPI removido'} ${item?.ca||''} ${m.tipo||''} ${m.motivo||''}`).includes(q);
+    });
+    root.innerHTML=`<div class="page-head"><div><h2>📦 Controle de Estoque de EPIs</h2><div class="sub">Entradas, saídas, ajustes e histórico de movimentações.</div></div>${checkPermission('Master')?'<button class="btn" id="btn-stock-move">🔄 Nova Movimentação</button>':''}</div>
+    <div class="panel epi-filter"><div class="epi-filter-grid"><div class="field"><label>🔎 Pesquisar EPI</label><input id="stock-search" value="${empEsc(root.dataset.stockSearch||'')}" placeholder="Nome ou CA"></div><button class="btn secondary" id="stock-clear">🧹 Limpar</button></div></div>
+    <div class="panel"><div class="panel-head"><h3>📊 Posição atual</h3></div>${rows.length?`<table><thead><tr><th>🦺 EPI</th><th>🛡️ CA</th><th>📦 Saldo</th><th>⚠️ Mínimo</th><th>🚦 Situação</th></tr></thead><tbody>${rows.map(i=>`<tr><td><strong>${pgrEpiIcon(i.nome)} ${empEsc(i.nome)}</strong></td><td>CA ${empEsc(i.ca)}</td><td>${Number(i.estoque)||0}</td><td>${Number(i.estoqueMinimo)||0}</td><td><span class="status-pill ${Number(i.estoque)<=Number(i.estoqueMinimo)?'bad':'ok'}">${Number(i.estoque)<=Number(i.estoqueMinimo)?'Estoque baixo':'Regular'}</span></td></tr>`).join('')}</tbody></table>`:'<div class="empty">🔎 Nenhum EPI encontrado na posição atual.</div>'}</div>
+    <div class="panel"><div class="panel-head"><h3>🧾 Histórico de movimentações</h3></div>${filteredMovements.length?`<table><thead><tr><th>📅 Data</th><th>🦺 EPI</th><th>🔄 Tipo</th><th>🔢 Quantidade</th><th>📝 Motivo</th></tr></thead><tbody>${filteredMovements.slice().reverse().map(m=>`<tr><td>${fmtDate(m.data)}</td><td>${empEsc(itemById(m.itemId)?.nome||'EPI removido')}</td><td>${m.tipo==='entrada'?'📥 Entrada':m.tipo==='saida'?'📤 Saída':'🛠️ Ajuste'}</td><td>${m.quantidade}</td><td>${empEsc(m.motivo||'—')}</td></tr>`).join('')}</tbody></table>`:`<div class="empty">${q?'🔎 Nenhuma movimentação encontrada para esta pesquisa.':'📭 Nenhuma movimentação registrada.'}</div>`}</div>`;
+    root.querySelector('#stock-search')?.addEventListener('input',e=>{root.dataset.stockSearch=e.target.value;renderEpiStock(root);const input=root.querySelector('#stock-search');input?.focus();input?.setSelectionRange(input.value.length,input.value.length)});
+    root.querySelector('#stock-clear')?.addEventListener('click',()=>{root.dataset.stockSearch='';renderEpiStock(root)});
+    root.querySelector('#btn-stock-move')?.addEventListener('click',openStockMovementModal);
   }
 
   function renderEpiDeliveries(root){
+    const q=normalizeText(root.dataset.deliverySearch||'');
+    const rows=state.deliveries.filter(d=>!q||normalizeText(`${employeeName(d.employeeId)} ${itemById(d.itemId)?.nome||''}`).includes(q));
     root.innerHTML = `
       <div class="page-head">
-        <div><h2>Entregas de EPI</h2><div class="sub">Histórico de termo de entrega por funcionário.</div></div>
-        ${checkPermission("Master") ? `<button class="btn" id="btn-new-delivery">+ Nova Entrega</button>` : ""}
+        <div><h2>📝 Entregas de EPI</h2><div class="sub">Histórico de termo de entrega por funcionário.</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn secondary" id="btn-epi-employee-sheet">📄 Ficha do Funcionário</button>${checkPermission("Master") ? `<button class="btn" id="btn-new-delivery">➕ Nova Entrega</button>` : ""}</div>
       </div>
+      <div class="panel epi-filter"><div class="epi-filter-grid"><div class="field"><label>🔎 Pesquisar</label><input id="delivery-search" value="${empEsc(root.dataset.deliverySearch||'')}" placeholder="Funcionário ou EPI"></div><button class="btn secondary" id="delivery-clear">🧹 Limpar</button></div></div>
       <div class="panel">
-        ${state.deliveries.length === 0 ? `<div class="empty">Nenhuma entrega emitida.</div>` : `
+        ${rows.length === 0 ? `<div class="empty">📭 Nenhuma entrega encontrada.</div>` : `
         <table>
-          <thead><tr><th>Colaborador</th><th>Equipamento</th><th>Validade</th><th>Status</th>${checkPermission("Administrador")?'<th></th>':''}</tr></thead>
+          <thead><tr><th>👤 Colaborador</th><th>🦺 Equipamento</th><th>🔢 Quantidade</th><th>📅 Entrega</th><th>🔐 Assinatura</th><th>🛡️ Validade do CA</th><th>🚦 Status</th>${checkPermission("Administrador")?'<th>⚙️ Ações</th>':''}</tr></thead>
           <tbody>
-            ${state.deliveries.map(d=>{
+            ${rows.map(d=>{
               const st = deliveryStatus(d);
               return `<tr>
-                <td>${employeeName(d.employeeId)}</td>
-                <td>${itemById(d.itemId)?.nome || "—"}</td>
+                <td>${employeeName(d.employeeId)}${d.pgrLinked?'<br><span class="status-pill ok">🛡️ PGR</span>':''}</td>
+                <td>${pgrEpiIcon(itemById(d.itemId)?.nome||'')} ${itemById(d.itemId)?.nome || "—"}</td><td><strong>${Number(d.quantidade)||1}</strong></td><td>${fmtDate(d.dataEntrega)}</td><td>${d.signatureMethod==='convencional'?'<span class="status-pill warn">✍️ Manual pendente</span><br><span class="muted">Assinar a ficha impressa</span>':d.biometricVerifiedAt?`<span class="status-pill ok">${d.biometricMethod==='WebAuthn/facial'?'🙂 Facial':'🖐️ Digital'}</span><br><span class="muted">${fmtDateTime(d.biometricVerifiedAt)}</span>`:'<span class="status-pill warn">Registro antigo</span>'}</td>
                 <td>${fmtDate(d.dataValidade)}</td>
                 <td><span class="status-pill ${st}"><span class="dot"></span>${st}</span></td>
-                ${checkPermission("Administrador") ? `<td class="row-actions"><button class="action-link" data-del-deliv="${d.id}">Remover</button></td>` : ''}
+                ${checkPermission("Administrador") ? `<td class="row-actions"><button class="btn secondary" data-edit-deliv="${d.id}">✏️ Editar</button> <button class="action-link" data-del-deliv="${d.id}">🗑️ Remover</button></td>` : ''}
               </tr>`;
             }).join("")}
           </tbody>
         </table>`}
       </div>
     `;
+    root.querySelector('#delivery-search')?.addEventListener('input',e=>{root.dataset.deliverySearch=e.target.value;renderEpiDeliveries(root)});
+    root.querySelector('#delivery-clear')?.addEventListener('click',()=>{root.dataset.deliverySearch='';renderEpiDeliveries(root)});
+    root.querySelector('#btn-new-delivery')?.addEventListener('click',openDeliveryModal);
+    root.querySelector('#btn-epi-employee-sheet')?.addEventListener('click',openEpiEmployeeSheetModal);
+    root.querySelectorAll('[data-edit-deliv]').forEach(b=>b.addEventListener('click',()=>openDeliveryEditModal(b.dataset.editDeliv)));
   }
 
   
@@ -8966,6 +9059,25 @@ function renderPcmsoDash(root){
     });
   }
 
+  function biometricRandomBytes(size=32){const b=new Uint8Array(size);crypto.getRandomValues(b);return b}
+  function biometricToBase64Url(buffer){return btoa(String.fromCharCode(...new Uint8Array(buffer))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+  function biometricFromBase64Url(value){const s=String(value||'').replace(/-/g,'+').replace(/_/g,'/');const padded=s+'='.repeat((4-s.length%4)%4);return Uint8Array.from(atob(padded),c=>c.charCodeAt(0))}
+  function biometricAvailable(){return !!(window.PublicKeyCredential&&navigator.credentials&&window.isSecureContext)}
+  async function registerEmployeeBiometric(name,matricula){
+    if(!biometricAvailable()) throw new Error('A biometria exige navegador compatível e acesso por HTTPS ou localhost.');
+    const credential=await navigator.credentials.create({publicKey:{challenge:biometricRandomBytes(),rp:{name:'Sistema SST'},user:{id:biometricRandomBytes(),name:`${matricula||'funcionario'}@sst.local`,displayName:name||'Funcionário'},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'discouraged'},timeout:60000,attestation:'none'}});
+    if(!credential) throw new Error('Cadastro biométrico não concluído.');
+    return biometricToBase64Url(credential.rawId);
+  }
+  async function verifyEmployeeBiometric(employee){
+    if(!employee?.biometricCredentialId){alert('Este funcionário ainda não possui biometria cadastrada no Cadastro Geral.');return false}
+    if(!biometricAvailable()){alert('A biometria exige navegador compatível e acesso por HTTPS ou localhost.');return false}
+    try{
+      const assertion=await navigator.credentials.get({publicKey:{challenge:biometricRandomBytes(),allowCredentials:[{type:'public-key',id:biometricFromBase64Url(employee.biometricCredentialId)}],userVerification:'required',timeout:60000}});
+      return !!assertion;
+    }catch(err){alert('A assinatura biométrica não foi confirmada. A entrega não foi registrada.');return false}
+  }
+
   function openEmployeeModal(employeeId=null){
     const employee = employeeId ? state.employees.find(x=>x.id===employeeId) : null;
     const isEdit = !!employee;
@@ -9004,6 +9116,7 @@ function renderPcmsoDash(root){
             </div>
           </div>
         </div>
+        <div class="field"><label>🔐 Biometria para retirada de EPI</label><div class="nr7-banner" style="margin:0;"><div id="employee-biometric-status"><strong>${employee?.biometricCredentialId?`✅ ${employee?.biometricType==='facial'?'Biometria facial':'Biometria digital/do dispositivo'} cadastrada`:'⚠️ Biometria não cadastrada'}</strong></div><div class="muted" style="margin:6px 0 10px;">Escolha o método disponível no aparelho. O sistema não armazena imagem da digital, fotografia ou modelo do rosto.</div><div style="display:flex;gap:8px;flex-wrap:wrap;"><button type="button" class="btn" id="employee-biometric-register">🖐️ Digital / dispositivo</button><button type="button" class="btn" id="employee-facial-register">🙂 Biometria facial</button>${employee?.biometricCredentialId?'<button type="button" class="btn secondary" id="employee-biometric-remove">🗑️ Remover cadastro</button>':''}</div><div class="muted" style="margin-top:8px;">A opção facial utiliza Windows Hello, Face ID ou o reconhecimento facial configurado no dispositivo.</div></div></div>
         <div class="modal-actions">
           <button type="button" class="btn secondary" onclick="window.closeModal()">Cancelar</button>
           <button type="submit" class="btn">${isEdit ? "Salvar Alterações" : "Cadastrar"}</button>
@@ -9011,6 +9124,23 @@ function renderPcmsoDash(root){
       </form>
     `, (ov)=>{
       let employeePhoto = employee?.foto || "";
+      let employeeBiometricCredentialId=employee?.biometricCredentialId||"";
+      let employeeBiometricType=employee?.biometricType||"device";
+      const biometricStatus=ov.querySelector('#employee-biometric-status');
+      const biometricRegister=ov.querySelector('#employee-biometric-register');
+      const facialRegister=ov.querySelector('#employee-facial-register');
+      const performBiometricRegistration=async(type,button)=>{
+        const form=ov.querySelector('#emp-form');
+        const nome=String(form.elements.nome.value||'').trim(),matricula=String(form.elements.matricula.value||'').trim();
+        if(!nome||!matricula){alert('Informe o nome e a matrícula antes de cadastrar a biometria.');return}
+        biometricRegister.disabled=true;facialRegister.disabled=true;const oldText=button.textContent;button.textContent=type==='facial'?'⏳ Aguardando reconhecimento facial...':'⏳ Aguardando biometria...';
+        try{employeeBiometricCredentialId=await registerEmployeeBiometric(nome,matricula);employeeBiometricType=type;biometricStatus.innerHTML=`<strong>✅ ${type==='facial'?'Biometria facial':'Biometria digital/do dispositivo'} cadastrada</strong>`;}
+        catch(err){alert(err?.message||'Não foi possível cadastrar a biometria.');}
+        finally{button.textContent=oldText;biometricRegister.disabled=false;facialRegister.disabled=false}
+      };
+      biometricRegister?.addEventListener('click',()=>performBiometricRegistration('device',biometricRegister));
+      facialRegister?.addEventListener('click',()=>performBiometricRegistration('facial',facialRegister));
+      ov.querySelector('#employee-biometric-remove')?.addEventListener('click',()=>{if(confirm('Remover o cadastro biométrico deste funcionário?')){employeeBiometricCredentialId='';employeeBiometricType='';biometricStatus.innerHTML='<strong>⚠️ Biometria não cadastrada</strong>';}});
       const photoInput = ov.querySelector("#employee-photo-file");
       photoInput?.addEventListener("change", ()=>{
         const file=photoInput.files?.[0];
@@ -9144,9 +9274,9 @@ function renderPcmsoDash(root){
         if(isEdit){
           const idx = state.employees.findIndex(x=>x.id===employeeId);
           if(idx < 0) return;
-          state.employees[idx] = { ...state.employees[idx], ...data, foto: employeePhoto };
+          state.employees[idx] = { ...state.employees[idx], ...data, foto: employeePhoto, biometricCredentialId:employeeBiometricCredentialId,biometricType:employeeBiometricType };
         } else {
-          state.employees.push({id:uid("emp"), ...data, foto: employeePhoto});
+          state.employees.push({id:uid("emp"), ...data, foto: employeePhoto, biometricCredentialId:employeeBiometricCredentialId,biometricType:employeeBiometricType});
         }
 
         await saveState();
@@ -9156,58 +9286,198 @@ function renderPcmsoDash(root){
     });
   }
 
-  function openItemModal(){
+  function openItemModal(itemId=""){
+    const atual=state.items.find(i=>i.id===itemId)||null;
     openModal(`
-      <h3>Novo EPI</h3>
+      <h3>${atual?'✏️ Editar':'➕ Novo'} EPI</h3>
       <form id="item-form">
-        <div class="field"><label>Nome do Equipamento</label><input required name="nome"></div>
+        <div class="field"><label>🦺 Nome do Equipamento</label><input required name="nome" value="${empEsc(atual?.nome||'')}"></div>
         <div class="field-row">
-          <div class="field"><label>C.A.</label><input required name="ca"></div>
-          <div class="field"><label>Vida Útil (Dias)</label><input type="number" required name="vidaUtilDias" value="365"></div>
+          <div class="field"><label>🛡️ Número do C.A.</label><input required name="ca" value="${empEsc(atual?.ca||'')}"></div>
+          <div class="field"><label>📅 Data de validade do C.A.</label><input type="date" required name="validadeCA" value="${atual?.validadeCA||''}"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Estoque Atual</label><input type="number" required name="estoque" value="10"></div>
-          <div class="field"><label>Estoque Mínimo</label><input type="number" required name="estoqueMinimo" value="5"></div>
+          <div class="field"><label>📦 Estoque Atual</label><input type="number" min="0" required name="estoque" value="${Number(atual?.estoque??10)}"></div>
+          <div class="field"><label>⚠️ Estoque Mínimo</label><input type="number" min="0" required name="estoqueMinimo" value="${Number(atual?.estoqueMinimo??5)}"></div>
         </div>
         <div class="modal-actions">
           <button type="button" class="btn secondary" onclick="window.closeModal()">Cancelar</button>
-          <button type="submit" class="btn">Cadastrar Item</button>
+          <button type="submit" class="btn">💾 ${atual?'Salvar alterações':'Cadastrar Item'}</button>
         </div>
       </form>
     `, (ov)=>{
       ov.querySelector("#item-form").addEventListener("submit", async(e)=>{
         e.preventDefault();
-        state.items.push({id:uid("item"), ...Object.fromEntries(new FormData(e.target))});
+        const data=Object.fromEntries(new FormData(e.target));
+        data.estoque=Number(data.estoque); data.estoqueMinimo=Number(data.estoqueMinimo);
+        if(atual) Object.assign(atual,data); else state.items.push({id:uid("item"),...data});
         await saveState(); window.closeModal(); render();
       });
     });
   }
 
+  function openStockMovementModal(){
+    if(!state.items.length){alert('Cadastre um EPI antes de movimentar o estoque.');return;}
+    openModal(`<h3>🔄 Nova Movimentação de Estoque</h3><form id="stock-form"><div class="field"><label>🦺 EPI</label><select name="itemId" required>${state.items.map(i=>`<option value="${i.id}">${empEsc(i.nome)} · CA ${empEsc(i.ca)} · saldo ${Number(i.estoque)||0}</option>`).join('')}</select></div><div class="field-row"><div class="field"><label>🔄 Tipo</label><select name="tipo"><option value="entrada">📥 Entrada</option><option value="saida">📤 Saída</option><option value="ajuste">🛠️ Definir saldo (ajuste)</option></select></div><div class="field"><label>🔢 Quantidade</label><input name="quantidade" type="number" min="0" required value="1"></div></div><div class="field"><label>📝 Motivo / documento</label><input name="motivo" placeholder="Ex.: Compra NF 123, perda, inventário"></div><div class="field"><label>📅 Data</label><input name="data" type="date" required value="${new Date().toISOString().slice(0,10)}"></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">💾 Registrar</button></div></form>`,ov=>{ov.querySelector('form').onsubmit=async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),item=itemById(d.itemId),q=Number(d.quantidade);if(!item)return;const saldo=Number(item.estoque)||0;if(d.tipo==='saida'&&q>saldo){alert('Estoque insuficiente para esta saída.');return;}item.estoque=d.tipo==='entrada'?saldo+q:d.tipo==='saida'?saldo-q:q;if(!Array.isArray(state.stockMovements))state.stockMovements=[];state.stockMovements.push({id:uid('mov'),...d,quantidade:q});await saveState();closeModal();render();};});
+  }
+
   function openDeliveryModal(){
-    if(state.employees.length===0 || state.items.length===0){
-      alert("É necessário ter pelo menos 1 funcionário e 1 EPI cadastrados."); return;
+    const pgrEmployeeMap=new Map();
+    (state.pgrRisks||[]).forEach(r=>pgrExposedEmployees(r).forEach(emp=>pgrEmployeeMap.set(emp.id,emp)));
+    const pgrEmployees=Array.from(pgrEmployeeMap.values()).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'));
+    if(pgrEmployees.length===0 || state.items.length===0){
+      alert(pgrEmployees.length===0
+        ? "Nenhum funcionário está vinculado ao PGR. Verifique se o setor e o cargo do funcionário correspondem aos riscos cadastrados no Inventário de Riscos."
+        : "É necessário ter pelo menos 1 EPI cadastrado.");
+      return;
     }
     openModal(`
       <h3>Registrar Entrega de EPI</h3>
       <form id="deliv-form">
-        <div class="field"><label>Funcionário</label><select required name="employeeId">${state.employees.map(e=>`<option value="${e.id}">${e.nome}</option>`).join("")}</select></div>
-        <div class="field"><label>EPI</label><select required name="itemId">${state.items.map(i=>`<option value="${i.id}">${i.nome} (CA ${i.ca})</option>`).join("")}</select></div>
-        <div class="field"><label>Data da Entrega</label><input type="date" required name="dataEntrega" value="${new Date().toISOString().slice(0,10)}"></div>
+        <div class="field"><label>👤 Funcionário vinculado ao PGR</label><select required name="employeeId" id="epi-delivery-employee">${pgrEmployees.map(e=>`<option value="${e.id}">${empEsc(e.nome)}${e.matricula?` · Matrícula ${empEsc(e.matricula)}`:''} · ${empEsc(e.cargo||e.funcao||'Sem cargo')} · ${empEsc(e.setor||'Sem setor')}</option>`).join("")}</select><div class="muted" style="margin-top:6px;">Lista formada pelos funcionários expostos aos riscos do PGR, conforme setor e cargo.</div></div>
+        <div id="epi-pgr-employee-info" class="nr7-banner" style="margin:0 0 14px;"></div>
+        <div class="field"><label>🦺 EPI exigido para a função conforme PGR</label><select required name="itemId" id="epi-delivery-item"></select><div id="epi-delivery-item-hint" class="muted" style="margin-top:6px;"></div></div>
+        <div class="field"><label>✍️ Forma de registro da entrega</label><select required name="signatureMethod" id="epi-delivery-signature-method"><option value="facial">🙂 Biometria facial</option><option value="digital">🖐️ Biometria digital / dispositivo</option><option value="convencional">📝 Assinatura convencional na ficha impressa</option></select><div id="epi-delivery-signature-hint" class="muted" style="margin-top:6px;"></div></div>
+        <div class="field-row"><div class="field"><label>🔢 Quantidade a fornecer</label><input type="number" required name="quantidade" id="epi-delivery-quantity" min="1" step="1" value="1"></div><div class="field"><label>📅 Data da Entrega</label><input type="date" required name="dataEntrega" value="${new Date().toISOString().slice(0,10)}"></div></div>
         <div class="modal-actions">
           <button type="button" class="btn secondary" onclick="window.closeModal()">Cancelar</button>
-          <button type="submit" class="btn">Confirmar Entrega</button>
+          <button type="submit" class="btn" id="epi-delivery-submit">Confirmar Entrega</button>
         </div>
       </form>
     `, (ov)=>{
+      const employeeSelect=ov.querySelector('#epi-delivery-employee');
+      const info=ov.querySelector('#epi-pgr-employee-info');
+      const itemSelect=ov.querySelector('#epi-delivery-item');
+      const itemHint=ov.querySelector('#epi-delivery-item-hint');
+      const quantityInput=ov.querySelector('#epi-delivery-quantity');
+      const submitButton=ov.querySelector('#epi-delivery-submit');
+      const signatureMethod=ov.querySelector('#epi-delivery-signature-method');
+      const signatureHint=ov.querySelector('#epi-delivery-signature-hint');
+      let currentEmployeeHasBiometric=false;
+      const pgrDataForEmployee=emp=>{
+        const risks=(state.pgrRisks||[]).filter(r=>pgrExposedEmployees(r).some(x=>x.id===emp?.id));
+        const epiMap=new Map();
+        risks.forEach(r=>pgrEpisOfRisk(r).forEach(item=>epiMap.set(item.id,item)));
+        return {risks,epis:Array.from(epiMap.values()).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'))};
+      };
+      const updateQuantityLimit=()=>{
+        const item=itemById(itemSelect.value);
+        const saldo=Number(item?.estoque)||0;
+        quantityInput.max=String(saldo);
+        if(Number(quantityInput.value)>saldo) quantityInput.value=saldo>0?'1':'0';
+        // A ausência de biometria não deve deixar o botão aparentemente sem ação.
+        // O envio continua bloqueado pela validação, mas o clique mostra a orientação ao usuário.
+        submitButton.disabled=!item||saldo<1;
+        if(item&&saldo<1) itemHint.innerHTML+=' <strong style="color:var(--red)">⚠️ Sem estoque disponível.</strong>';
+      };
+      const showEmployeeInfo=()=>{
+        const emp=pgrEmployees.find(e=>e.id===employeeSelect.value);
+        currentEmployeeHasBiometric=!!emp?.biometricCredentialId;
+        const {risks,epis}=pgrDataForEmployee(emp);
+        info.innerHTML=emp?`<strong>🛡️ Cadastro PGR confirmado</strong><br><span class="muted">${empEsc(emp.nome)} · Matrícula ${empEsc(emp.matricula||'não informada')} · ${empEsc(emp.cargo||emp.funcao||'Cargo não informado')} · ${empEsc(emp.setor||'Setor não informado')} · ${risks.length} risco${risks.length===1?'':'s'} relacionado${risks.length===1?'':'s'}</span><div style="margin-top:8px;"><span class="status-pill ${currentEmployeeHasBiometric?'ok':'bad'}">${currentEmployeeHasBiometric?'🖐️ Biometria pronta':'⚠️ Biometria não cadastrada'}</span>${currentEmployeeHasBiometric?'':'<div class="muted" style="margin-top:7px;">Cadastre a biometria em <strong>Geral / Pessoas → Funcionários → Editar</strong>. Ao confirmar, o sistema mostrará essa orientação e não registrará a entrega sem assinatura.</div>'}</div>`:'';
+        itemSelect.innerHTML=epis.length
+          ? epis.map(i=>`<option value="${i.id}">${pgrEpiIcon(i.nome)} ${empEsc(i.nome)} (CA ${empEsc(i.ca||'não informado')}) · Estoque ${Number(i.estoque)||0}</option>`).join('')
+          : '<option value="">Nenhum EPI vinculado à função no PGR</option>';
+        itemSelect.disabled=!epis.length;
+        quantityInput.disabled=!epis.length;
+        submitButton.disabled=!epis.length;
+        itemHint.innerHTML=epis.length
+          ? `✅ ${epis.length} EPI${epis.length===1?'':'s'} exigido${epis.length===1?'':'s'} para <strong>${empEsc(emp?.cargo||emp?.funcao||'esta função')}</strong>, considerando ${risks.length} risco${risks.length===1?'':'s'} do PGR.`
+          : `⚠️ Nenhum EPI foi relacionado aos riscos desta função no PGR. Edite o Inventário de Riscos e selecione os EPIs antes de registrar a entrega.`;
+        updateQuantityLimit();
+      };
+      const updateSignatureHint=()=>{
+        const emp=pgrEmployees.find(e=>e.id===employeeSelect.value),method=signatureMethod.value;
+        if(method==='convencional') signatureHint.innerHTML='📝 A entrega será liberada agora e ficará como <strong>assinatura manual pendente</strong>. Depois, imprima a Ficha do Funcionário para colher a assinatura.';
+        else if(method==='facial') signatureHint.innerHTML=emp?.biometricType==='facial'?'✅ Biometria facial cadastrada para este funcionário.':'⚠️ Este funcionário precisa ter a biometria facial cadastrada em Geral / Pessoas → Funcionários → Editar.';
+        else signatureHint.innerHTML=emp?.biometricCredentialId&&emp?.biometricType!=='facial'?'✅ Biometria digital/do dispositivo cadastrada.':'⚠️ Este funcionário precisa ter a biometria digital/do dispositivo cadastrada em Geral / Pessoas → Funcionários → Editar.';
+      };
+      employeeSelect.addEventListener('change',()=>{showEmployeeInfo();updateSignatureHint();});
+      itemSelect.addEventListener('change',updateQuantityLimit);
+      signatureMethod.addEventListener('change',updateSignatureHint);
+      showEmployeeInfo();
+      updateSignatureHint();
       ov.querySelector("#deliv-form").addEventListener("submit", async(e)=>{
         e.preventDefault();
         const data = Object.fromEntries(new FormData(e.target));
+        const selectedEmployee=pgrEmployees.find(emp=>emp.id===data.employeeId);
+        const allowedEpiIds=new Set(pgrDataForEmployee(selectedEmployee).epis.map(i=>i.id));
+        if(!data.itemId || !allowedEpiIds.has(data.itemId)){
+          alert('Selecione um EPI relacionado à função deste funcionário no PGR.');
+          return;
+        }
         const item = itemById(data.itemId);
-        data.dataValidade = addMonths(data.dataEntrega, (item.vidaUtilDias / 30));
-        state.deliveries.push({id:uid("deliv"), ...data});
+        const quantidade=Number(data.quantidade);
+        const saldo=Number(item.estoque)||0;
+        if(!Number.isInteger(quantidade)||quantidade<1){alert('Informe uma quantidade válida, maior que zero.');return;}
+        if(quantidade>saldo){alert(`Estoque insuficiente. Saldo disponível: ${saldo}.`);return;}
+        const method=data.signatureMethod;
+        if(method==='facial'&&selectedEmployee?.biometricType!=='facial'){alert('A biometria facial ainda não está cadastrada para este funcionário. Cadastre em Geral / Pessoas → Funcionários → Editar ou escolha assinatura convencional.');return;}
+        if(method==='digital'&&(!selectedEmployee?.biometricCredentialId||selectedEmployee?.biometricType==='facial')){alert('A biometria digital/do dispositivo ainda não está cadastrada para este funcionário. Cadastre em Geral / Pessoas → Funcionários → Editar ou escolha assinatura convencional.');return;}
+        let biometricVerifiedAt='',biometricMethod='Assinatura convencional',signatureStatus='pendente-manual';
+        if(method!=='convencional'){
+          submitButton.disabled=true;submitButton.textContent=method==='facial'?'🙂 Aguardando reconhecimento facial...':'🖐️ Aguardando biometria digital...';
+          const biometricOk=await verifyEmployeeBiometric(selectedEmployee);
+          if(!biometricOk){submitButton.disabled=false;submitButton.textContent='Confirmar Entrega';return;}
+          biometricVerifiedAt=new Date().toISOString();biometricMethod=method==='facial'?'WebAuthn/facial':'WebAuthn/plataforma';signatureStatus='confirmada';
+        }else if(!confirm('Confirmar a entrega com assinatura convencional?\n\nA retirada será registrada agora e o funcionário deverá assinar posteriormente a ficha impressa de EPI.')) return;
+        data.quantidade=quantidade;
+        data.dataValidade = item.validadeCA || '';
+        item.estoque=saldo-quantidade;
+        if(!Array.isArray(state.stockMovements)) state.stockMovements=[];
+        state.stockMovements.push({id:uid('mov'),itemId:item.id,tipo:'saida',quantidade,data:data.dataEntrega,motivo:`Entrega de ${quantidade} unidade${quantidade===1?'':'s'} para ${employeeName(data.employeeId)}`});
+        const employee=pgrEmployees.find(emp=>emp.id===data.employeeId);
+        state.deliveries.push({id:uid("deliv"), ...data, pgrLinked:true,biometricVerifiedAt,biometricMethod,signatureStatus,employeeSnapshot:{nome:employee?.nome||'',matricula:employee?.matricula||'',cargo:employee?.cargo||employee?.funcao||'',setor:employee?.setor||''}});
         await saveState(); window.closeModal(); render();
       });
     });
+  }
+
+  function openDeliveryEditModal(deliveryId){
+    const delivery=(state.deliveries||[]).find(d=>d.id===deliveryId);
+    if(!delivery){alert('Entrega não encontrada.');return;}
+    const employee=(state.employees||[]).find(e=>e.id===delivery.employeeId),item=itemById(delivery.itemId);
+    if(!employee||!item){alert('Funcionário ou EPI desta entrega não foi encontrado.');return;}
+    const oldQuantity=Number(delivery.quantidade)||1,currentStock=Number(item.estoque)||0;
+    openModal(`<h3>✏️ Editar Entrega de EPI</h3><div class="nr7-banner" style="margin-bottom:14px;"><strong>👤 ${empEsc(employee.nome)}</strong><br><span class="muted">${empEsc(item.nome)} · CA ${empEsc(item.ca||'não informado')} · quantidade registrada: ${oldQuantity}</span></div><form id="delivery-edit-form"><div class="field-row"><div class="field"><label>🔢 Quantidade fornecida</label><input name="quantidade" type="number" min="1" step="1" required value="${oldQuantity}"><div class="muted" style="margin-top:6px;">Saldo atual: ${currentStock}. A diferença será ajustada no estoque.</div></div><div class="field"><label>📅 Data da entrega</label><input name="dataEntrega" type="date" required value="${delivery.dataEntrega||''}"></div></div><div class="muted" style="margin-top:8px;">🖐️ Para proteger a ficha assinada, o funcionário deverá confirmar novamente com a biometria cadastrada.</div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn" id="delivery-edit-submit">💾 Salvar alterações</button></div></form>`,ov=>{
+      ov.querySelector('#delivery-edit-form').onsubmit=async e=>{
+        e.preventDefault();const data=Object.fromEntries(new FormData(e.target)),newQuantity=Number(data.quantidade),delta=newQuantity-oldQuantity;
+        if(!Number.isInteger(newQuantity)||newQuantity<1){alert('Informe uma quantidade inteira maior que zero.');return;}
+        if(delta>currentStock){alert(`Estoque insuficiente para acrescentar ${delta} unidade${delta===1?'':'s'}. Saldo disponível: ${currentStock}.`);return;}
+        const submit=ov.querySelector('#delivery-edit-submit');submit.disabled=true;submit.textContent='🖐️ Aguardando assinatura biométrica...';
+        if(!await verifyEmployeeBiometric(employee)){submit.disabled=false;submit.textContent='💾 Salvar alterações';return;}
+        item.estoque=currentStock-delta;
+        if(delta!==0){if(!Array.isArray(state.stockMovements))state.stockMovements=[];state.stockMovements.push({id:uid('mov'),itemId:item.id,tipo:delta>0?'saida':'entrada',quantidade:Math.abs(delta),data:new Date().toISOString().slice(0,10),motivo:`Ajuste da entrega editada de ${employee.nome}`});}
+        delivery.quantidade=newQuantity;delivery.dataEntrega=data.dataEntrega;delivery.biometricVerifiedAt=new Date().toISOString();delivery.biometricMethod=employee.biometricType==='facial'?'WebAuthn/facial':'WebAuthn/plataforma';delivery.editedAt=new Date().toISOString();delivery.editedBy=currentUser?.nome||currentUser?.name||'Usuário do sistema';
+        await saveState();closeModal();render();
+      };
+    });
+  }
+
+  function epiEmployeeSheetData(employeeId){
+    const employee=(state.employees||[]).find(e=>e.id===employeeId);
+    const deliveries=(state.deliveries||[]).filter(d=>d.employeeId===employeeId).sort((a,b)=>String(b.dataEntrega||'').localeCompare(String(a.dataEntrega||'')));
+    return {employee,deliveries};
+  }
+
+  function epiEmployeeSheetHtml(employeeId,forPrint=false){
+    const {employee,deliveries}=epiEmployeeSheetData(employeeId);if(!employee)return '<p>Funcionário não encontrado.</p>';
+    const totalUnits=deliveries.reduce((sum,d)=>sum+(Number(d.quantidade)||1),0);
+    const rows=deliveries.map(d=>{const item=itemById(d.itemId),quantity=Number(d.quantidade)||1;return `<tr><td>${fmtDate(d.dataEntrega)}</td><td>${pgrEpiIcon(item?.nome)} ${empEsc(item?.nome||'EPI removido')}</td><td>${empEsc(item?.ca||'—')}</td><td>${quantity}</td><td>${fmtDate(d.dataValidade||item?.validadeCA)}</td><td>${d.signatureMethod==='convencional'?'✍️ Assinatura convencional<br><small>Pendente na ficha impressa</small>':d.biometricVerifiedAt?`✅ ${d.biometricMethod==='WebAuthn/facial'?'Biometria facial':'Biometria digital'}<br><small>${fmtDateTime(d.biometricVerifiedAt)}</small>`:'⚠️ Sem assinatura registrada'}</td></tr>`;}).join('');
+    const needsManualSignature=deliveries.some(d=>d.signatureMethod==='convencional');
+    return `${forPrint?'<h1>Ficha de Entrega de EPI</h1>':'<h3>📄 Ficha de Entrega de EPI</h3>'}<section class="sheet-identification"><strong>👤 ${empEsc(employee.nome)}</strong><br>Matrícula: ${empEsc(employee.matricula||'não informada')} · Função: ${empEsc(employee.cargo||employee.funcao||'não informada')} · Setor: ${empEsc(employee.setor||'não informado')}</section><p class="sheet-declaration">Declaro ter recebido os Equipamentos de Proteção Individual relacionados abaixo, com orientação para uso, guarda e conservação, conforme as normas e procedimentos aplicáveis.</p><div style="overflow:auto"><table class="data-table sheet-table"><thead><tr><th>Entrega</th><th>Equipamento</th><th>CA</th><th>Qtd.</th><th>Validade CA</th><th>Forma de assinatura</th></tr></thead><tbody>${rows||'<tr><td colspan="6" style="text-align:center">Nenhuma entrega registrada.</td></tr>'}</tbody></table></div><p><strong>${deliveries.length}</strong> registro${deliveries.length===1?'':'s'} · <strong>${totalUnits}</strong> unidade${totalUnits===1?'':'s'} fornecida${totalUnits===1?'':'s'}.</p>${needsManualSignature?'<div style="margin-top:55px;border-top:1px solid #333;padding-top:8px;text-align:center;max-width:420px;margin-left:auto;margin-right:auto;">Assinatura convencional do funcionário<br><small>Confirmo o recebimento dos EPIs relacionados nesta ficha.</small></div>':''}`;
+  }
+
+  function printEpiEmployeeSheet(employeeId){
+    const {employee}=epiEmployeeSheetData(employeeId);if(!employee)return;
+    const popup=window.open('','_blank','width=1100,height=760');if(!popup){alert('O navegador bloqueou a janela do PDF. Permita pop-ups e tente novamente.');return;}
+    popup.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Ficha EPI - ${empEsc(employee.nome)}</title><style>body{font:14px Arial,sans-serif;color:#17202a;margin:28px}h1{text-align:center;font-size:24px}.sheet-identification,.sheet-declaration{border:1px solid #ccd2d8;border-radius:6px;padding:12px;margin:14px 0}.sheet-declaration{line-height:1.5}table{width:100%;border-collapse:collapse;margin-top:14px}th,td{border:1px solid #b9c0c7;padding:8px;text-align:left;vertical-align:top}th{background:#eef1f4}.footer{margin-top:32px;border-top:1px solid #aaa;padding-top:10px;color:#555;font-size:12px}@media print{body{margin:12mm}}</style></head><body>${epiEmployeeSheetHtml(employeeId,true)}<div class="footer">Documento emitido em ${new Date().toLocaleString('pt-BR')}. A confirmação biométrica registrada no sistema compõe a trilha de auditoria desta entrega.</div><script>window.onload=()=>setTimeout(()=>window.print(),250)<\/script></body></html>`);popup.document.close();
+  }
+
+  function openEpiEmployeeSheetModal(){
+    const employeeIds=[...new Set((state.deliveries||[]).map(d=>d.employeeId))],employees=(state.employees||[]).filter(e=>employeeIds.includes(e.id)).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'));
+    if(!employees.length){alert('Ainda não há entregas registradas para gerar uma ficha de funcionário.');return;}
+    openModal(`<h3>📄 Ficha de Entrega por Funcionário</h3><div class="field"><label>👤 Funcionário</label><select id="epi-sheet-employee">${employees.map(e=>`<option value="${e.id}">${empEsc(e.nome)}${e.matricula?` · Matrícula ${empEsc(e.matricula)}`:''}</option>`).join('')}</select></div><div id="epi-sheet-preview"></div><div class="modal-actions"><button class="btn secondary" type="button" onclick="closeModal()">Fechar</button><button class="btn" type="button" id="epi-sheet-pdf">🖨️ Gerar PDF</button></div>`,ov=>{const select=ov.querySelector('#epi-sheet-employee'),preview=ov.querySelector('#epi-sheet-preview'),update=()=>{preview.innerHTML=epiEmployeeSheetHtml(select.value);};select.onchange=update;ov.querySelector('#epi-sheet-pdf').onclick=()=>printEpiEmployeeSheet(select.value);update();});
   }
 
   function openPcmsoModal(recordId=""){
@@ -9514,6 +9784,7 @@ function renderPcmsoDash(root){
     } else if(currentModule === "epi"){
       if(currentTab === "epi-dash") renderEpiDash(main);
       else if(currentTab === "epi-items") renderEpiItems(main);
+      else if(currentTab === "epi-stock") renderEpiStock(main);
       else if(currentTab === "epi-deliveries") renderEpiDeliveries(main);
     } else if(currentModule === "pcmso"){
       if(currentTab === "pcmso-dash") renderPcmsoDash(main);
@@ -10093,7 +10364,17 @@ function renderPcmsoDash(root){
     }));
 
     root.querySelectorAll("[data-del-deliv]").forEach(b => b.addEventListener("click", async e => {
-      state.deliveries = state.deliveries.filter(x => x.id !== e.target.dataset.delDeliv);
+      const deliveryId=e.currentTarget.dataset.delDeliv;
+      const delivery=(state.deliveries||[]).find(x=>x.id===deliveryId);
+      if(!delivery||!confirm('Remover esta entrega da ficha do funcionário?')) return;
+      const quantity=Number(delivery.quantidade)||1,item=itemById(delivery.itemId);
+      const returnToStock=!!item&&confirm(`Deseja devolver ${quantity} unidade${quantity===1?'':'s'} de ${item.nome} ao estoque?\n\nOK = remover e devolver ao estoque\nCancelar = remover sem devolver ao estoque`);
+      if(returnToStock){
+        item.estoque=(Number(item.estoque)||0)+quantity;
+        if(!Array.isArray(state.stockMovements))state.stockMovements=[];
+        state.stockMovements.push({id:uid('mov'),itemId:item.id,tipo:'entrada',quantidade:quantity,data:new Date().toISOString().slice(0,10),motivo:`Estorno da entrega removida de ${employeeName(delivery.employeeId)}`});
+      }
+      state.deliveries = state.deliveries.filter(x => x.id !== deliveryId);
       await saveState(); render();
     }));
 
