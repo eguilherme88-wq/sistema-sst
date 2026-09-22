@@ -1447,8 +1447,9 @@ body.cipa-terminal-mode .urna-confirm{
 .qr-card img{width:200px;height:200px;background:#fff;border:8px solid #fff;border-radius:8px}
 .brigade-mobile{min-height:100vh;background:var(--bg);padding:18px}.brigade-mobile-shell{max-width:760px;margin:auto}.brigade-mobile .mobile-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
 .brigade-mobile .mobile-equip{display:flex;justify-content:space-between;gap:12px;align-items:center}.brigade-mobile .mobile-equip .btn{flex:0 0 auto}
+.brigade-mobile-filters{display:grid;grid-template-columns:minmax(220px,1.5fr) minmax(190px,1fr) auto;gap:10px;align-items:end}.brigade-mobile-filters label{display:block;margin-bottom:5px;font-size:12px;font-weight:700;color:var(--ink-dim)}
 @media(max-width:1050px){.inspection-filter-grid{grid-template-columns:1fr 1fr 1fr}.inspection-filter-grid .btn{grid-column:1/-1}.inspection-check-row{grid-template-columns:1fr 160px}.inspection-check-row input{grid-column:1/-1}}
-@media(max-width:700px){.brigade-grid,.inspection-filter-grid,.inspection-check-row,.qr-card{grid-template-columns:1fr}.inspection-filter-grid .btn,.inspection-check-row input{grid-column:auto}.qr-card img{margin:auto}.brigade-mobile .mobile-equip{align-items:stretch;flex-direction:column}}
+@media(max-width:700px){.brigade-grid,.inspection-filter-grid,.inspection-check-row,.qr-card,.brigade-mobile-filters{grid-template-columns:1fr}.inspection-filter-grid .btn,.inspection-check-row input{grid-column:auto}.qr-card img{margin:auto}.brigade-mobile .mobile-equip{align-items:stretch;flex-direction:column}}
 </style>
 
 </head>
@@ -2364,8 +2365,26 @@ body.cipa-terminal-mode .urna-confirm{
   }
 
   function getNextInspectionDate(eq){
+    if(eq.proximaInspecao) return eq.proximaInspecao;
     if(!eq.ultimaInspecao) return eq.dataCarga || new Date().toISOString().slice(0,10);
     return addMonths(eq.ultimaInspecao, eq.periodicidadeInspMeses || 1);
+  }
+
+  function syncFireInspectionSchedule(equipId){
+    const eq=fireEquipById(equipId);
+    if(!eq) return;
+    const latest=(state.fireInspections||[]).filter(insp=>insp.equipId===equipId&&insp.dataInspecao).sort((a,b)=>String(b.dataInspecao).localeCompare(String(a.dataInspecao)))[0];
+    if(latest){
+      eq.ultimaInspecao=latest.dataInspecao;
+      eq.proximaInspecao=latest.proximaInspecao||addMonths(latest.dataInspecao,eq.periodicidadeInspMeses||1);
+      eq.ultimoInspetor=latest.inspetor||"";
+      eq.ultimoBrigadistaId=latest.brigadistaId||"";
+    }else{
+      eq.ultimaInspecao="";
+      eq.proximaInspecao="";
+      eq.ultimoInspetor="";
+      eq.ultimoBrigadistaId="";
+    }
   }
 
   function inspectionStatus(eq){
@@ -5337,15 +5356,24 @@ function renderPcmsoDash(root){
   }
 
   function fireBrigadistaEmployee(record){ return (state.employees||[]).find(e=>e.id===record?.employeeId)||null; }
-  function fireBrigadistaPortalUrl(){ const u=new URL(location.href);u.search="";u.hash="brigadista-inspecao";return u.href; }
+  function firePortalBaseUrl(){
+    const configured=String(state.firePortalPublicUrl||"").trim();
+    if(configured) return configured;
+    return location.protocol==="http:"||location.protocol==="https:" ? location.href : "";
+  }
+  function fireBrigadistaPortalUrl(){
+    const base=firePortalBaseUrl();
+    if(!base) return "";
+    try{const u=new URL(base);u.search="";u.hash="brigadista-inspecao";return u.href;}catch(e){return "";}
+  }
   function renderFireBrigadistas(root){
     const search=root.dataset.brigSearch||"",status=root.dataset.brigStatus||"",q=normalizeText(search);
     const rows=(state.fireBrigadistas||[]).filter(b=>{const e=fireBrigadistaEmployee(b);return(!q||normalizeText([e?.nome,e?.matricula,e?.cargo,e?.setor].join(" ")).includes(q))&&(!status||String(b.ativo!==false)===status)});
-    const portal=fireBrigadistaPortalUrl(),qr="https://api.qrserver.com/v1/create-qr-code/?size=240x240&data="+encodeURIComponent(portal);
+    const portal=fireBrigadistaPortalUrl(),isLocalFile=location.protocol==="file:",qr=portal?"https://api.qrserver.com/v1/create-qr-code/?size=240x240&data="+encodeURIComponent(portal):"";
     root.innerHTML=`<div class="page-head"><div><h2>🦺 Cadastro de Brigadistas</h2><div class="sub">Funcionários autorizados a realizar inspeções.</div></div>${checkPermission("Master")?'<button class="btn" id="btn-new-brigadista">+ Cadastrar Brigadista</button>':""}</div>
     <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros</h3><span>${rows.length} de ${(state.fireBrigadistas||[]).length}</span></div><div class="brigade-grid" style="padding:14px 16px"><div><label>Pesquisar</label><input id="brig-search" value="${empEsc(search)}" placeholder="Nome, matrícula, cargo ou setor"></div><div><label>Situação</label><select id="brig-status"><option value="">Todos</option><option value="true" ${status==="true"?"selected":""}>Ativos</option><option value="false" ${status==="false"?"selected":""}>Inativos</option></select></div><button class="btn secondary" id="brig-clear">🧹 Limpar</button></div></div>
     <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>👥 Brigadistas autorizados</h3></div>${rows.length?`<div class="fire-table-wrap"><table><thead><tr><th>Brigadista</th><th>Matrícula</th><th>Cargo / Setor</th><th>Situação</th><th>Ações</th></tr></thead><tbody>${rows.map(b=>{const e=fireBrigadistaEmployee(b);return `<tr><td><strong>${empEsc(e?.nome||"Funcionário não encontrado")}</strong></td><td>${empEsc(e?.matricula||"Não cadastrada")}</td><td>${empEsc(e?.cargo||"—")}<br><small>${empEsc(e?.setor||"—")}</small></td><td><span class="status-pill ${b.ativo!==false?"ok":"bad"}"><span class="dot"></span>${b.ativo!==false?"Ativo":"Inativo"}</span></td><td><button class="action-link" data-edit-brig="${b.id}">✏️ Editar</button><br><button class="action-link danger-link" data-del-brig="${b.id}">🗑️ Remover</button></td></tr>`}).join("")}</tbody></table></div>`:'<div class="empty">Nenhum brigadista cadastrado.</div>'}</div>
-    <div class="panel"><div class="panel-head"><h3>📱 QR Code padrão</h3></div><div class="qr-card"><img src="${qr}" alt="QR Code do portal"><div><h3>Portal exclusivo de inspeções</h3><p class="sub">O brigadista escolhe o próprio nome e usa a matrícula do Cadastro Geral como senha.</p><div class="field"><label>Endereço do portal</label><input readonly value="${empEsc(portal)}"></div><button class="btn secondary" id="brig-copy-link">📋 Copiar link</button> <button class="btn secondary" id="brig-print-qr">🖨️ Imprimir</button><small style="display:block;margin-top:10px">Para leitura em outro aparelho, publique o sistema em endereço HTTP/HTTPS acessível pelo celular.</small></div></div></div>`;
+    <div class="panel"><div class="panel-head"><h3>📱 QR Code padrão</h3></div><div class="qr-card">${qr?`<img src="${qr}" alt="QR Code do portal">`:'<div style="width:240px;min-height:240px;border:2px dashed var(--line);border-radius:10px;display:grid;place-items:center;text-align:center;padding:18px;color:var(--ink-dim);">⚠️ Informe o endereço público para gerar o QR Code</div>'}<div><h3>Portal exclusivo de inspeções</h3><p class="sub">O brigadista escolhe o próprio nome e usa a matrícula do Cadastro Geral como senha.</p>${isLocalFile&&!state.firePortalPublicUrl?'<div class="nr7-banner" style="margin:10px 0;"><strong>⚠️ Este arquivo está aberto somente no computador.</strong><div class="muted" style="margin-top:5px;">Um endereço iniciado por file:/// não abre no celular. Publique o sistema e informe abaixo o endereço HTTPS recebido.</div></div>':''}<div class="field"><label>Endereço público onde o sistema foi publicado</label><input id="brig-public-url" type="url" value="${empEsc(state.firePortalPublicUrl||'')}" placeholder="https://seu-site.web.app/index.html"><small style="display:block;margin-top:5px;color:var(--ink-dim);">Cole o endereço HTTPS da página principal. O acesso do portal será acrescentado automaticamente.</small></div><button class="btn" id="brig-save-public-url">💾 Salvar e gerar QR Code</button> ${portal?'<button class="btn secondary" id="brig-copy-link">📋 Copiar link</button> <button class="btn secondary" id="brig-print-qr">🖨️ Imprimir</button>':''}${portal?`<div class="field" style="margin-top:12px;"><label>Link final do portal</label><input readonly value="${empEsc(portal)}"></div>`:''}</div></div></div>`;
   }
   function openFireBrigadistaModal(id=null){
     const current=(state.fireBrigadistas||[]).find(x=>x.id===id),used=new Set((state.fireBrigadistas||[]).filter(x=>x.id!==id).map(x=>x.employeeId)),employees=(state.employees||[]).filter(e=>!used.has(e.id));
@@ -5360,8 +5388,14 @@ function renderPcmsoDash(root){
       app.querySelector("#brig-login")?.addEventListener("submit",e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),b=active.find(x=>x.id===d.brigadistaId),emp=fireBrigadistaEmployee(b);if(!b||!emp||String(emp.matricula||"").trim()!==String(d.matricula||"").trim()){alert("Nome ou matrícula inválidos.");return;}brigadistaSession={brigadistaId:b.id,employeeId:emp.id};sessionStorage.setItem("sst-brigadista-session",JSON.stringify(brigadistaSession));renderBrigadistaPortal()});return;
     }
     const b=active.find(x=>x.id===brigadistaSession.brigadistaId),emp=fireBrigadistaEmployee(b);
-    app.innerHTML=`<div class="brigade-mobile"><div class="brigade-mobile-shell"><div class="mobile-card"><h2>🧯 Inspeção de Equipamentos</h2><div class="sub">Brigadista: <strong>${empEsc(emp.nome)}</strong></div><button class="btn secondary" id="brig-logout">Sair</button></div>${(state.fireEquip||[]).map(eq=>`<div class="mobile-card mobile-equip"><div><strong>${empEsc(eq.identificador)} · ${empEsc(eq.tipo)}</strong><div class="sub">📍 ${empEsc(eq.localizacao||"—")} · Próxima: ${fmtDate(getNextInspectionDate(eq))}</div></div><button class="btn" data-brig-inspect="${eq.id}">📋 Inspecionar</button></div>`).join("")||'<div class="mobile-card empty">Nenhum equipamento cadastrado.</div>'}</div></div>`;
+    const search=sessionStorage.getItem("sst-brig-search")||"",selectedGroup=sessionStorage.getItem("sst-brig-group")||"",q=normalizeText(search);
+    const groups=[...new Set((state.fireEquip||[]).map(fireEquipGroup))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+    const equipments=(state.fireEquip||[]).filter(eq=>(!selectedGroup||fireEquipGroup(eq)===selectedGroup)&&(!q||normalizeText([eq.identificador,eq.tipo,eq.categoria,eq.localizacao,fireEquipGroup(eq)].join(" ")).includes(q)));
+    app.innerHTML=`<div class="brigade-mobile"><div class="brigade-mobile-shell"><div class="mobile-card"><h2>🧯 Inspeção de Equipamentos</h2><div class="sub">Brigadista: <strong>${empEsc(emp.nome)}</strong></div><button class="btn secondary" id="brig-logout">Sair</button></div><div class="mobile-card"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${equipments.length} de ${(state.fireEquip||[]).length}</span></div><div class="brigade-mobile-filters"><div><label>Pesquisar equipamento</label><input id="brig-equip-search" type="search" value="${empEsc(search)}" placeholder="ID, tipo ou localização"></div><div><label>🗂️ Grupo</label><select id="brig-equip-group"><option value="">Todos os grupos</option>${groups.map(group=>`<option value="${empEsc(group)}" ${selectedGroup===group?'selected':''}>${FIRE_GROUP_ICONS[group]||'📦'} ${empEsc(group)}</option>`).join('')}</select></div><button class="btn secondary" id="brig-equip-clear">🧹 Limpar</button></div></div>${equipments.map(eq=>`<div class="mobile-card mobile-equip"><div><strong>${empEsc(eq.identificador)} · ${empEsc(eq.tipo)}</strong><div class="sub">${FIRE_GROUP_ICONS[fireEquipGroup(eq)]||'📦'} ${empEsc(fireEquipGroup(eq))}<br>📍 ${empEsc(eq.localizacao||"—")} · Próxima: ${fmtDate(getNextInspectionDate(eq))}</div></div><button class="btn" data-brig-inspect="${eq.id}">📋 Inspecionar</button></div>`).join("")||'<div class="mobile-card empty">Nenhum equipamento encontrado neste filtro.</div>'}</div></div>`;
     app.querySelector("#brig-logout").addEventListener("click",()=>{brigadistaSession=null;sessionStorage.removeItem("sst-brigadista-session");renderBrigadistaPortal()});
+    app.querySelector("#brig-equip-search")?.addEventListener("input",e=>{sessionStorage.setItem("sst-brig-search",e.currentTarget.value);renderBrigadistaPortal();const input=document.querySelector("#brig-equip-search");input?.focus();input?.setSelectionRange(input.value.length,input.value.length)});
+    app.querySelector("#brig-equip-group")?.addEventListener("change",e=>{sessionStorage.setItem("sst-brig-group",e.currentTarget.value);renderBrigadistaPortal()});
+    app.querySelector("#brig-equip-clear")?.addEventListener("click",()=>{sessionStorage.removeItem("sst-brig-search");sessionStorage.removeItem("sst-brig-group");renderBrigadistaPortal()});
     app.querySelectorAll("[data-brig-inspect]").forEach(btn=>btn.addEventListener("click",()=>openFireInspectionPlanModal(btn.dataset.brigInspect,null,brigadistaSession.brigadistaId)));
   }
 
@@ -5438,6 +5472,9 @@ function renderPcmsoDash(root){
   }
 
   function renderFireSchedule(root){
+    const search=root.dataset.fireScheduleSearch||"",group=root.dataset.fireScheduleGroup||"",q=normalizeText(search);
+    const groups=[...new Set((state.fireEquip||[]).map(fireEquipGroup))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+    const filtered=(state.fireEquip||[]).filter(eq=>(!group||fireEquipGroup(eq)===group)&&(!q||normalizeText([eq.identificador,eq.tipo,eq.categoria,eq.localizacao,fireEquipGroup(eq),eq.ultimoInspetor].join(" ")).includes(q)));
     root.innerHTML = `
       <div class="page-head">
         <div>
@@ -5446,8 +5483,13 @@ function renderPcmsoDash(root){
         </div>
         ${checkPermission("Master") ? `<button class="btn" id="btn-new-fire-insp">+ Registrar Inspeção</button>` : ""}
       </div>
+      <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${filtered.length} de ${(state.fireEquip||[]).length} equipamento(s)</span></div><div class="fire-filters" style="padding:14px 16px;grid-template-columns:minmax(240px,1.7fr) minmax(190px,1fr) auto;">
+        <div><label>Pesquisar</label><input id="fire-schedule-search" type="search" value="${empEsc(search)}" placeholder="Equipamento, localização ou brigadista"></div>
+        <div><label>🗂️ Grupo</label><select id="fire-schedule-group"><option value="">Todos os grupos</option>${groups.map(x=>`<option value="${empEsc(x)}" ${group===x?'selected':''}>${FIRE_GROUP_ICONS[x]||'📦'} ${empEsc(x)}</option>`).join('')}</select></div>
+        <button class="btn secondary" id="fire-schedule-clear">🧹 Limpar</button>
+      </div></div>
       <div class="panel">
-        ${renderFireScheduleTable(state.fireEquip, checkPermission("Master"))}
+        ${renderFireScheduleTable(filtered, checkPermission("Master"))}
       </div>
     `;
   }
@@ -5456,7 +5498,7 @@ function renderPcmsoDash(root){
     if(list.length === 0) return `<div class="empty">Nenhum equipamento cadastrado no cronograma.</div>`;
     return `
       <div class="fire-table-wrap"><table>
-        <thead><tr><th>🧯 Equipamento</th><th>📍 Localização</th><th>🔁 Periodicidade</th><th>📋 Última inspeção</th><th>📅 Vencimento / Validade</th><th>🔎 Próx. verificação</th><th>🚦 Situação</th>${allowActions?'<th>⚙️ Ações</th>':''}</tr></thead>
+        <thead><tr><th>🧯 Equipamento</th><th>🗂️ Grupo</th><th>📍 Localização</th><th>🔁 Periodicidade</th><th>📋 Última inspeção</th><th>👷 Último brigadista</th><th>📅 Vencimento / Validade</th><th>🔎 Próx. verificação</th><th>🚦 Situação</th>${allowActions?'<th>⚙️ Ações</th>':''}</tr></thead>
         <tbody>
           ${list.map(eq=>{
             const nextDate = getNextInspectionDate(eq);
@@ -5468,9 +5510,11 @@ function renderPcmsoDash(root){
             const validityLabel = validitySt==="ok" ? "Em dia" : validitySt==="bad" ? `Vencido ${Math.abs(validityDays)}d` : `${validityDays}d restantes`;
             return `<tr>
               <td><strong>${eq.identificador}</strong><br><span style="font-size:11px;color:var(--ink-dim);">${eq.tipo}${eq.agenteExtintor?' · '+eq.agenteExtintor:''}${eq.categoria?' · '+eq.categoria:''}</span></td>
+              <td>${FIRE_GROUP_ICONS[fireEquipGroup(eq)]||'📦'} ${empEsc(fireEquipGroup(eq))}</td>
               <td>📍 ${eq.localizacao}</td>
               <td>A cada ${eq.periodicidadeInspMeses || 1} mês(es)</td>
               <td>${fmtDate(eq.ultimaInspecao)}</td>
+              <td>${empEsc(eq.ultimoInspetor||((state.fireInspections||[]).filter(insp=>insp.equipId===eq.id).sort((a,b)=>String(b.dataInspecao||'').localeCompare(String(a.dataInspecao||'')))[0]?.inspetor)||'—')}</td>
               <td>📅 ${fmtDate(eq.vencimentoCarga)}</td>
               <td><strong>🔎 ${fmtDate(nextDate)}</strong><br><small style="color:var(--ink-dim)">Teste/validade: ${fmtDate(eq.vencimentoHidro)}</small></td>
               <td><span class="status-pill ${validitySt}"><span class="dot"></span>${validityLabel}</span><br><small style="color:var(--ink-dim)">Inspeção: ${stLabel}</small></td>
@@ -5483,12 +5527,13 @@ function renderPcmsoDash(root){
   }
 
   function renderFireInspections(root){
-    const search=root.dataset.fireInspSearch||"", group=root.dataset.fireInspGroup||"", result=root.dataset.fireInspResult||"", start=root.dataset.fireInspStart||"", end=root.dataset.fireInspEnd||"", q=normalizeText(search);
+    const search=root.dataset.fireInspSearch||"", group=root.dataset.fireInspGroup||"", brigadista=root.dataset.fireInspBrigadista||"", result=root.dataset.fireInspResult||"", start=root.dataset.fireInspStart||"", end=root.dataset.fireInspEnd||"", q=normalizeText(search);
     const groups=[...new Set(state.fireEquip.map(fireEquipGroup))].sort();
+    const brigadistas=[...new Set((state.fireInspections||[]).map(insp=>insp.inspetor).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
     const filtered=state.fireInspections.filter(insp=>{
       const eq=fireEquipById(insp.equipId), g=eq?fireEquipGroup(eq):"";
       const text=normalizeText([eq?.identificador,eq?.tipo,eq?.categoria,eq?.localizacao,g,insp.inspetor,insp.resultado,insp.observacoes,...(insp.checklist||[]).flatMap(x=>[x.item,x.resultado,x.observacao])].join(" "));
-      return(!q||text.includes(q))&&(!group||g===group)&&(!result||insp.resultado===result)&&(!start||insp.dataInspecao>=start)&&(!end||insp.dataInspecao<=end);
+      return(!q||text.includes(q))&&(!group||g===group)&&(!brigadista||insp.inspetor===brigadista)&&(!result||insp.resultado===result)&&(!start||insp.dataInspecao>=start)&&(!end||insp.dataInspecao<=end);
     });
     root.innerHTML = `
       <div class="page-head">
@@ -5501,6 +5546,7 @@ function renderPcmsoDash(root){
       <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${filtered.length} de ${state.fireInspections.length} inspeção(ões)</span></div><div class="inspection-filter-grid" style="padding:14px 16px">
         <div><label>🔍 Pesquisar</label><input id="fire-insp-search" value="${empEsc(search)}" placeholder="Equipamento, local, inspetor ou item..."></div>
         <div><label>🗂️ Grupo</label><select id="fire-insp-group"><option value="">Todos</option>${groups.map(x=>`<option value="${empEsc(x)}" ${group===x?'selected':''}>${FIRE_GROUP_ICONS[x]||'📦'} ${empEsc(x)}</option>`).join('')}</select></div>
+        <div><label>👷 Brigadista</label><select id="fire-insp-brigadista"><option value="">Todos</option>${brigadistas.map(x=>`<option value="${empEsc(x)}" ${brigadista===x?'selected':''}>${empEsc(x)}</option>`).join('')}</select></div>
         <div><label>✅ Resultado</label><select id="fire-insp-result"><option value="">Todos</option>${['Aprovado','Atenção','Reprovado'].map(x=>`<option ${result===x?'selected':''}>${x}</option>`).join('')}</select></div>
         <div><label>📅 De</label><input type="date" id="fire-insp-start" value="${start}"></div><div><label>📅 Até</label><input type="date" id="fire-insp-end" value="${end}"></div>
         <button class="btn secondary" id="fire-insp-clear">🧹 Limpar</button>
@@ -5518,7 +5564,7 @@ function renderPcmsoDash(root){
                 <td>${fmtDate(insp.dataInspecao)}</td>
                 <td><strong>${eq ? eq.identificador : '—'}</strong><br><small>${eq?eq.tipo:''} · ${eq?fireEquipGroup(eq):'—'}<br>📍 ${eq?.localizacao||'—'}</small></td>
                 <td><strong>${insp.tipoChecagem||'Plano de inspeção'}</strong><br><small>${checks.length?`${checks.length} itens · ✅ ${approved} · ⚠️ ${attention} · ❌ ${failed}`:'Registro anterior sem checklist detalhado'}</small></td>
-                <td>${insp.inspetor}</td>
+                <td><strong>${empEsc(insp.inspetor||'—')}</strong>${insp.brigadistaEmployeeId?'<br><small>Brigadista cadastrado</small>':''}</td>
                 <td><span class="status-pill ${insp.resultado==='Aprovado'?'ok':insp.resultado==='Atenção'?'warn':'bad'}"><span class="dot"></span>${insp.resultado}</span></td>
                 <td>${insp.observacoes || "—"}</td>
                 ${checkPermission("Administrador") ? `<td><div class="fire-actions"><button class="action-link" data-edit-fire-insp="${insp.id}">✏️ Editar</button><button class="action-link danger-link" data-del-fire-insp="${insp.id}">🗑️ Remover</button></div></td>` : ''}
@@ -10133,8 +10179,10 @@ function renderPcmsoDash(root){
         const eq=fireEquipById(data.equipId),brig=(state.fireBrigadistas||[]).find(x=>x.id===data.brigadistaId),brigEmp=fireBrigadistaEmployee(brig);
         if(!brig||!brigEmp){alert("Selecione um brigadista válido.");return;}
         const record={equipId:data.equipId,dataInspecao:data.dataInspecao,brigadistaId:brig.id,brigadistaEmployeeId:brigEmp.id,inspetor:brigEmp.nome,observacoes:data.observacoes||"",checklist,resultado,tipoChecagem:`Plano · ${fireEquipGroup(eq)}`,proximaInspecao:addMonths(data.dataInspecao,eq?.periodicidadeInspMeses||1),updatedAt:new Date().toISOString()};
+        const previousEquipId=current?.equipId||"";
         if(current)Object.assign(current,record);else state.fireInspections.push({id:uid("insp"),...record});
-        (state.fireEquip||[]).forEach(equip=>{const dates=(state.fireInspections||[]).filter(x=>x.equipId===equip.id).map(x=>x.dataInspecao).filter(Boolean).sort();equip.ultimaInspecao=dates.at(-1)||equip.ultimaInspecao;});
+        syncFireInspectionSchedule(record.equipId);
+        if(previousEquipId&&previousEquipId!==record.equipId) syncFireInspectionSchedule(previousEquipId);
         await saveState();window.closeModal();render();
       });
     });
@@ -10513,6 +10561,18 @@ function renderPcmsoDash(root){
     root.querySelector("#brig-clear")?.addEventListener("click",()=>{delete root.dataset.brigSearch;delete root.dataset.brigStatus;applyBrigFilters()});
     root.querySelectorAll("[data-edit-brig]").forEach(b=>b.addEventListener("click",e=>openFireBrigadistaModal(e.currentTarget.dataset.editBrig)));
     root.querySelectorAll("[data-del-brig]").forEach(b=>b.addEventListener("click",async e=>{if(!confirm("Remover este brigadista?"))return;state.fireBrigadistas=(state.fireBrigadistas||[]).filter(x=>x.id!==e.currentTarget.dataset.delBrig);await saveState();render()}));
+    root.querySelector("#brig-save-public-url")?.addEventListener("click",async()=>{
+      const input=root.querySelector("#brig-public-url"),value=String(input?.value||"").trim();
+      if(!value){alert("Informe o endereço público HTTPS onde o sistema foi publicado.");input?.focus();return;}
+      try{
+        const url=new URL(value);
+        if(url.protocol!=="https:"&&url.protocol!=="http:") throw new Error("protocol");
+        url.hash="";url.search="";
+        state.firePortalPublicUrl=url.href;
+        await saveState();render();
+        alert("Endereço salvo. O QR Code foi atualizado para acesso pelo celular.");
+      }catch(err){alert("Informe um endereço válido iniciado por https:// ou http://.");input?.focus();}
+    });
     root.querySelector("#brig-copy-link")?.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(fireBrigadistaPortalUrl());alert("Link copiado.")}catch(e){prompt("Copie o link:",fireBrigadistaPortalUrl())}});
     root.querySelector("#brig-print-qr")?.addEventListener("click",()=>window.print());
     root.querySelector("#btn-new-fire-insp")?.addEventListener("click", () => openFireInspectionPlanModal());
@@ -10522,10 +10582,14 @@ function renderPcmsoDash(root){
     root.querySelector("#fire-filter-location")?.addEventListener("change",e=>{root.dataset.fireLocation=e.currentTarget.value;applyFireFilters()});
     root.querySelector("#fire-clear-filters")?.addEventListener("click",()=>{delete root.dataset.fireSearch;delete root.dataset.fireGroup;delete root.dataset.fireLocation;applyFireFilters()});
     root.querySelectorAll("[data-edit-fire]").forEach(b=>b.addEventListener("click",e=>openFireModal(e.currentTarget.dataset.editFire)));
+    const applyFireScheduleFilters=()=>{renderFireSchedule(root);attachMainListeners(root)};
+    root.querySelector("#fire-schedule-search")?.addEventListener("input",e=>{root.dataset.fireScheduleSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;applyFireScheduleFilters();const i=root.querySelector("#fire-schedule-search");i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#fire-schedule-group")?.addEventListener("change",e=>{root.dataset.fireScheduleGroup=e.currentTarget.value;applyFireScheduleFilters()});
+    root.querySelector("#fire-schedule-clear")?.addEventListener("click",()=>{delete root.dataset.fireScheduleSearch;delete root.dataset.fireScheduleGroup;applyFireScheduleFilters()});
     const applyFireInspectionFilters=()=>{renderFireInspections(root);attachMainListeners(root)};
     root.querySelector("#fire-insp-search")?.addEventListener("input",e=>{root.dataset.fireInspSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;applyFireInspectionFilters();const i=root.querySelector("#fire-insp-search");i?.focus();i?.setSelectionRange(p,p)});
-    [["#fire-insp-group","fireInspGroup"],["#fire-insp-result","fireInspResult"],["#fire-insp-start","fireInspStart"],["#fire-insp-end","fireInspEnd"]].forEach(([sel,key])=>root.querySelector(sel)?.addEventListener("change",e=>{root.dataset[key]=e.currentTarget.value;applyFireInspectionFilters()}));
-    root.querySelector("#fire-insp-clear")?.addEventListener("click",()=>{["fireInspSearch","fireInspGroup","fireInspResult","fireInspStart","fireInspEnd"].forEach(k=>delete root.dataset[k]);applyFireInspectionFilters()});
+    [["#fire-insp-group","fireInspGroup"],["#fire-insp-brigadista","fireInspBrigadista"],["#fire-insp-result","fireInspResult"],["#fire-insp-start","fireInspStart"],["#fire-insp-end","fireInspEnd"]].forEach(([sel,key])=>root.querySelector(sel)?.addEventListener("change",e=>{root.dataset[key]=e.currentTarget.value;applyFireInspectionFilters()}));
+    root.querySelector("#fire-insp-clear")?.addEventListener("click",()=>{["fireInspSearch","fireInspGroup","fireInspBrigadista","fireInspResult","fireInspStart","fireInspEnd"].forEach(k=>delete root.dataset[k]);applyFireInspectionFilters()});
     root.querySelectorAll("[data-edit-fire-insp]").forEach(b=>b.addEventListener("click",e=>openFireInspectionPlanModal(null,e.currentTarget.dataset.editFireInsp)));
     root.querySelector("#btn-new-cipa-membro")?.addEventListener("click", openCipaMemberModal);
     root.querySelector("#btn-new-cipa-eleicao")?.addEventListener("click", openCipaElectionModal);
@@ -10914,7 +10978,10 @@ function renderPcmsoDash(root){
     }));
 
     root.querySelectorAll("[data-del-fire-insp]").forEach(b => b.addEventListener("click", async e => {
-      state.fireInspections = state.fireInspections.filter(x => x.id !== e.target.dataset.delFireInsp);
+      const inspectionId=e.currentTarget.dataset.delFireInsp;
+      const removed=(state.fireInspections||[]).find(x=>x.id===inspectionId);
+      state.fireInspections = state.fireInspections.filter(x => x.id !== inspectionId);
+      if(removed?.equipId) syncFireInspectionSchedule(removed.equipId);
       await saveState(); render();
     }));
 
