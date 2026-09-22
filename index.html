@@ -4575,11 +4575,16 @@ body.cipa-terminal-mode .urna-confirm{
     const fSort   = root.dataset.secSort || "";
     const hasFilter = !!(fSearch || fCargo || fSit || fSort);
 
-    // Monta cada setor com seus colaboradores e os cargos exercidos nele.
+    // Monta cada setor com os cargos vinculados diretamente e os exercidos pelos colaboradores.
     const all = state.generalSectors.map(x => {
       const emps = sectorEmployees(x.nome);
       const map = new Map();
       emps.forEach(e => { const c = String(e.cargo||"").trim(); if(c) map.set(c, (map.get(c)||0) + 1); });
+      (Array.isArray(x.cargoIds) ? x.cargoIds : []).forEach(jobId => {
+        const job = state.generalJobs.find(j => j.id === jobId);
+        const nome = String(job?.nome || "").trim();
+        if(nome && !map.has(nome)) map.set(nome, 0);
+      });
       const cargos = [...map.entries()].sort((a,b) => a[0].localeCompare(b[0],"pt-BR"));
       return { s:x, emps, cargos };
     });
@@ -4614,7 +4619,7 @@ body.cipa-terminal-mode .urna-confirm{
         + (emps.length>4 ? `<div class="sm more" title="${emps.slice(4).map(e=>empEsc(e.nome)).join(", ")}">+${emps.length-4}</div>` : "");
       return `<tr>
         <td><div class="sec-name"><span class="sec-ico" style="background:hsla(${hue},65%,50%,.16);border:1px solid hsla(${hue},65%,50%,.35);">${empIcon(x.nome, EMP_SECTOR_ICONS, "🏢")}</span><span>${empEsc(x.nome)}</span></div></td>
-        <td>${cargos.length ? `<div class="sec-cargos">${cargos.map(([c,n]) => `<span class="sec-cargo ${fCargo===c?"match":""}" title="${n} colaborador${n===1?"":"es"} neste cargo">${empIcon(c, EMP_ROLE_ICONS, "💼")} ${empEsc(c)}<span class="cnt">${n}</span></span>`).join("")}</div>` : `<span class="sec-none">💤 Nenhum cargo ainda</span>`}</td>
+        <td>${cargos.length ? `<div class="sec-cargos">${cargos.map(([c,n]) => `<span class="sec-cargo ${fCargo===c?"match":""}" title="${n ? `${n} colaborador${n===1?"":"es"} neste cargo` : "Cargo vinculado, ainda sem colaborador"}">${empIcon(c, EMP_ROLE_ICONS, "💼")} ${empEsc(c)}<span class="cnt">${n}</span></span>`).join("")}</div>` : `<span class="sec-none">💤 Nenhum cargo vinculado</span>`}</td>
         <td>${emps.length ? `<div class="sec-people"><div class="sec-stack">${stack}</div><div class="sec-count">👥 ${emps.length} colaborador${emps.length===1?"":"es"}</div></div>` : `<span class="sec-none">👥 Sem colaboradores</span>`}</td>
         <td><div class="emp-actions">
           <button type="button" class="emp-action master-edit-sector" data-id="${empEsc(x.id)}" title="Editar setor" aria-label="Editar setor ${empEsc(x.nome)}">✏️</button>
@@ -4699,15 +4704,37 @@ body.cipa-terminal-mode .urna-confirm{
   function openGeneralSectorForm(id=""){
     ensureGeneralMasterData();
     const x = state.generalSectors.find(z=>z.id===id) || {};
+    const selectedJobIds = new Set(Array.isArray(x.cargoIds) ? x.cargoIds : []);
+    // Compatibilidade: em cadastros antigos, reconhece os cargos já usados pelos colaboradores do setor.
+    sectorEmployees(x.nome||"").forEach(e => {
+      const job = state.generalJobs.find(j => normalizeText(j.nome) === normalizeText(e.cargo||e.funcao));
+      if(job) selectedJobIds.add(job.id);
+    });
+    const jobs = state.generalJobs.slice().sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"));
     openModal(`<h3>${id?"✏️ Editar":"➕ Novo"} Setor</h3>
       <form id="general-sector-form">
         <div class="field"><label>Nome do setor *</label><input name="nome" required value="${empEsc(x.nome||"")}" placeholder="Ex.: Almoxarifado"></div>
-        <div style="font-size:11px;color:var(--ink-dim);margin:-4px 0 12px;">💼 Os cargos do setor aparecem automaticamente conforme os colaboradores são cadastrados em Funcionários.</div>
+        <div class="field"><label>💼 Cargos vinculados ao setor</label>
+          ${jobs.length ? `<div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;max-height:230px;overflow:auto;background:var(--panel-2);">
+            <label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-weight:700;"><input type="checkbox" id="sector-jobs-all" style="width:auto;"> Selecionar todos</label>
+            <div style="height:1px;background:var(--line);margin:5px 0 7px;"></div>
+            ${jobs.map(j=>`<label style="display:flex;align-items:center;gap:8px;padding:6px 0;font-weight:500;"><input type="checkbox" name="cargoIds" value="${empEsc(j.id)}" ${selectedJobIds.has(j.id)?"checked":""} style="width:auto;"> ${empIcon(j.nome, EMP_ROLE_ICONS, "💼")} ${empEsc(j.nome)}</label>`).join("")}
+          </div>` : `<div class="empty" style="padding:14px;">Nenhum cargo cadastrado. Cadastre primeiro em <strong>Cadastro de Cargos</strong>.</div>`}
+        </div>
+        <div style="font-size:11px;color:var(--ink-dim);margin:-4px 0 12px;">Os cargos marcados ficarão vinculados ao setor mesmo antes do cadastro de colaboradores.</div>
         <div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">💾 Salvar</button></div>
       </form>`, ov => {
+      const allBox = ov.querySelector("#sector-jobs-all");
+      const jobBoxes = [...ov.querySelectorAll('input[name="cargoIds"]')];
+      const syncAllBox = () => { if(allBox){ allBox.checked = !!jobBoxes.length && jobBoxes.every(b=>b.checked); allBox.indeterminate = jobBoxes.some(b=>b.checked) && !jobBoxes.every(b=>b.checked); } };
+      syncAllBox();
+      allBox?.addEventListener("change",()=>{ jobBoxes.forEach(b=>b.checked=allBox.checked); syncAllBox(); });
+      jobBoxes.forEach(b=>b.addEventListener("change",syncAllBox));
       ov.querySelector("form").onsubmit = async e => {
         e.preventDefault();
-        const nome = String(new FormData(e.target).get("nome")||"").trim();
+        const formData = new FormData(e.target);
+        const nome = String(formData.get("nome")||"").trim();
+        const cargoIds = formData.getAll("cargoIds").map(String).filter(jobId=>state.generalJobs.some(j=>j.id===jobId));
         if(!nome) return;
         if(state.generalSectors.some(z => z.id!==id && normalizeText(z.nome)===normalizeText(nome))){
           alert("Já existe um setor com este nome."); return;
@@ -4716,13 +4743,14 @@ body.cipa-terminal-mode .urna-confirm{
           const sector = state.generalSectors.find(z=>z.id===id);
           const antigo = sector.nome;
           sector.nome = nome;
+          sector.cargoIds = cargoIds;
           // Mantém o vínculo: quem usava o nome antigo passa a usar o novo.
           if(normalizeText(antigo) !== normalizeText(nome) || antigo !== nome){
             const troca = arr => (arr||[]).forEach(r => { if(normalizeText(r.setor)===normalizeText(antigo)) r.setor = nome; });
             troca(state.employees); troca(state.pgrRisks); troca(state.pcmsoFunctionExams);
           }
         } else {
-          state.generalSectors.push({id:uid("setor"), nome});
+          state.generalSectors.push({id:uid("setor"), nome, cargoIds});
         }
         await saveState(); closeModal(); render();
       };
@@ -4745,6 +4773,9 @@ body.cipa-terminal-mode .urna-confirm{
       const emps = jobEmployees(x.nome);
       const map = new Map();
       emps.forEach(e => { const st = String(e.setor||"").trim(); if(st) map.set(st, (map.get(st)||0) + 1); });
+      state.generalSectors.forEach(sector => {
+        if(Array.isArray(sector.cargoIds) && sector.cargoIds.includes(x.id) && !map.has(sector.nome)) map.set(sector.nome, 0);
+      });
       const setores = [...map.entries()].sort((a,b) => a[0].localeCompare(b[0],"pt-BR"));
       return { j:x, emps, setores, desc:String(x.descricao||"").trim() };
     });
@@ -4870,6 +4901,9 @@ body.cipa-terminal-mode .urna-confirm{
       }
       if(!confirm(`Remover o cargo "${job.nome}" do cadastro geral?`)) return;
       state.generalJobs = state.generalJobs.filter(z => z.id !== job.id);
+      state.generalSectors.forEach(sector => {
+        if(Array.isArray(sector.cargoIds)) sector.cargoIds = sector.cargoIds.filter(jobId => jobId !== job.id);
+      });
       await saveState(); render();
     }));
   }
@@ -9370,6 +9404,16 @@ function renderPcmsoDash(root){
     }catch(err){alert('A assinatura biométrica não foi confirmada. A entrega não foi registrada.');return false}
   }
 
+  function nextEmployeeRegistration(){
+    const numericRegistrations = (state.employees || []).map(employee => {
+      const raw = String(employee.matricula || "").trim();
+      return /^\d+$/.test(raw) ? { raw, number: Number(raw) } : null;
+    }).filter(item => item && Number.isSafeInteger(item.number));
+    const lastNumber = numericRegistrations.reduce((max,item)=>Math.max(max,item.number),0);
+    const width = Math.max(6, ...numericRegistrations.map(item=>item.raw.length));
+    return String(lastNumber + 1).padStart(width,"0");
+  }
+
   function openEmployeeModal(employeeId=null){
     const employee = employeeId ? state.employees.find(x=>x.id===employeeId) : null;
     const isEdit = !!employee;
@@ -9382,15 +9426,16 @@ function renderPcmsoDash(root){
     ensureGeneralMasterData();
     const cargosCadastrados = (state.generalJobs || []).slice().sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'));
     const setoresCadastrados = (state.generalSectors || []).slice().sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'));
+    const employeeRegistration = isEdit ? String(employee?.matricula || "") : nextEmployeeRegistration();
 
     openModal(`
       <h3>${isEdit ? "Editar Funcionário" : "Novo Funcionário"}</h3>
       <form id="emp-form">
         <div class="field"><label>Nome Completo</label><input required name="nome" value="${esc(employee?.nome)}"></div>
-        <div class="field"><label>Matrícula</label><input name="matricula" required value="${esc(employee?.matricula)}" placeholder="Ex.: 000123"><div id="emp-matricula-error" style="display:none;font-size:11px;color:var(--red);margin-top:5px;">Esta matrícula já está cadastrada para outro funcionário.</div></div>
+        <div class="field"><label>Matrícula</label><input name="matricula" required value="${esc(employeeRegistration)}" ${isEdit?'':'readonly'} inputmode="numeric" placeholder="Ex.: 000123"><div style="font-size:11px;color:var(--ink-dim);margin-top:5px;">${isEdit?'Matrícula atual do funcionário.':'Numeração gerada automaticamente após a última matrícula cadastrada.'}</div><div id="emp-matricula-error" style="display:none;font-size:11px;color:var(--red);margin-top:5px;">Esta matrícula já está cadastrada para outro funcionário.</div></div>
         <div class="field-row">
-          <div class="field"><label>Cargo / Função</label><select name="cargo" required><option value="">Selecione o cargo cadastrado</option>${cargosCadastrados.map(x=>`<option value="${esc(x.nome)}" ${employee?.cargo===x.nome?'selected':''}>${esc(x.nome)}</option>`).join('')}</select>${!cargosCadastrados.length?'<div style="font-size:11px;color:var(--red);margin-top:5px;">Cadastre primeiro um cargo em Cadastro de Cargos.</div>':''}</div>
-          <div class="field"><label>Setor</label><select name="setor" required><option value="">Selecione o setor cadastrado</option>${setoresCadastrados.map(x=>`<option value="${esc(x.nome)}" ${employee?.setor===x.nome?'selected':''}>${esc(x.nome)}</option>`).join('')}</select>${!setoresCadastrados.length?'<div style="font-size:11px;color:var(--red);margin-top:5px;">Cadastre primeiro um setor em Cadastro de Setores.</div>':''}</div>
+          <div class="field"><label>Cargo / Função</label><select name="cargo" id="employee-job-select" required><option value="">Selecione o cargo cadastrado</option>${cargosCadastrados.map(x=>`<option value="${esc(x.nome)}" ${employee?.cargo===x.nome?'selected':''}>${esc(x.nome)}</option>`).join('')}</select>${!cargosCadastrados.length?'<div style="font-size:11px;color:var(--red);margin-top:5px;">Cadastre primeiro um cargo em Cadastro de Cargos.</div>':''}</div>
+          <div class="field"><label>Setor</label><select name="setor" id="employee-sector-select" required><option value="">Selecione primeiro o cargo</option></select><div id="employee-sector-link-info" style="font-size:11px;color:var(--ink-dim);margin-top:5px;">O setor será carregado conforme o vínculo do cargo.</div>${!setoresCadastrados.length?'<div style="font-size:11px;color:var(--red);margin-top:5px;">Cadastre primeiro um setor em Cadastro de Setores.</div>':''}</div>
         </div>
         <div class="field-row">
           <div class="field"><label>Telefone (WhatsApp)</label><input name="telefone" value="${esc(employee?.telefone)}" placeholder="(00) 00000-0000"></div>
@@ -9418,6 +9463,31 @@ function renderPcmsoDash(root){
       let employeePhoto = employee?.foto || "";
       let employeeBiometricCredentialId=employee?.biometricCredentialId||"";
       let employeeBiometricType=employee?.biometricType||"device";
+      const employeeJobSelect=ov.querySelector('#employee-job-select');
+      const employeeSectorSelect=ov.querySelector('#employee-sector-select');
+      const employeeSectorLinkInfo=ov.querySelector('#employee-sector-link-info');
+      const updateEmployeeSectors=()=>{
+        const selectedJob=state.generalJobs.find(job=>normalizeText(job.nome)===normalizeText(employeeJobSelect?.value));
+        const linkedSectors=selectedJob ? setoresCadastrados.filter(sector=>Array.isArray(sector.cargoIds)&&sector.cargoIds.includes(selectedJob.id)) : [];
+        const previousSector=employeeSectorSelect?.value || (isEdit ? String(employee?.setor||'') : '');
+        if(!employeeSectorSelect) return;
+        if(!selectedJob){
+          employeeSectorSelect.innerHTML='<option value="">Selecione primeiro o cargo</option>';
+          employeeSectorLinkInfo.textContent='O setor será carregado conforme o vínculo do cargo.';
+          return;
+        }
+        if(!linkedSectors.length){
+          employeeSectorSelect.innerHTML='<option value="">Nenhum setor vinculado a este cargo</option>';
+          employeeSectorLinkInfo.textContent='Vincule este cargo a um setor em Cadastro de Setores antes de continuar.';
+          return;
+        }
+        employeeSectorSelect.innerHTML=`<option value="">${linkedSectors.length===1?'Setor vinculado':'Selecione um dos setores vinculados'}</option>${linkedSectors.map(sector=>`<option value="${esc(sector.nome)}">${esc(sector.nome)}</option>`).join('')}`;
+        const validPrevious=linkedSectors.some(sector=>normalizeText(sector.nome)===normalizeText(previousSector));
+        employeeSectorSelect.value=validPrevious ? linkedSectors.find(sector=>normalizeText(sector.nome)===normalizeText(previousSector)).nome : (linkedSectors.length===1 ? linkedSectors[0].nome : '');
+        employeeSectorLinkInfo.textContent=linkedSectors.length===1 ? 'Setor preenchido automaticamente conforme o cargo.' : `${linkedSectors.length} setores vinculados a este cargo. Selecione o setor correto.`;
+      };
+      employeeJobSelect?.addEventListener('change',updateEmployeeSectors);
+      updateEmployeeSectors();
       const biometricStatus=ov.querySelector('#employee-biometric-status');
       const biometricRegister=ov.querySelector('#employee-biometric-register');
       const facialRegister=ov.querySelector('#employee-facial-register');
