@@ -778,16 +778,22 @@
   window.firestoreStateRef = doc(db, "sst_erp_state", "main");
   window.firestoreGetDoc = () => getDoc(window.firestoreStateRef);
   window.firestoreSetDoc = async (jsonString) => {
-    // Conserva a versão atual antes de cada alteração.
-    const current = await getDoc(window.firestoreStateRef);
-    if(current.exists() && current.data()?.json){
-      const backupId = new Date().toISOString().replace(/[^0-9]/g, "");
-      await setDoc(doc(db, "sst_erp_backups", backupId), {
-        json: current.data().json,
-        backedUpAt: serverTimestamp(),
-        sourceUpdatedAt: current.data().updatedAt || null
-      });
+    // Tenta conservar a versão anterior. Se as regras do Firebase ainda não
+    // autorizarem a coleção de backups, isso NÃO pode impedir o salvamento.
+    try{
+      const current = await getDoc(window.firestoreStateRef);
+      if(current.exists() && current.data()?.json){
+        const backupId = new Date().toISOString().replace(/[^0-9]/g, "");
+        await setDoc(doc(db, "sst_erp_backups", backupId), {
+          json: current.data().json,
+          backedUpAt: serverTimestamp(),
+          sourceUpdatedAt: current.data().updatedAt || null
+        });
+      }
+    }catch(backupError){
+      console.warn("Backup separado indisponível; salvamento principal continuará.", backupError);
     }
+    // A gravação principal é obrigatória e continua propagando qualquer erro.
     await setDoc(window.firestoreStateRef, {
       json: jsonString,
       updatedAt: serverTimestamp()
