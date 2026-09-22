@@ -777,10 +777,22 @@
   window.firestoreDb = db;
   window.firestoreStateRef = doc(db, "sst_erp_state", "main");
   window.firestoreGetDoc = () => getDoc(window.firestoreStateRef);
-  window.firestoreSetDoc = (jsonString) => setDoc(window.firestoreStateRef, {
-    json: jsonString,
-    updatedAt: serverTimestamp()
-  });
+  window.firestoreSetDoc = async (jsonString) => {
+    // Conserva a versão atual antes de cada alteração.
+    const current = await getDoc(window.firestoreStateRef);
+    if(current.exists() && current.data()?.json){
+      const backupId = new Date().toISOString().replace(/[^0-9]/g, "");
+      await setDoc(doc(db, "sst_erp_backups", backupId), {
+        json: current.data().json,
+        backedUpAt: serverTimestamp(),
+        sourceUpdatedAt: current.data().updatedAt || null
+      });
+    }
+    await setDoc(window.firestoreStateRef, {
+      json: jsonString,
+      updatedAt: serverTimestamp()
+    });
+  };
 </script>
 <style>
     .cipa-candidate-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:0 0 14px}
@@ -2130,37 +2142,33 @@ body.cipa-terminal-mode .urna-confirm{
   async function loadState(){
     try{
       let parsed = null;
+      let firestoreDocumentExists = false;
 
       // 1) Firestore: fonte principal de dados. É de onde o sistema lê ao
       // abrir, tanto no computador quanto em qualquer outro dispositivo/
       // navegador que acesse este mesmo arquivo com a mesma firebaseConfig.
-      try{
-        if(window.firestoreGetDoc){
-          const snap = await window.firestoreGetDoc();
-          if(snap && snap.exists && snap.exists()){
-            const data = snap.data();
-            if(data && data.json) parsed = JSON.parse(data.json);
-          }
+      // Se a leitura falhar, o sistema bloqueia sem usar dados de demonstração.
+      if(!window.firestoreGetDoc){
+        throw new Error("Firebase ainda não foi inicializado.");
+      }
+      const snap = await window.firestoreGetDoc();
+      if(snap && snap.exists && snap.exists()){
+        firestoreDocumentExists = true;
+        const data = snap.data();
+        if(!data || typeof data.json !== "string" || !data.json.trim()){
+          throw new Error("O documento principal do Firebase está sem dados válidos.");
         }
-      }catch(e){ console.error("Falha ao carregar do Firestore:", e); }
+        parsed = JSON.parse(data.json);
+      }
 
       // 2) Estado embutido na própria página (usado só como semente inicial,
-      // caso o Firestore ainda esteja vazio na primeira execução).
-      if(!parsed){
+      // exclusivamente quando o documento principal realmente não existe.
+      if(!firestoreDocumentExists){
         const stateEl = document.getElementById("__STATE__");
         const raw = stateEl ? stateEl.textContent.trim() : "";
         if(raw && raw !== "{}"){
           try{ parsed = JSON.parse(raw); }catch(e){ parsed = null; }
         }
-      }
-
-      // 3) Fallback extra: armazenamento do preview do Claude, caso esteja
-      // rodando ali e o Firestore não tenha respondido por algum motivo.
-      if(!parsed){
-        try{
-          const res = await window.storage.get(STORAGE_KEY, true);
-          if(res && res.value) parsed = JSON.parse(res.value);
-        }catch(e){}
       }
 
       if(parsed){
@@ -2170,8 +2178,17 @@ body.cipa-terminal-mode .urna-confirm{
         seedIfEmpty();
         applyStateMigrations();
       }
-      await saveState(); // garante que o Firestore fique com o dado carregado/semeado
-    }catch(e){ seedIfEmpty(); applyStateMigrations(); }
+      // Nunca grava automaticamente ao abrir um banco já existente.
+      if(!firestoreDocumentExists){
+        await saveState();
+      }
+    }catch(e){
+      console.error("Carregamento seguro bloqueado:", e);
+      loaded = false;
+      const app = document.getElementById("app");
+      if(app) app.innerHTML = `<main style="min-height:100vh;display:grid;place-items:center;padding:24px;background:#0f172a;color:#e5e7eb;font-family:Inter,Arial,sans-serif"><section style="max-width:680px;background:#172033;border:1px solid #334155;border-radius:14px;padding:28px"><h1 style="margin-top:0;color:#f59e0b">Proteção dos dados ativada</h1><p>O sistema não conseguiu confirmar a leitura do Firebase e, por segurança, nenhuma informação foi carregada ou gravada.</p><p>Verifique a internet e tente novamente. Se o problema continuar, confira as regras de acesso do Firestore.</p><button onclick="location.reload()" style="border:0;border-radius:8px;padding:11px 18px;font-weight:700;cursor:pointer">Tentar novamente</button></section></main>`;
+      return;
+    }
     (state.cipaElections || []).forEach(ensureElectionVotingFields);
     loaded = true;
     render();
