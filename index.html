@@ -354,11 +354,16 @@
   .modal h3 { font-family: var(--font-head); font-size: 18px; margin: 0 0 16px; font-weight: 600; }
   .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
   .modal.role-procedures-modal { max-width: 1180px; width: calc(100vw - 32px); max-height: 94vh; }
+  .modal.ghe-people-modal { max-width: 920px; width: calc(100vw - 32px); max-height: 92vh; }
+  .ghe-people-modal table { width:100%; min-width:700px; table-layout:auto; }
+  .ghe-people-modal th,.ghe-people-modal td { white-space:normal; overflow-wrap:anywhere; padding:11px 14px; }
+  .ghe-job-link { all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:4px; margin:2px; padding:4px 7px; border-radius:999px; color:var(--blue); background:var(--panel-2); border:1px solid var(--line); font-size:11px; font-weight:700; text-decoration:underline; }
   .role-procedures-modal table { min-width: 980px; }
   .role-procedure-toolbar { display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; margin:0 0 16px; }
   .role-training-status { min-width:110px; font-weight:700; }
   @media(max-width:700px){
     .modal.role-procedures-modal { width:100%; max-height:96vh; padding:16px; }
+    .modal.ghe-people-modal { width:100%; max-height:96vh; padding:16px; }
     .role-procedure-toolbar .btn { width:100%; justify-content:center; }
   }
 
@@ -1447,7 +1452,7 @@ body.cipa-terminal-mode .urna-confirm{
 .qr-card img{width:200px;height:200px;background:#fff;border:8px solid #fff;border-radius:8px}
 .brigade-mobile{min-height:100vh;background:var(--bg);padding:18px}.brigade-mobile-shell{max-width:760px;margin:auto}.brigade-mobile .mobile-card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:var(--shadow)}
 .brigade-mobile .mobile-equip{display:flex;justify-content:space-between;gap:12px;align-items:center}.brigade-mobile .mobile-equip .btn{flex:0 0 auto}
-.brigade-mobile-filters{display:grid;grid-template-columns:minmax(220px,1.5fr) minmax(190px,1fr) auto;gap:10px;align-items:end}.brigade-mobile-filters label{display:block;margin-bottom:5px;font-size:12px;font-weight:700;color:var(--ink-dim)}
+.brigade-mobile-filters{display:grid;grid-template-columns:1fr;gap:10px;align-items:end}.brigade-mobile-filters label{display:block;margin-bottom:5px;font-size:12px;font-weight:700;color:var(--ink-dim)}
 @media(max-width:1050px){.inspection-filter-grid{grid-template-columns:1fr 1fr 1fr}.inspection-filter-grid .btn{grid-column:1/-1}.inspection-check-row{grid-template-columns:1fr 160px}.inspection-check-row input{grid-column:1/-1}}
 @media(max-width:700px){.brigade-grid,.inspection-filter-grid,.inspection-check-row,.qr-card,.brigade-mobile-filters{grid-template-columns:1fr}.inspection-filter-grid .btn,.inspection-check-row input{grid-column:auto}.qr-card img{margin:auto}.brigade-mobile .mobile-equip{align-items:stretch;flex-direction:column}}
 </style>
@@ -1493,9 +1498,15 @@ body.cipa-terminal-mode .urna-confirm{
     pcmso: [],
     fireEquip: [],
     fireInspections: [],
+    fireCorrectiveActions: [],
     pgrRisks: [],
+    pgrGhes: [],
+    nr15Assessments: [],
+    nr15Professionals: [],
     confinedSpaces: [],
     pets: [],
+    ecSupervisors: [],
+    ecPortalPublicUrl: "",
     trainings: [],
     roleMatrix: [],
     roleTrainingCompliance: [],
@@ -1510,7 +1521,7 @@ body.cipa-terminal-mode .urna-confirm{
     tercTiposDocumento: [],
     tercDocumentos: [],
     modulePermissions: {
-      master: ["trainings", "ec", "pgr", "epi", "pcmso", "incendio", "cipa", "terceiros", "geral"],
+      master: ["trainings", "ec", "pgr", "nr15", "epi", "pcmso", "incendio", "cipa", "terceiros", "geral"],
       usuario: ["trainings", "epi"]
     },
     userSpecificPermissions: {},
@@ -1545,6 +1556,7 @@ body.cipa-terminal-mode .urna-confirm{
     { id: "trainings", name: "🎓 Treinamentos" },
     { id: "ec", name: "🚧 Espaço Confinado (NR-33)" },
     { id: "pgr", name: "⚠️ PGR (NR-1)" },
+    { id: "nr15", name: "☣️ Insalubridade (NR-15)" },
     { id: "epi", name: "⛑️ EPIs (NR-6)" },
     { id: "pcmso", name: "🏥 PCMSO (NR-7)" },
     { id: "incendio", name: "🧯 Incêndio (NR-23)" },
@@ -1563,12 +1575,22 @@ body.cipa-terminal-mode .urna-confirm{
     ec: [
       { id: "ec-dash", name: "📊 Dashboard NR-33" },
       { id: "ec-inventory", name: "🏭 Inventário Espaços" },
-      { id: "ec-pets", name: "📜 Gestão de PETs" }
+      { id: "ec-pets", name: "📜 Gestão de PETs" },
+      { id: "ec-supervisors", name: "👷 Supervisores Autorizados" },
+      { id: "ec-portal", name: "📱 Portal e QR Codes" }
     ],
     pgr: [
       { id: "pgr-dash", name: "📊 Dashboard PGR" },
       { id: "pgr-list", name: "⚠️ Inventário de Riscos" },
+      { id: "pgr-ghe", name: "👥 Cadastro de GHE" },
       { id: "pgr-hazards", name: "☣️ Cadastro de Perigos" }
+    ],
+    nr15: [
+      { id: "nr15-dash", name: "📊 Dashboard NR-15" },
+      { id: "nr15-assessments", name: "🧪 Avaliações de Insalubridade" },
+      { id: "nr15-agents", name: "☣️ Agentes e Anexos" },
+      { id: "nr15-professionals", name: "👷 Responsáveis Técnicos" },
+      { id: "nr15-reports", name: "📄 Laudos e Revisões" }
     ],
     epi: [
       { id: "epi-dash", name: "📊 Dashboard EPI" },
@@ -1588,7 +1610,8 @@ body.cipa-terminal-mode .urna-confirm{
       { id: "fire-list", name: "🧯 Equipamentos de Emergência" },
       { id: "fire-brigadistas", name: "🦺 Cadastro de Brigadistas" },
       { id: "fire-schedule", name: "📅 Cronograma Inspeções" },
-      { id: "fire-inspections", name: "📋 Histórico Inspeções" }
+      { id: "fire-inspections", name: "📋 Histórico Inspeções" },
+      { id: "fire-corrective-plan", name: "🛠️ Plano de Manutenção Corretiva" }
     ],
     cipa: [
       { id: "cipa-dash", name: "📊 Dashboard CIPA" },
@@ -2055,12 +2078,19 @@ body.cipa-terminal-mode .urna-confirm{
     }
   }
 
-  const DEFAULT_STATE_SHAPE = {usersDb:[], employees:[],items:[],deliveries:[],stockMovements:[],pcmso:[],fireEquip:[],fireInspections:[],fireBrigadistas:[],pgrRisks:[],confinedSpaces:[],pets:[],trainings:[],roleMatrix:[],roleTrainingCompliance:[],annualTrainingPlan:[],cipaMembers:[],cipaElections:[],cipaMeetings:[],cipaActions:[],tercEmpresas:[],tercFuncionarios:[],tercIntegracoes:[],tercTiposDocumento:[],tercDocumentos:[],modulePermissions:{master:[],usuario:[]},userSpecificPermissions:{},roleActionPermissions:{},roleSubitemPermissions:{Master:{}},companyLogo:null,systemLogo:null};
+  const DEFAULT_STATE_SHAPE = {usersDb:[], employees:[],items:[],deliveries:[],stockMovements:[],pcmso:[],fireEquip:[],fireInspections:[],fireBrigadistas:[],fireCorrectiveActions:[],pgrRisks:[],pgrGhes:[],nr15Assessments:[],nr15Professionals:[],confinedSpaces:[],pets:[],ecSupervisors:[],ecPortalPublicUrl:"",trainings:[],roleMatrix:[],roleTrainingCompliance:[],annualTrainingPlan:[],cipaMembers:[],cipaElections:[],cipaMeetings:[],cipaActions:[],tercEmpresas:[],tercFuncionarios:[],tercIntegracoes:[],tercTiposDocumento:[],tercDocumentos:[],modulePermissions:{master:[],usuario:[]},userSpecificPermissions:{},roleActionPermissions:{},roleSubitemPermissions:{Master:{}},companyLogo:null,systemLogo:null};
 
   // Aplica migrações/valores-padrão em uma base carregada (de qualquer origem)
   // para manter compatibilidade com estados salvos por versões anteriores.
   function applyStateMigrations(){
     if(!Array.isArray(state.fireBrigadistas)) state.fireBrigadistas=[];
+    if(!Array.isArray(state.fireCorrectiveActions)) state.fireCorrectiveActions=[];
+    if(!Array.isArray(state.pgrGhes)) state.pgrGhes=[];
+    if(!Array.isArray(state.nr15Assessments)) state.nr15Assessments=[];
+    if(!Array.isArray(state.nr15Professionals)) state.nr15Professionals=[];
+    if(!Array.isArray(state.ecSupervisors)) state.ecSupervisors=[];
+    if(typeof state.ecPortalPublicUrl!=="string") state.ecPortalPublicUrl="";
+    (state.fireInspections||[]).forEach(inspection=>ensureFireCorrectiveActionsForInspection(inspection));
     if(!Array.isArray(state.stockMovements)) state.stockMovements=[];
     (state.items||[]).forEach(item=>{
       delete item.vidaUtilDias;
@@ -2101,6 +2131,9 @@ body.cipa-terminal-mode .urna-confirm{
     }
     if(Array.isArray(state.modulePermissions.master) && !state.modulePermissions.master.includes("terceiros")) {
       state.modulePermissions.master.push("terceiros");
+    }
+    if(Array.isArray(state.modulePermissions.master) && !state.modulePermissions.master.includes("nr15")) {
+      state.modulePermissions.master.push("nr15");
     }
     // Atualiza a nomenclatura dos registros automáticos já existentes.
     (state.annualTrainingPlan || []).forEach(plan => {
@@ -4161,6 +4194,56 @@ body.cipa-terminal-mode .urna-confirm{
     `;
   }
 
+  function pgrGheJobs(ghe){
+    const ids=Array.isArray(ghe?.cargoIds)?ghe.cargoIds:[];
+    return ids.map(id=>(state.generalJobs||[]).find(j=>j.id===id)).filter(Boolean);
+  }
+  function pgrGheActivityDescription(ghe){
+    const jobs=pgrGheJobs(ghe);
+    if(!jobs.length) return "—";
+    return jobs.map(j=>`${j.nome}: ${String(j.descricao||"").trim()||"descrição não cadastrada no Cadastro Geral"}`).join(" | ");
+  }
+  function pgrGheHazards(ghe){
+    const ids=Array.isArray(ghe?.hazardIds)?ghe.hazardIds:[];
+    return ids.map(id=>(state.pgrHazards||[]).find(h=>h.id===id)).filter(Boolean);
+  }
+  function pgrGheEmployees(ghe){
+    const setor=normalizeText(ghe?.setor),nomes=new Set(pgrGheJobs(ghe).map(j=>normalizeText(j.nome)));
+    return(state.employees||[]).filter(e=>normalizeText(e.setor)===setor&&nomes.has(normalizeText(e.cargo||e.funcao))).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'));
+  }
+  function renderPgrGhe(root){
+    ensureGeneralMasterData();ensurePgrHazards();
+    const search=root.dataset.gheSearch||"",setor=root.dataset.gheSetor||"",situacao=root.dataset.gheSituacao||"",q=normalizeText(search);
+    const setores=(state.generalSectors||[]).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+    const all=state.pgrGhes||[];
+    const filtered=all.filter(g=>{const jobs=pgrGheJobs(g),hazards=pgrGheHazards(g);return(!q||normalizeText([g.codigo,g.nome,g.setor,pgrGheActivityDescription(g),g.observacoes,...jobs.map(j=>j.nome),...hazards.map(h=>h.nome)].join(" ")).includes(q))&&(!setor||g.setor===setor)&&(!situacao||String(g.ativo!==false)===situacao)});
+    const totalWorkers=new Set(filtered.flatMap(g=>pgrGheEmployees(g).map(e=>e.id))).size;
+    root.innerHTML=`<div class="page-head"><div><h2>👥 Grupos Homogêneos de Exposição (GHE)</h2><div class="sub">Agrupamento de trabalhadores com atividades e exposições ocupacionais semelhantes.</div></div>${checkPermission("Master")?'<button class="btn" id="btn-new-ghe">+ Cadastrar GHE</button>':''}</div>
+      <div class="annual-kpis emp-kpis" style="grid-template-columns:repeat(3,minmax(0,1fr));"><div class="annual-kpi"><div class="annual-kpi-icon blue">👥</div><div><div class="num">${all.length}</div><div class="label">GHEs cadastrados</div></div></div><div class="annual-kpi"><div class="annual-kpi-icon green">👷</div><div><div class="num">${totalWorkers}</div><div class="label">Trabalhadores enquadrados</div></div></div><div class="annual-kpi"><div class="annual-kpi-icon amber">☣️</div><div><div class="num">${new Set(filtered.flatMap(g=>(g.hazardIds||[]))).size}</div><div class="label">Perigos relacionados</div></div></div></div>
+      <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${filtered.length} de ${all.length} GHE(s)</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="ghe-search" type="search" value="${empEsc(search)}" placeholder="Código, nome, cargo, atividade ou perigo"></div><div class="field"><label>Setor</label><select id="ghe-setor"><option value="">Todos</option>${setores.map(s=>`<option value="${empEsc(s.nome)}" ${setor===s.nome?'selected':''}>${empEsc(s.nome)}</option>`).join('')}</select></div><div class="field"><label>Situação</label><select id="ghe-situacao"><option value="">Todas</option><option value="true" ${situacao==='true'?'selected':''}>Ativos</option><option value="false" ${situacao==='false'?'selected':''}>Inativos</option></select></div><button class="btn secondary" id="ghe-clear">Limpar</button></div></div>
+      <div class="panel">${filtered.length?`<div style="overflow:auto"><table><thead><tr><th>Código / GHE</th><th>Setor</th><th>Cargos / Funções</th><th>Perigos / Agentes</th><th>Expostos</th><th>Situação</th>${checkPermission("Administrador")?'<th>Ações</th>':''}</tr></thead><tbody>${filtered.map(g=>{const jobs=pgrGheJobs(g),hazards=pgrGheHazards(g),workers=pgrGheEmployees(g);return`<tr><td><strong>${empEsc(g.codigo)}</strong><br><small>${empEsc(g.nome)}</small></td><td>🏢 ${empEsc(g.setor)}</td><td>${jobs.length?jobs.map(j=>`<button type="button" class="ghe-job-link" data-ghe-job="${j.id}" title="Ver descrição do cargo">💼 ${empEsc(j.nome)}</button>`).join(' '):'—'}</td><td>${hazards.length?hazards.map(h=>pgrTipoChip(h.tipo).replace(empEsc(h.tipo),empEsc(h.nome))).join(' '):'—'}</td><td><button type="button" class="pgr-exposed-btn" data-ghe-people="${g.id}">👥 ${workers.length}</button></td><td><span class="status-pill ${g.ativo!==false?'ok':'bad'}"><span class="dot"></span>${g.ativo!==false?'Ativo':'Inativo'}</span></td>${checkPermission("Administrador")?`<td><div class="row-actions"><button class="action-link" data-edit-ghe="${g.id}">✏️ Editar</button><button class="action-link" data-del-ghe="${g.id}">Remover</button></div></td>`:''}</tr>`}).join('')}</tbody></table></div>`:'<div class="empty">Nenhum GHE encontrado.</div>'}</div>`;
+  }
+  function openPgrGhePeopleModal(id){
+    const g=(state.pgrGhes||[]).find(x=>x.id===id);if(!g)return;const people=pgrGheEmployees(g);
+    openModal(`<h3>👥 Trabalhadores do ${empEsc(g.codigo)}</h3><div class="sub" style="margin-bottom:14px">${empEsc(g.nome)} · ${empEsc(g.setor)} · ${people.length} trabalhador${people.length===1?'':'es'}</div>${people.length?`<div style="overflow:auto;max-height:62vh"><table><thead><tr><th style="min-width:230px">Funcionário</th><th style="min-width:120px">Matrícula</th><th style="min-width:210px">Cargo</th><th style="min-width:170px">Setor</th></tr></thead><tbody>${people.map(e=>`<tr><td><strong>${empEsc(e.nome)}</strong></td><td>${empEsc(e.matricula||'—')}</td><td>${empEsc(e.cargo||e.funcao||'—')}</td><td>${empEsc(e.setor||'—')}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Nenhum funcionário do Cadastro Geral pertence aos cargos selecionados neste GHE.</div>'}<div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Fechar</button></div>`,ov=>ov.querySelector('.modal')?.classList.add('ghe-people-modal'));
+  }
+  function openPgrGheJobModal(id){
+    const job=(state.generalJobs||[]).find(j=>j.id===id);if(!job)return;
+    openModal(`<h3>💼 ${empEsc(job.nome)}</h3><div class="field"><label>Descrição cadastrada no Cadastro Geral</label><div style="padding:14px;border:1px solid var(--line);border-radius:7px;background:var(--panel-2);line-height:1.55">${empEsc(String(job.descricao||'').trim()||'Nenhuma descrição cadastrada para este cargo.')}</div></div><div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Fechar</button></div>`);
+  }
+  function openPgrGheModal(id=""){
+    ensureGeneralMasterData();ensurePgrHazards();
+    const current=(state.pgrGhes||[]).find(x=>x.id===id)||null,sectors=(state.generalSectors||[]).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")),hazards=(state.pgrHazards||[]).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
+    if(!sectors.length){alert("Cadastre primeiro um setor em Geral / Pessoas → Cadastro de Setores.");return;}
+    const nextCode=`GHE-${String((state.pgrGhes||[]).length+1).padStart(3,'0')}`;
+    openModal(`<h3>${current?'✏️ Editar':'👥 Cadastrar'} GHE</h3><form id="ghe-form"><div class="field-row"><div class="field"><label>Código *</label><input required name="codigo" value="${empEsc(current?.codigo||nextCode)}"></div><div class="field"><label>Nome do GHE *</label><input required name="nome" value="${empEsc(current?.nome||'')}" placeholder="Ex.: GHE Administrativo"></div></div><div class="field-row"><div class="field"><label>Setor *</label><select required name="setor" id="ghe-form-setor"><option value="">Selecione o setor</option>${sectors.map(s=>`<option value="${empEsc(s.nome)}" ${current?.setor===s.nome?'selected':''}>${empEsc(s.nome)}</option>`).join('')}</select></div><div class="field"><label>Situação</label><select name="ativo"><option value="true" ${current?.ativo!==false?'selected':''}>Ativo</option><option value="false" ${current?.ativo===false?'selected':''}>Inativo</option></select></div></div><div class="field"><label>Cargos / Funções do Cadastro Geral *</label><div id="ghe-jobs" style="border:1px solid var(--line);border-radius:7px;padding:8px 12px;max-height:170px;overflow:auto"><span class="muted">Selecione primeiro o setor.</span></div></div><div class="field"><label>Perigos / agentes de exposição</label><div style="border:1px solid var(--line);border-radius:7px;padding:8px 12px;max-height:180px;overflow:auto">${hazards.length?hazards.map(h=>`<label style="display:flex;gap:8px;align-items:center;padding:5px 0;font-weight:500"><input type="checkbox" name="hazardIds" value="${h.id}" ${(current?.hazardIds||[]).includes(h.id)?'checked':''} style="width:auto"> ${PGR_TIPO_ICON[h.tipo]||'☣️'} ${empEsc(h.nome)} <small>(${empEsc(h.tipo)})</small></label>`).join(''):'<span class="muted">Nenhum perigo cadastrado em Cadastro de Perigos.</span>'}</div></div><div class="field-row"><div class="field"><label>Jornada / frequência de exposição</label><input name="jornada" value="${empEsc(current?.jornada||'')}" placeholder="Ex.: 8 horas por dia"></div><div class="field"><label>Observações</label><input name="observacoes" value="${empEsc(current?.observacoes||'')}"></div></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">💾 Salvar GHE</button></div></form>`,ov=>{
+      const sectorSel=ov.querySelector('#ghe-form-setor'),jobsBox=ov.querySelector('#ghe-jobs');
+      const paintJobs=()=>{const sector=(state.generalSectors||[]).find(s=>s.nome===sectorSel.value),ids=new Set(sector?.cargoIds||[]),selected=new Set(current?.setor===sectorSel.value?(current?.cargoIds||[]):[]),jobs=(state.generalJobs||[]).filter(j=>ids.has(j.id)).sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));jobsBox.innerHTML=jobs.length?jobs.map(j=>`<label style="display:flex;gap:8px;align-items:center;padding:5px 0;font-weight:500"><input type="checkbox" name="cargoIds" value="${j.id}" ${selected.has(j.id)?'checked':''} style="width:auto"> 💼 ${empEsc(j.nome)}</label>`).join(''):'<span class="muted">Nenhum cargo do Cadastro Geral está vinculado a este setor.</span>'};
+      sectorSel.addEventListener('change',paintJobs);if(sectorSel.value)paintJobs();
+      ov.querySelector('#ghe-form').addEventListener('submit',async e=>{e.preventDefault();const fd=new FormData(e.target),cargoIds=fd.getAll('cargoIds'),hazardIds=fd.getAll('hazardIds');if(!cargoIds.length){alert('Selecione ao menos um cargo/função para o GHE.');return;}const codigo=String(fd.get('codigo')||'').trim();if((state.pgrGhes||[]).some(g=>g.id!==id&&normalizeText(g.codigo)===normalizeText(codigo))){alert('Já existe um GHE com este código.');return;}const record={codigo,nome:String(fd.get('nome')||'').trim(),setor:fd.get('setor'),cargoIds,hazardIds,descricaoAtividades:pgrGheActivityDescription({cargoIds}),jornada:String(fd.get('jornada')||'').trim(),observacoes:String(fd.get('observacoes')||'').trim(),ativo:fd.get('ativo')==='true',updatedAt:new Date().toISOString()};if(current)Object.assign(current,record);else(state.pgrGhes||=[]).push({id:uid('ghe'),...record,createdAt:new Date().toISOString()});await saveState();closeModal();render();});
+    });
+  }
+
   const PGR_TIPOS = ["Físico","Químico","Biológico","Ergonômico","Acidentes"];
   const PGR_TIPO_ICON = {"Físico":"🔊","Químico":"🧪","Biológico":"🦠","Ergonômico":"🪑","Acidentes":"⚠️"};
   const PGR_TIPO_HUE  = {"Físico":205,"Químico":280,"Biológico":130,"Ergonômico":32,"Acidentes":2};
@@ -4207,7 +4290,7 @@ body.cipa-terminal-mode .urna-confirm{
               ? `${epis.length ? `<div class="pgr-epi-chips">${epis.map(i=>`<span class="pgr-epi" title="${i.ca?`CA ${empEsc(i.ca)}`:"EPI cadastrado"}">${pgrEpiIcon(i.nome)} ${empEsc(i.nome)}</span>`).join("")}</div>` : ""}${r.medidaControle ? `<div class="pgr-medida-txt" ${epis.length?"":'style="margin-top:0;color:inherit;font-size:inherit;"'}>${empEsc(r.medidaControle)}</div>` : ""}`
               : "—";
             return `<tr>
-              <td><strong>${empEsc(r.setor)}</strong><br><span style="font-size:11px;color:var(--ink-dim);">${empEsc(r.atividade)}</span></td>
+              <td><strong>${empEsc(r.setor)}</strong>${r.gheId?`<br><span class="ca-tag">${empEsc((state.pgrGhes||[]).find(g=>g.id===r.gheId)?.codigo||'GHE')}</span>`:''}<br><span style="font-size:11px;color:var(--ink-dim);">${empEsc(r.atividade)}</span></td>
               <td>${empEsc(r.perigo)}</td>
               <td>${pgrTipoChip(r.tipo)}</td>
               <td>${medida}</td>
@@ -4221,7 +4304,7 @@ body.cipa-terminal-mode .urna-confirm{
     `;
   }
 
-  function pgrExposedEmployees(r){const setor=normalizeText(r?.setor),cargo=normalizeText(r?.atividade);return(state.employees||[]).filter(e=>normalizeText(e.setor)===setor&&normalizeText(e.cargo||e.funcao)===cargo).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'))}
+  function pgrExposedEmployees(r){const ghe=(state.pgrGhes||[]).find(g=>g.id===r?.gheId);if(ghe)return pgrGheEmployees(ghe);const setor=normalizeText(r?.setor),cargo=normalizeText(r?.atividade);return(state.employees||[]).filter(e=>normalizeText(e.setor)===setor&&normalizeText(e.cargo||e.funcao)===cargo).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'))}
   function openPgrExposedModal(id){const r=(state.pgrRisks||[]).find(x=>x.id===id);if(!r)return;const pessoas=pgrExposedEmployees(r);openModal(`<h3>👥 Pessoas expostas</h3><div class="sub" style="margin-bottom:14px"><strong>${empEsc(r.setor)}</strong> · ${empEsc(r.atividade)} · ${empEsc(r.perigo)}</div>${pessoas.length?`<div style="overflow:auto;max-height:60vh"><table><thead><tr><th>Nome</th><th>Matrícula</th><th>Cargo / Função</th><th>Setor</th></tr></thead><tbody>${pessoas.map(e=>`<tr><td><strong>${empEsc(e.nome||'—')}</strong></td><td>${empEsc(e.matricula||'—')}</td><td>${empEsc(e.cargo||e.funcao||'—')}</td><td>${empEsc(e.setor||'—')}</td></tr>`).join('')}</tbody></table></div>`:`<div class="empty">Nenhuma pessoa do Cadastro Geral está vinculada a este setor e cargo/função.</div>`}<div class="modal-actions"><button type="button" class="btn secondary" onclick="window.closeModal()">Fechar</button></div>`)}
 
   // ===== Cadastro de Perigos =====
@@ -5388,21 +5471,27 @@ function renderPcmsoDash(root){
       app.querySelector("#brig-login")?.addEventListener("submit",e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),b=active.find(x=>x.id===d.brigadistaId),emp=fireBrigadistaEmployee(b);if(!b||!emp||String(emp.matricula||"").trim()!==String(d.matricula||"").trim()){alert("Nome ou matrícula inválidos.");return;}brigadistaSession={brigadistaId:b.id,employeeId:emp.id};sessionStorage.setItem("sst-brigadista-session",JSON.stringify(brigadistaSession));renderBrigadistaPortal()});return;
     }
     const b=active.find(x=>x.id===brigadistaSession.brigadistaId),emp=fireBrigadistaEmployee(b);
-    const search=sessionStorage.getItem("sst-brig-search")||"",selectedGroup=sessionStorage.getItem("sst-brig-group")||"",q=normalizeText(search);
+    const selectedGroup=sessionStorage.getItem("sst-brig-group")||"";
     const groups=[...new Set((state.fireEquip||[]).map(fireEquipGroup))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
-    const equipments=(state.fireEquip||[]).filter(eq=>(!selectedGroup||fireEquipGroup(eq)===selectedGroup)&&(!q||normalizeText([eq.identificador,eq.tipo,eq.categoria,eq.localizacao,fireEquipGroup(eq)].join(" ")).includes(q)));
-    app.innerHTML=`<div class="brigade-mobile"><div class="brigade-mobile-shell"><div class="mobile-card"><h2>🧯 Inspeção de Equipamentos</h2><div class="sub">Brigadista: <strong>${empEsc(emp.nome)}</strong></div><button class="btn secondary" id="brig-logout">Sair</button></div><div class="mobile-card"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${equipments.length} de ${(state.fireEquip||[]).length}</span></div><div class="brigade-mobile-filters"><div><label>Pesquisar equipamento</label><input id="brig-equip-search" type="search" value="${empEsc(search)}" placeholder="ID, tipo ou localização"></div><div><label>🗂️ Grupo</label><select id="brig-equip-group"><option value="">Todos os grupos</option>${groups.map(group=>`<option value="${empEsc(group)}" ${selectedGroup===group?'selected':''}>${FIRE_GROUP_ICONS[group]||'📦'} ${empEsc(group)}</option>`).join('')}</select></div><button class="btn secondary" id="brig-equip-clear">🧹 Limpar</button></div></div>${equipments.map(eq=>`<div class="mobile-card mobile-equip"><div><strong>${empEsc(eq.identificador)} · ${empEsc(eq.tipo)}</strong><div class="sub">${FIRE_GROUP_ICONS[fireEquipGroup(eq)]||'📦'} ${empEsc(fireEquipGroup(eq))}<br>📍 ${empEsc(eq.localizacao||"—")} · Próxima: ${fmtDate(getNextInspectionDate(eq))}</div></div><button class="btn" data-brig-inspect="${eq.id}">📋 Inspecionar</button></div>`).join("")||'<div class="mobile-card empty">Nenhum equipamento encontrado neste filtro.</div>'}</div></div>`;
+    const equipments=(state.fireEquip||[]).filter(eq=>!selectedGroup||fireEquipGroup(eq)===selectedGroup);
+    app.innerHTML=`<div class="brigade-mobile"><div class="brigade-mobile-shell"><div class="mobile-card"><h2>🧯 Inspeção de Equipamentos</h2><div class="sub">Brigadista: <strong>${empEsc(emp.nome)}</strong></div><button class="btn secondary" id="brig-logout">Sair</button></div><div class="mobile-card"><div class="panel-head"><h3>🗂️ Escolher grupo</h3><span>${equipments.length} de ${(state.fireEquip||[]).length}</span></div><div class="brigade-mobile-filters"><div><label>Grupo de equipamentos</label><select id="brig-equip-group"><option value="">Todos os grupos</option>${groups.map(group=>`<option value="${empEsc(group)}" ${selectedGroup===group?'selected':''}>${FIRE_GROUP_ICONS[group]||'📦'} ${empEsc(group)}</option>`).join('')}</select></div></div></div>${equipments.map(eq=>`<div class="mobile-card mobile-equip"><div><strong>${empEsc(eq.identificador)} · ${empEsc(eq.tipo)}</strong><div class="sub">${FIRE_GROUP_ICONS[fireEquipGroup(eq)]||'📦'} ${empEsc(fireEquipGroup(eq))}<br>📍 ${empEsc(eq.localizacao||"—")} · Próxima: ${fmtDate(getNextInspectionDate(eq))}</div></div><button class="btn" data-brig-inspect="${eq.id}">📋 Inspecionar</button></div>`).join("")||'<div class="mobile-card empty">Nenhum equipamento encontrado neste grupo.</div>'}</div></div>`;
     app.querySelector("#brig-logout").addEventListener("click",()=>{brigadistaSession=null;sessionStorage.removeItem("sst-brigadista-session");renderBrigadistaPortal()});
-    app.querySelector("#brig-equip-search")?.addEventListener("input",e=>{sessionStorage.setItem("sst-brig-search",e.currentTarget.value);renderBrigadistaPortal();const input=document.querySelector("#brig-equip-search");input?.focus();input?.setSelectionRange(input.value.length,input.value.length)});
     app.querySelector("#brig-equip-group")?.addEventListener("change",e=>{sessionStorage.setItem("sst-brig-group",e.currentTarget.value);renderBrigadistaPortal()});
-    app.querySelector("#brig-equip-clear")?.addEventListener("click",()=>{sessionStorage.removeItem("sst-brig-search");sessionStorage.removeItem("sst-brig-group");renderBrigadistaPortal()});
     app.querySelectorAll("[data-brig-inspect]").forEach(btn=>btn.addEventListener("click",()=>openFireInspectionPlanModal(btn.dataset.brigInspect,null,brigadistaSession.brigadistaId)));
   }
 
   function renderFireDash(root){
-    const totalEq = state.fireEquip.length;
-    const vencidosManut = state.fireEquip.filter(f=>fireStatus(f)==="bad").length;
-    const inspecPen = state.fireEquip.filter(f=>inspectionStatus(f)==="bad").length;
+    const search=root.dataset.fireDashSearch||"",group=root.dataset.fireDashGroup||"",status=root.dataset.fireDashStatus||"",q=normalizeText(search);
+    const groups=[...new Set((state.fireEquip||[]).map(fireEquipGroup))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+    const filtered=(state.fireEquip||[]).filter(eq=>{
+      const matchesText=!q||normalizeText([eq.identificador,eq.tipo,eq.localizacao,fireEquipGroup(eq),eq.ultimoInspetor].join(" ")).includes(q);
+      const currentStatus=inspectionStatus(eq);
+      return matchesText&&(!group||fireEquipGroup(eq)===group)&&(!status||currentStatus===status);
+    });
+    const totalEq=(state.fireEquip||[]).length;
+    const vencidosManut=(state.fireEquip||[]).filter(f=>fireStatus(f)==="bad").length;
+    const inspecPen=(state.fireEquip||[]).filter(f=>inspectionStatus(f)==="bad").length;
+    const correctivePending=(state.fireCorrectiveActions||[]).filter(a=>a.status!=="Concluído"&&a.status!=="Cancelado").length;
 
     root.innerHTML = `
       <div class="page-head">
@@ -5412,26 +5501,53 @@ function renderPcmsoDash(root){
         </div>
       </div>
 
-      <div class="hero">
-        <div class="stat-card">
-          <div class="num" style="color:var(${inspecPen>0?'--red':'--green'})">${inspecPen}</div>
-          <div class="label">Inspeções Atrasadas</div>
-        </div>
-        <div class="stat-card">
-          <div class="num" style="color:var(${vencidosManut>0?'--red':'--amber'})">${vencidosManut}</div>
-          <div class="label">Recarga/Hidro Vencido</div>
-        </div>
-        <div class="stat-card">
-          <div class="num">${totalEq}</div>
-          <div class="label">Total de Equipamentos</div>
-        </div>
+      <div class="annual-kpis emp-kpis" style="grid-template-columns:repeat(4,minmax(0,1fr));">
+        <div class="annual-kpi"><div class="annual-kpi-icon ${inspecPen?'red':'green'}">⏰</div><div><div class="num">${inspecPen}</div><div class="label">Inspeções atrasadas</div></div></div>
+        <div class="annual-kpi"><div class="annual-kpi-icon ${vencidosManut?'red':'amber'}">🧯</div><div><div class="num">${vencidosManut}</div><div class="label">Recarga ou hidro vencido</div></div></div>
+        <div class="annual-kpi"><div class="annual-kpi-icon blue">📦</div><div><div class="num">${totalEq}</div><div class="label">Equipamentos cadastrados</div></div></div>
+        <div class="annual-kpi"><div class="annual-kpi-icon ${correctivePending?'amber':'green'}">🛠️</div><div><div class="num">${correctivePending}</div><div class="label">Ações corretivas abertas</div></div></div>
       </div>
 
+      <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${filtered.length} de ${totalEq} equipamento(s)</span></div><div class="fire-filters" style="padding:14px 16px;grid-template-columns:minmax(240px,1.7fr) minmax(180px,1fr) minmax(180px,1fr) auto;">
+        <div><label>Pesquisar</label><input id="fire-dash-search" type="search" value="${empEsc(search)}" placeholder="Equipamento, localização ou brigadista"></div>
+        <div><label>🗂️ Grupo</label><select id="fire-dash-group"><option value="">Todos os grupos</option>${groups.map(x=>`<option value="${empEsc(x)}" ${group===x?'selected':''}>${FIRE_GROUP_ICONS[x]||'📦'} ${empEsc(x)}</option>`).join('')}</select></div>
+        <div><label>🚦 Situação</label><select id="fire-dash-status"><option value="">Todas as situações</option><option value="bad" ${status==='bad'?'selected':''}>Atrasada</option><option value="warn" ${status==='warn'?'selected':''}>Próxima do prazo</option><option value="ok" ${status==='ok'?'selected':''}>Em dia</option></select></div>
+        <button class="btn secondary" id="fire-dash-clear">🧹 Limpar</button>
+      </div></div>
+
       <div class="panel">
-        <div class="panel-head"><h3>Inspeções de Rotina Pendentes ou Atrasadas</h3></div>
-        ${renderFireScheduleTable(state.fireEquip.filter(f=>inspectionStatus(f)!=="ok"))}
+        <div class="panel-head"><h3>📅 Visão geral das inspeções</h3></div>
+        ${renderFireScheduleTable(filtered)}
       </div>
     `;
+  }
+
+  function ensureFireCorrectiveActionsForInspection(inspection){
+    const eq=fireEquipById(inspection?.equipId);
+    if(!inspection||eq?.tipo!=="Extintor") return;
+    state.fireCorrectiveActions||=[];
+    (inspection.checklist||[]).filter(item=>item.resultado==="Reprovado").forEach(item=>{
+      const existing=state.fireCorrectiveActions.find(a=>a.inspectionId===inspection.id&&a.checklistItem===item.item);
+      const source={equipId:eq.id,inspectionId:inspection.id,checklistItem:item.item,descricao:item.observacao||`Corrigir reprovação: ${item.item}`,brigadistaId:inspection.brigadistaId||"",brigadistaEmployeeId:inspection.brigadistaEmployeeId||"",brigadista:inspection.inspetor||"",dataOrigem:inspection.dataInspecao,prazo:existing?.prazo||addDays(inspection.dataInspecao,7),updatedAt:new Date().toISOString()};
+      if(existing) Object.assign(existing,source);
+      else state.fireCorrectiveActions.push({id:uid("fireaction"),...source,responsavel:"",providencia:"",status:"Pendente",observacoes:"",autoCreated:true,createdAt:new Date().toISOString()});
+    });
+  }
+
+  function renderFireCorrectivePlan(root){
+    const search=root.dataset.fireActionSearch||"",group=root.dataset.fireActionGroup||"",status=root.dataset.fireActionStatus||"",q=normalizeText(search);
+    const groups=[...new Set((state.fireEquip||[]).map(fireEquipGroup))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+    const actions=(state.fireCorrectiveActions||[]).filter(a=>{const eq=fireEquipById(a.equipId);return(!q||normalizeText([eq?.identificador,eq?.localizacao,a.checklistItem,a.descricao,a.brigadista,a.responsavel].join(" ")).includes(q))&&(!group||fireEquipGroup(eq)===group)&&(!status||a.status===status)}).sort((a,b)=>String(a.prazo||"").localeCompare(String(b.prazo||"")));
+    const all=state.fireCorrectiveActions||[],open=all.filter(a=>!["Concluído","Cancelado"].includes(a.status)),late=open.filter(a=>daysUntil(a.prazo)<0).length;
+    root.innerHTML=`<div class="page-head"><div><h2>🛠️ Plano de Manutenção Corretiva</h2><div class="sub">Ações geradas automaticamente para itens reprovados nas inspeções de extintores.</div></div></div>
+      <div class="annual-kpis emp-kpis" style="grid-template-columns:repeat(4,minmax(0,1fr));"><div class="annual-kpi"><div class="annual-kpi-icon amber">📌</div><div><div class="num">${open.length}</div><div class="label">Ações abertas</div></div></div><div class="annual-kpi"><div class="annual-kpi-icon red">⏰</div><div><div class="num">${late}</div><div class="label">Ações atrasadas</div></div></div><div class="annual-kpi"><div class="annual-kpi-icon blue">🔧</div><div><div class="num">${all.filter(a=>a.status==="Em andamento").length}</div><div class="label">Em andamento</div></div></div><div class="annual-kpi"><div class="annual-kpi-icon green">✅</div><div><div class="num">${all.filter(a=>a.status==="Concluído").length}</div><div class="label">Concluídas</div></div></div></div>
+      <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${actions.length} de ${all.length} ação(ões)</span></div><div class="fire-filters" style="padding:14px 16px;grid-template-columns:minmax(240px,1.7fr) minmax(180px,1fr) minmax(180px,1fr) auto;"><div><label>Pesquisar</label><input id="fire-action-search" type="search" value="${empEsc(search)}" placeholder="Extintor, item, local ou responsável"></div><div><label>🗂️ Grupo</label><select id="fire-action-group"><option value="">Todos os grupos</option>${groups.map(x=>`<option value="${empEsc(x)}" ${group===x?'selected':''}>${FIRE_GROUP_ICONS[x]||'📦'} ${empEsc(x)}</option>`).join('')}</select></div><div><label>🚦 Situação</label><select id="fire-action-status"><option value="">Todas</option>${["Pendente","Em andamento","Concluído","Cancelado"].map(x=>`<option ${status===x?'selected':''}>${x}</option>`).join('')}</select></div><button class="btn secondary" id="fire-action-clear">🧹 Limpar</button></div></div>
+      <div class="panel"><div class="panel-head"><h3>📋 Plano de ação</h3></div>${actions.length?`<div class="fire-table-wrap"><table><thead><tr><th>🧯 Extintor</th><th>❌ Item reprovado</th><th>👷 Origem da inspeção</th><th>📅 Prazo</th><th>👤 Responsável</th><th>🚦 Situação</th><th>⚙️ Ações</th></tr></thead><tbody>${actions.map(a=>{const eq=fireEquipById(a.equipId),isLate=!['Concluído','Cancelado'].includes(a.status)&&daysUntil(a.prazo)<0,cls=a.status==='Concluído'?'ok':isLate?'bad':'warn';return`<tr><td><strong>${empEsc(eq?.identificador||'Equipamento removido')}</strong><br><small>${empEsc(eq?.localizacao||'—')}</small></td><td><strong>${empEsc(a.checklistItem)}</strong><br><small>${empEsc(a.descricao||'—')}</small></td><td>${fmtDate(a.dataOrigem)}<br><small>${empEsc(a.brigadista||'—')}</small></td><td>${fmtDate(a.prazo)}${isLate?'<br><small style="color:var(--red)">Atrasada</small>':''}</td><td>${empEsc(a.responsavel||'Não definido')}</td><td><span class="status-pill ${cls}"><span class="dot"></span>${empEsc(a.status)}</span></td><td><button class="btn secondary" style="padding:5px 9px" data-edit-fire-action="${a.id}">✏️ Atualizar</button></td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty">Nenhuma ação corretiva encontrada.</div>'}</div>`;
+  }
+
+  function openFireCorrectiveActionModal(id){
+    const action=(state.fireCorrectiveActions||[]).find(a=>a.id===id),eq=fireEquipById(action?.equipId);if(!action)return;
+    openModal(`<h3>🛠️ Atualizar ação corretiva</h3><div class="empty" style="text-align:left;margin-bottom:12px"><strong>${empEsc(eq?.identificador||'Extintor')}</strong> · ${empEsc(action.checklistItem)}</div><form id="fire-action-form"><div class="field-row"><div class="field"><label>Prazo</label><input type="date" required name="prazo" value="${empEsc(action.prazo||'')}"></div><div class="field"><label>Situação</label><select name="status">${["Pendente","Em andamento","Concluído","Cancelado"].map(x=>`<option ${action.status===x?'selected':''}>${x}</option>`).join('')}</select></div></div><div class="field"><label>Responsável</label><input name="responsavel" value="${empEsc(action.responsavel||'')}" placeholder="Nome ou empresa responsável"></div><div class="field"><label>Providência corretiva</label><textarea name="providencia" rows="3" placeholder="Descreva o reparo, recarga ou substituição realizada.">${empEsc(action.providencia||'')}</textarea></div><div class="field"><label>Observações</label><textarea name="observacoes" rows="2">${empEsc(action.observacoes||'')}</textarea></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="window.closeModal()">Cancelar</button><button class="btn">💾 Salvar</button></div></form>`,ov=>ov.querySelector('#fire-action-form').addEventListener('submit',async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));Object.assign(action,data,{concluidoEm:data.status==='Concluído'?(action.concluidoEm||new Date().toISOString()):'',updatedAt:new Date().toISOString()});await saveState();window.closeModal();render()}));
   }
 
   function renderFireList(root){
@@ -5507,7 +5623,7 @@ function renderPcmsoDash(root){
             const stLabel = st==="ok" ? `Em ${dleft} dias` : st==="bad" ? `Atrasada (${Math.abs(dleft)}d)` : `Pendente (${dleft}d)`;
             const validitySt = fireStatus(eq);
             const validityDays = Math.min(daysUntil(eq.vencimentoCarga),daysUntil(eq.vencimentoHidro));
-            const validityLabel = validitySt==="ok" ? "Em dia" : validitySt==="bad" ? `Vencido ${Math.abs(validityDays)}d` : `${validityDays}d restantes`;
+            const validityLabel = validitySt==="bad" ? "Vencido" : "Em dia";
             return `<tr>
               <td><strong>${eq.identificador}</strong><br><span style="font-size:11px;color:var(--ink-dim);">${eq.tipo}${eq.agenteExtintor?' · '+eq.agenteExtintor:''}${eq.categoria?' · '+eq.categoria:''}</span></td>
               <td>${FIRE_GROUP_ICONS[fireEquipGroup(eq)]||'📦'} ${empEsc(fireEquipGroup(eq))}</td>
@@ -5517,7 +5633,7 @@ function renderPcmsoDash(root){
               <td>${empEsc(eq.ultimoInspetor||((state.fireInspections||[]).filter(insp=>insp.equipId===eq.id).sort((a,b)=>String(b.dataInspecao||'').localeCompare(String(a.dataInspecao||'')))[0]?.inspetor)||'—')}</td>
               <td>📅 ${fmtDate(eq.vencimentoCarga)}</td>
               <td><strong>🔎 ${fmtDate(nextDate)}</strong><br><small style="color:var(--ink-dim)">Teste/validade: ${fmtDate(eq.vencimentoHidro)}</small></td>
-              <td><span class="status-pill ${validitySt}"><span class="dot"></span>${validityLabel}</span><br><small style="color:var(--ink-dim)">Inspeção: ${stLabel}</small></td>
+              <td><span class="status-pill ${validitySt==="bad"?"bad":"ok"}"><span class="dot"></span>${validityLabel}</span><br><small style="color:var(--ink-dim)">Inspeção: ${stLabel}</small></td>
               ${allowActions ? `<td class="row-actions"><button class="btn secondary" style="padding:4px 8px;font-size:11px;" data-quick-insp="${eq.id}">Inspecionar</button></td>` : ''}
             </tr>`;
           }).join("")}
@@ -8360,23 +8476,24 @@ function renderPcmsoDash(root){
   }
 
   function openRoleMatrixModal(matrixId=null){
+    ensureGeneralMasterData();
     const registro = matrixId ? (state.roleMatrix || []).find(x=>x.id===matrixId) : null;
-    const cargosUnicos = Array.from(new Set([...state.employees.map(e => e.cargo).filter(Boolean), ...(registro?.cargo?[registro.cargo]:[])]));
+    const cargosUnicos = (state.generalJobs || []).slice().sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"));
+    if(!cargosUnicos.length){
+      alert("Cadastre primeiro um cargo em Geral / Pessoas → Cadastro de Cargos.");
+      return;
+    }
     
     openModal(`
       <h3>${registro?'Editar':'Vincular'} Procedimento / Treinamento por Função</h3>
       <form id="role-matrix-form">
         <div class="field">
           <label>Cargo / Função</label>
-          ${cargosUnicos.length > 0 ? `
-            <select name="cargoSelect" id="cargoSelect">
-              ${cargosUnicos.map(c=>`<option value="${c}" ${registro?.cargo===c?'selected':''}>${c}</option>`).join("")}
-              <option value="__OUTRO__">+ Informar outro cargo...</option>
-            </select>
-            <input name="cargoCustom" id="cargoCustom" placeholder="Digite o nome da função" style="display:none; margin-top:6px;">
-          ` : `
-            <input required name="cargo" placeholder="Ex: Operador de Empilhadeira">
-          `}
+          <select required name="cargo" id="cargoSelect">
+            <option value="">Selecione o cargo do Cadastro Geral</option>
+            ${cargosUnicos.map(c=>`<option value="${empEsc(c.nome)}" ${registro?.cargo===c.nome?'selected':''}>${empEsc(c.nome)}</option>`).join("")}
+          </select>
+          <small style="display:block;margin-top:5px;color:var(--ink-dim);">Lista carregada exclusivamente de Geral / Pessoas → Cadastro de Cargos.</small>
         </div>
         <div class="field-row">
           <div class="field">
@@ -8413,21 +8530,15 @@ function renderPcmsoDash(root){
       </form>
     `, (ov)=>{
       const cargoSel = ov.querySelector("#cargoSelect");
-      const cargoCust = ov.querySelector("#cargoCustom");
-      if(cargoSel && cargoCust){
-        cargoSel.addEventListener("change", ()=>{
-          cargoCust.style.display = cargoSel.value === "__OUTRO__" ? "block" : "none";
-          if(cargoSel.value === "__OUTRO__") cargoCust.required = true;
-          else cargoCust.required = false;
-        });
-      }
 
       ov.querySelector("#role-matrix-form").addEventListener("submit", async(e)=>{
         e.preventDefault();
         const formData = Object.fromEntries(new FormData(e.target));
-        let cargoFinal = formData.cargo;
-        if(cargoSel){
-          cargoFinal = cargoSel.value === "__OUTRO__" ? formData.cargoCustom : cargoSel.value;
+        const cargoFinal = String(formData.cargo||"").trim();
+        if(!cargosUnicos.some(c=>c.nome===cargoFinal)){
+          alert("Selecione um cargo válido do Cadastro Geral.");
+          cargoSel?.focus();
+          return;
         }
 
         const entryData = {
@@ -8896,11 +9007,13 @@ function renderPcmsoDash(root){
     ensurePgrHazards();
     const atual=(state.pgrRisks||[]).find(x=>x.id===riskId)||null;
     const setores = state.generalSectors.slice().sort((x,y)=>x.nome.localeCompare(y.nome,"pt-BR"));
+    const ghes = (state.pgrGhes||[]).filter(g=>g.ativo!==false).slice().sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||""),"pt-BR"));
     const epis = (state.items||[]).slice().sort((x,y)=>String(x.nome||"").localeCompare(String(y.nome||""),"pt-BR"));
 
     openModal(`
       <h3>${atual?'Editar Risco':'Mapear Novo Risco'} (PGR)</h3>
       <form id="pgr-form">
+        <div class="field"><label>👥 GHE — Grupo Homogêneo de Exposição</label><select ${atual?'':'required'} name="gheId" id="pgr-ghe-select"><option value="">${ghes.length?'Selecione o GHE':'Nenhum GHE ativo cadastrado'}</option>${ghes.map(g=>`<option value="${g.id}" ${atual?.gheId===g.id?'selected':''}>${empEsc(g.codigo)} · ${empEsc(g.nome)} · ${empEsc(g.setor)}</option>`).join('')}</select><div class="pgr-hint">O setor, os cargos e os trabalhadores expostos serão vinculados ao GHE escolhido.</div></div>
         <div class="field-row">
           <div class="field"><label>🏢 Setor</label><select required name="setor" id="pgr-sector-select"><option value="">Selecione o setor</option>${setores.map(x=>`<option value="${empEsc(x.nome)}" ${atual?.setor===x.nome?'selected':''}>${empEsc(x.nome)}</option>`).join("")}</select></div>
           <div class="field"><label>💼 Cargo / Função</label><select required name="atividade" id="pgr-job-select" disabled><option value="">Selecione primeiro o setor</option></select><div class="pgr-hint" id="pgr-job-hint"></div></div>
@@ -8909,20 +9022,8 @@ function renderPcmsoDash(root){
         <div class="field-row">
           <div class="field">
             <label>☣️ Perigo / Agente Nocivo</label>
-            <div class="pgr-row">
-              <select required id="pgr-hazard-select"></select>
-              <button type="button" class="btn secondary" id="pgr-hazard-add" title="Cadastrar um novo perigo">➕ Novo</button>
-            </div>
-            <div class="pgr-inline" id="pgr-hazard-inline">
-              <div class="pgr-inline-grid">
-                <input id="pgr-nh-name" placeholder="Nome do perigo (ex.: Ruído contínuo)">
-                <select id="pgr-nh-tipo">${PGR_TIPOS.map(t=>`<option value="${t}">${PGR_TIPO_ICON[t]} ${t}</option>`).join("")}</select>
-              </div>
-              <div class="pgr-inline-actions">
-                <button type="button" class="btn secondary" id="pgr-nh-cancel">Cancelar</button>
-                <button type="button" class="btn" id="pgr-nh-save">💾 Salvar perigo</button>
-              </div>
-            </div>
+            <select required id="pgr-hazard-select"></select>
+            <div class="pgr-hint">Os perigos devem ser cadastrados previamente em PGR → Cadastro de Perigos.</div>
           </div>
           <div class="field">
             <label>🧭 Tipo de Risco</label>
@@ -8981,6 +9082,7 @@ function renderPcmsoDash(root){
         </div>
       </form>
     `, (ov)=>{
+      const gheSel = ov.querySelector("#pgr-ghe-select");
       const setorSel = ov.querySelector("#pgr-sector-select");
       const jobSel = ov.querySelector("#pgr-job-select");
       const jobHint = ov.querySelector("#pgr-job-hint");
@@ -8989,31 +9091,35 @@ function renderPcmsoDash(root){
       if(atual){ov.querySelector('[name="severidade"]').value=String(atual.severidade||3);ov.querySelector('[name="probabilidade"]').value=String(atual.probabilidade||3)}
       const criteriaBtn=ov.querySelector("#pgr-criteria-toggle"),criteriaBox=ov.querySelector("#pgr-criteria-box");criteriaBtn?.addEventListener("click",()=>{const open=criteriaBox.classList.toggle("open");criteriaBtn.textContent=open?"✖ Fechar explicação":"❓ Como escolher a severidade e a probabilidade?"});
 
-      // ---- Setor -> só os cargos vinculados a ele no cadastro geral ----
+      // ---- Setor -> somente cargos do Cadastro Geral vinculados ao setor ----
       const fillJobs = () => {
         const setor = setorSel.value;
         jobHint.classList.remove("warn"); jobHint.textContent = "";
         if(!setor){ jobSel.innerHTML = '<option value="">Selecione primeiro o setor</option>'; jobSel.disabled = true; return; }
-        const map = new Map();
-        sectorEmployees(setor).forEach(e => { const c = String(e.cargo||"").trim(); if(c) map.set(c,(map.get(c)||0)+1); });
-        const cargos = [...map.entries()].sort((a,b)=>a[0].localeCompare(b[0],"pt-BR"));
+        const setorCadastro=(state.generalSectors||[]).find(s=>normalizeText(s.nome)===normalizeText(setor));
+        const ghe=(state.pgrGhes||[]).find(g=>g.id===gheSel?.value);
+        const idsVinculados=new Set(ghe&&ghe.setor===setor?(ghe.cargoIds||[]):(Array.isArray(setorCadastro?.cargoIds)?setorCadastro.cargoIds:[]));
+        const cargos=(state.generalJobs||[]).filter(c=>idsVinculados.has(c.id)).sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"));
         if(!cargos.length){
           jobSel.innerHTML = '<option value="">Nenhum cargo neste setor</option>'; jobSel.disabled = true;
           jobHint.classList.add("warn");
-          jobHint.textContent = "⚠️ Este setor ainda não tem cargos vinculados. Cadastre funcionários nele em Geral / Pessoas → Funcionários.";
+          jobHint.textContent = "⚠️ Este setor ainda não tem cargos vinculados. Faça o vínculo em Geral / Pessoas → Cadastro de Setores.";
           return;
         }
         jobSel.disabled = false;
-        jobSel.innerHTML = '<option value="">Selecione o cargo / função</option>' + cargos.map(([c,n]) => `<option value="${empEsc(c)}">${empEsc(c)} (${n})</option>`).join("");
+        jobSel.innerHTML = (ghe?'<option value="__GHE_ALL__">Todos os cargos do GHE</option>':'<option value="">Selecione o cargo / função</option>') + cargos.map(c => `<option value="${empEsc(c.nome)}">${empEsc(c.nome)}</option>`).join("");
         if(atual&&atual.setor===setor)jobSel.value=atual.atividade||'';
-        jobHint.textContent = `${cargos.length} cargo${cargos.length===1?"":"s"} vinculado${cargos.length===1?"":"s"} a este setor.`;
+        if(ghe&&(!atual||atual.gheId===ghe.id)&&![...jobSel.options].some(o=>o.value===jobSel.value)) jobSel.value="__GHE_ALL__";
+        jobHint.textContent = `${cargos.length} cargo${cargos.length===1?"":"s"} ${ghe?'pertencente'+(cargos.length===1?'':'s')+' ao GHE':'do Cadastro Geral vinculado'+(cargos.length===1?'':'s')+' a este setor'}.`;
       };
-      setorSel.addEventListener("change", fillJobs);if(setorSel.value)fillJobs();
+      gheSel?.addEventListener("change",()=>{const ghe=(state.pgrGhes||[]).find(g=>g.id===gheSel.value);if(ghe){setorSel.value=ghe.setor;setorSel.disabled=true}else setorSel.disabled=false;fillJobs()});
+      setorSel.addEventListener("change", fillJobs);
+      if(gheSel?.value){const ghe=(state.pgrGhes||[]).find(g=>g.id===gheSel.value);if(ghe){setorSel.value=ghe.setor;setorSel.disabled=true}}if(setorSel.value)fillJobs();
 
       // ---- Perigos cadastrados (agrupados por tipo) ----
       const fillHazards = (selectId="") => {
         const hs = state.pgrHazards.slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
-        if(!hs.length){ hzSel.innerHTML = '<option value="">Nenhum perigo cadastrado — clique em ➕ Novo</option>'; return; }
+        if(!hs.length){ hzSel.innerHTML = '<option value="">Nenhum perigo cadastrado</option>'; return; }
         const tipos = [...PGR_TIPOS, ...new Set(hs.map(h=>h.tipo).filter(t=>!PGR_TIPOS.includes(t)))];
         hzSel.innerHTML = '<option value="">Selecione o perigo</option>' + tipos.map(t => {
           const g = hs.filter(h=>h.tipo===t);
@@ -9026,24 +9132,6 @@ function renderPcmsoDash(root){
       };
       fillHazards(atual?.perigoId||state.pgrHazards.find(h=>normalizeText(h.nome)===normalizeText(atual?.perigo))?.id||"");
       hzSel.addEventListener("change", () => onHazardChange());
-
-      // ---- Cadastro rápido de perigo, sem sair do formulário ----
-      const inline = ov.querySelector("#pgr-hazard-inline"), nhName = ov.querySelector("#pgr-nh-name"), nhTipo = ov.querySelector("#pgr-nh-tipo");
-      const closeInline = () => { inline.classList.remove("open"); nhName.value = ""; };
-      ov.querySelector("#pgr-hazard-add").addEventListener("click", () => { inline.classList.add("open"); nhName.focus(); });
-      ov.querySelector("#pgr-nh-cancel").addEventListener("click", closeInline);
-      const saveHazard = async () => {
-        const nome = nhName.value.trim();
-        if(!nome){ nhName.focus(); return; }
-        const existente = state.pgrHazards.find(h => normalizeText(h.nome) === normalizeText(nome));
-        if(existente){ fillHazards(existente.id); onHazardChange(); closeInline(); return; }
-        const h = {id:uid("perigo"), nome, tipo:nhTipo.value};
-        state.pgrHazards.push(h);
-        await saveState();
-        fillHazards(h.id); onHazardChange(); closeInline();
-      };
-      ov.querySelector("#pgr-nh-save").addEventListener("click", saveHazard);
-      nhName.addEventListener("keydown", ev => { if(ev.key === "Enter"){ ev.preventDefault(); saveHazard(); } });
 
       // ---- EPIs: aparecem os relacionados ao perigo escolhido ----
       const epiList = ov.querySelector("#pgr-epi-list"), epiCount = ov.querySelector("#pgr-epi-count");
@@ -9107,12 +9195,23 @@ function renderPcmsoDash(root){
         e.preventDefault();
         const fd = Object.fromEntries(new FormData(e.target));
         const hazard = state.pgrHazards.find(z => z.id === hzSel.value);
-        if(!hazard){ alert("Selecione um perigo. Se ele não existir, clique em ➕ Novo para cadastrá-lo."); return; }
+        if(!hazard){ alert("Selecione um perigo cadastrado em PGR → Cadastro de Perigos."); return; }
+        const ghe=(state.pgrGhes||[]).find(g=>g.id===fd.gheId);
+        if(!atual&&!ghe){alert("Selecione o GHE para definir o risco.");gheSel?.focus();return;}
         if(!jobSel.value){ alert("Selecione o cargo / função do setor."); return; }
+        const setorFinal=ghe?.setor||fd.setor;
+        const setorCadastro=(state.generalSectors||[]).find(s=>normalizeText(s.nome)===normalizeText(setorFinal));
+        const cargoCadastro=(state.generalJobs||[]).find(c=>c.nome===jobSel.value);
+        if(jobSel.value!=="__GHE_ALL__"&&(!cargoCadastro||!Array.isArray(setorCadastro?.cargoIds)||!setorCadastro.cargoIds.includes(cargoCadastro.id))){
+          alert("Selecione um cargo válido do Cadastro Geral vinculado a este setor.");
+          fillJobs();
+          return;
+        }
         const epiIds = [...selected].filter(id => epis.some(i => i.id === id));
         if(saveChk?.checked) hazard.epiIds = epiIds.slice();
+        const atividade=jobSel.value==="__GHE_ALL__"?`Todos os cargos do ${ghe?.codigo||'GHE'}`:jobSel.value;
         const registro={
-          id:atual?.id||uid("pgr"), setor:fd.setor, atividade:jobSel.value,
+          id:atual?.id||uid("pgr"), gheId:ghe?.id||"", setor:setorFinal, atividade,
           perigo:hazard.nome, perigoId:hazard.id, tipo:fd.tipo,
           severidade:fd.severidade, probabilidade:fd.probabilidade,
           epiIds, medidaControle:String(fd.medidaControle||"").trim()
@@ -10180,13 +10279,125 @@ function renderPcmsoDash(root){
         if(!brig||!brigEmp){alert("Selecione um brigadista válido.");return;}
         const record={equipId:data.equipId,dataInspecao:data.dataInspecao,brigadistaId:brig.id,brigadistaEmployeeId:brigEmp.id,inspetor:brigEmp.nome,observacoes:data.observacoes||"",checklist,resultado,tipoChecagem:`Plano · ${fireEquipGroup(eq)}`,proximaInspecao:addMonths(data.dataInspecao,eq?.periodicidadeInspMeses||1),updatedAt:new Date().toISOString()};
         const previousEquipId=current?.equipId||"";
-        if(current)Object.assign(current,record);else state.fireInspections.push({id:uid("insp"),...record});
+        let savedInspection;
+        if(current){Object.assign(current,record);savedInspection=current;}else{savedInspection={id:uid("insp"),...record};state.fireInspections.push(savedInspection);}
+        ensureFireCorrectiveActionsForInspection(savedInspection);
         syncFireInspectionSchedule(record.equipId);
         if(previousEquipId&&previousEquipId!==record.equipId) syncFireInspectionSchedule(previousEquipId);
         await saveState();window.closeModal();render();
       });
     });
   }
+
+  function ecSupervisorEmployee(s){return(state.employees||[]).find(e=>e.id===s?.employeeId)||null}
+  // Curso de Supervisor de Entrada (NR-33) mais recente do funcionário, cadastrado
+  // no módulo Treinamentos (Matriz de Cursos / Plano Anual de Treinamento).
+  function ecSupervisorLatestTraining(employeeId){
+    return (state.trainings||[])
+      .filter(t=>t.employeeId===employeeId && /nr[\s-]?33/i.test(t.curso||'') && /supervisor/i.test(t.curso||''))
+      .sort((a,b)=>String(b.dataVencimento||'').localeCompare(String(a.dataVencimento||'')))[0] || null;
+  }
+  function ecSupervisorTrainingOk(employeeId){
+    const t=ecSupervisorLatestTraining(employeeId);
+    return !!(t && t.dataVencimento && daysUntil(t.dataVencimento)>=0);
+  }
+  // Situação real do supervisor: além do campo "ativo" cadastrado, o vínculo
+  // exige funcionário existente no Cadastro Geral e curso NR-33 de Supervisor
+  // de Entrada em dia no Plano Anual de Treinamento. Sem isso, o supervisor
+  // é automaticamente tratado como inativo (não aparece no portal de emissão).
+  function ecSupervisorEffectiveStatus(s){
+    const e=ecSupervisorEmployee(s);
+    if(!e) return {ativo:false, motivo:'Funcionário removido do Cadastro Geral'};
+    if(s.ativo===false) return {ativo:false, motivo:'Inativado manualmente'};
+    const t=ecSupervisorLatestTraining(e.id);
+    if(!t) return {ativo:false, motivo:'Sem curso de Supervisor de Entrada (NR-33) cadastrado no Plano Anual de Treinamento'};
+    if(!ecSupervisorTrainingOk(e.id)) return {ativo:false, motivo:`Curso de Supervisor de Entrada (NR-33) vencido em ${fmtDate(t.dataVencimento)}`};
+    return {ativo:true, motivo:'', vencimento:t.dataVencimento};
+  }
+  function ecPortalUrl(ecId=""){let base=String(state.ecPortalPublicUrl||'').trim();if(!base&&(location.protocol==='http:'||location.protocol==='https:'))base=location.href;if(!base)return'';try{const u=new URL(base);u.search='';u.hash=`ec-pet-portal${ecId?`?ec=${encodeURIComponent(ecId)}`:''}`;return u.href}catch(e){return''}}
+  function isEcPortalMode(){return location.hash.startsWith('#ec-pet-portal')}
+  function ecPortalSpaceId(){const raw=location.hash.split('?')[1]||'';return new URLSearchParams(raw).get('ec')||''}
+  function ecFilteredSpaces(root){const q=normalizeText(root.dataset.ecSearch||''),loc=root.dataset.ecLocation||'';return(state.confinedSpaces||[]).filter(ec=>(!q||normalizeText([ec.tag,ec.nome,ec.localizacao,ec.riscos,ec.equipamentos].join(' ')).includes(q))&&(!loc||ec.localizacao===loc))}
+  function ecFilteredPets(root){const q=normalizeText(root.dataset.petSearch||''),status=root.dataset.petStatus||'',ecId=root.dataset.petSpace||'';return(state.pets||[]).filter(p=>{const ec=ecById(p.ecId),sup=(state.employees||[]).find(e=>e.id===p.supervisorId);return(!q||normalizeText([p.numeroPet,ec?.tag,ec?.nome,sup?.nome,p.trabalhadores,p.trabalhoExecutar].join(' ')).includes(q))&&(!status||p.status===status)&&(!ecId||p.ecId===ecId)})}
+  function renderEcTableListV2(list,allowActions=false){if(!list.length)return`<div class="empty">Nenhum espaço confinado encontrado.</div>`;return`<div style="overflow:auto"><table><thead><tr><th>🏷️ TAG</th><th>🏭 Espaço</th><th>📍 Localização</th><th>⚠️ Riscos</th><th>🛟 Equipamentos</th><th>📱 QR</th>${allowActions?'<th>⚙️ Ações</th>':''}</tr></thead><tbody>${list.map(ec=>`<tr><td><span class="ca-tag">${empEsc(ec.tag)}</span></td><td><strong>${empEsc(ec.nome)}</strong><br><small>${empEsc(ec.dimensoes||'—')}</small></td><td>${empEsc(ec.localizacao||'—')}</td><td style="color:var(--amber);font-size:12px">${empEsc(ec.riscos||'—')}</td><td style="font-size:12px">${empEsc(ec.equipamentos||'—')}</td><td><button class="action-link" data-ec-qr="${ec.id}">📱 Ver QR</button></td>${allowActions?`<td class="row-actions"><button class="action-link" data-edit-ec="${ec.id}">✏️ Editar</button><button class="action-link danger-link" data-del-ec="${ec.id}">🗑️ Remover</button></td>`:''}</tr>`).join('')}</tbody></table></div>`}
+  function renderPetsTableListV2(list,allowActions=false){if(!list.length)return`<div class="empty">Nenhuma PET encontrada.</div>`;return`<div style="overflow:auto"><table><thead><tr><th>📜 PET</th><th>🏭 Espaço</th><th>📅 Emissão / Validade</th><th>👀 Vigia</th><th>👷 Supervisor</th><th>✍️ Assinatura</th><th>🚦 Situação</th>${allowActions?'<th>⚙️ Ações</th>':''}</tr></thead><tbody>${list.map(p=>{const ec=ecById(p.ecId),st=p.status==='Ativa'?'warn':p.status==='Encerrada'?'ok':'bad';return`<tr><td><strong>${empEsc(p.numeroPet)}</strong></td><td>${empEsc(ec?`${ec.tag} · ${ec.nome}`:'—')}</td><td>${fmtDate(p.dataEmissao)}<br><small>${empEsc(p.validadeHoras||'—')}</small></td><td>${empEsc(employeeName(p.vigiaId))}</td><td>${empEsc(employeeName(p.supervisorId))}</td><td>${p.supervisorSignature?'<span class="status-pill ok">● Assinada na tela</span>':'<span class="status-pill warn">● Pendente</span>'}</td><td><span class="status-pill ${st}"><span class="dot"></span>${empEsc(p.status)}</span></td>${allowActions?`<td class="row-actions">${p.status==='Ativa'?`<button class="action-link" data-close-pet="${p.id}">✅ Encerrar</button>`:''}<button class="action-link danger-link" data-del-pet="${p.id}">🗑️ Remover</button></td>`:''}</tr>`}).join('')}</tbody></table></div>`}
+  renderEcTableList=renderEcTableListV2;renderPetsTableList=renderPetsTableListV2;
+  function renderEcDashV2(root){const spaces=ecFilteredSpaces(root),pets=ecFilteredPets(root),active=pets.filter(p=>p.status==='Ativa').length,signed=pets.filter(p=>p.supervisorSignature).length,supervisors=(state.ecSupervisors||[]).filter(s=>ecSupervisorEffectiveStatus(s).ativo).length;root.innerHTML=`<div class="page-head"><div><h2>🚧 Espaço Confinado (NR-33) · Painel Geral</h2><div class="sub">Inventário, supervisores autorizados, emissão e rastreabilidade de PETs.</div></div></div><div class="annual-kpis emp-kpis" style="grid-template-columns:repeat(4,minmax(0,1fr))"><div class="annual-kpi"><div class="annual-kpi-icon amber">📜</div><div><div class="num">${active}</div><div class="label">PETs ativas</div></div></div><div class="annual-kpi"><div class="annual-kpi-icon blue">🏭</div><div><div class="num">${spaces.length}</div><div class="label">Espaços mapeados</div></div></div><div class="annual-kpi"><div class="annual-kpi-icon green">👷</div><div><div class="num">${supervisors}</div><div class="label">Supervisores ativos</div></div></div><div class="annual-kpi"><div class="annual-kpi-icon green">✍️</div><div><div class="num">${signed}</div><div class="label">PETs assinadas</div></div></div></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="ec-dash-search" value="${empEsc(root.dataset.ecSearch||'')}" placeholder="Espaço, TAG, localização, PET ou supervisor"></div><div class="field"><label>Situação da PET</label><select id="ec-dash-status"><option value="">Todas</option>${['Ativa','Encerrada','Cancelada'].map(x=>`<option ${root.dataset.petStatus===x?'selected':''}>${x}</option>`).join('')}</select></div><button class="btn secondary" id="ec-dash-clear">🧹 Limpar</button></div></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>📜 PETs encontradas</h3><span>${pets.length}</span></div>${renderPetsTableListV2(pets.slice(0,10))}</div><div class="panel"><div class="panel-head"><h3>🏭 Espaços confinados</h3><span>${spaces.length}</span></div>${renderEcTableListV2(spaces.slice(0,6))}</div>`}
+  renderEcDash=renderEcDashV2;
+  function renderEcInventoryV2(root){const rows=ecFilteredSpaces(root),locations=[...new Set((state.confinedSpaces||[]).map(x=>x.localizacao).filter(Boolean))];root.innerHTML=`<div class="page-head"><div><h2>🏭 Inventário de Espaços Confinados</h2><div class="sub">Cadastro, consulta e QR Code individual de cada local.</div></div><button class="btn" id="btn-new-ec">+ Cadastrar Espaço</button></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${rows.length} de ${(state.confinedSpaces||[]).length}</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="ec-search" value="${empEsc(root.dataset.ecSearch||'')}" placeholder="TAG, espaço, risco ou equipamento"></div><div class="field"><label>Localização</label><select id="ec-location"><option value="">Todas</option>${locations.map(x=>`<option ${root.dataset.ecLocation===x?'selected':''}>${empEsc(x)}</option>`).join('')}</select></div><button class="btn secondary" id="ec-clear">🧹 Limpar</button></div></div><div class="panel">${renderEcTableListV2(rows,checkPermission('Administrador'))}</div>`}
+  renderEcInventory=renderEcInventoryV2;
+  function renderEcPetsV2(root){const rows=ecFilteredPets(root);root.innerHTML=`<div class="page-head"><div><h2>📜 Gestão de PETs</h2><div class="sub">Emissão, assinatura, acompanhamento e encerramento das permissões.</div></div><button class="btn" id="btn-new-pet">+ Emitir PET</button></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${rows.length} de ${(state.pets||[]).length}</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="pet-search" value="${empEsc(root.dataset.petSearch||'')}" placeholder="Número, espaço, supervisor ou trabalho"></div><div class="field"><label>Espaço</label><select id="pet-space"><option value="">Todos</option>${(state.confinedSpaces||[]).map(ec=>`<option value="${ec.id}" ${root.dataset.petSpace===ec.id?'selected':''}>${empEsc(ec.tag)} · ${empEsc(ec.nome)}</option>`).join('')}</select></div><div class="field"><label>Situação</label><select id="pet-status"><option value="">Todas</option>${['Ativa','Encerrada','Cancelada'].map(x=>`<option ${root.dataset.petStatus===x?'selected':''}>${x}</option>`).join('')}</select></div><button class="btn secondary" id="pet-clear">🧹 Limpar</button></div></div><div class="panel">${renderPetsTableListV2(rows,checkPermission('Administrador'))}</div>`}
+  renderEcPets=renderEcPetsV2;
+  function renderEcSupervisors(root){const q=normalizeText(root.dataset.ecSupSearch||''),status=root.dataset.ecSupStatus||'',rows=(state.ecSupervisors||[]).filter(s=>{const e=ecSupervisorEmployee(s);return(!q||normalizeText([e?.nome,e?.matricula,e?.cargo,e?.setor].join(' ')).includes(q))&&(!status||String(ecSupervisorEffectiveStatus(s).ativo)===status)});root.innerHTML=`<div class="page-head"><div><h2>👷 Supervisores Autorizados a Emitir PET</h2><div class="sub">O acesso ao portal é exclusivo aos supervisores ativos e com curso de Supervisor de Entrada (NR-33) em dia no Plano Anual de Treinamento.</div></div><button class="btn" id="btn-new-ec-supervisor">+ Cadastrar Supervisor</button></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${rows.length}</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="ec-sup-search" value="${empEsc(root.dataset.ecSupSearch||'')}" placeholder="Nome, matrícula, cargo ou setor"></div><div class="field"><label>Situação</label><select id="ec-sup-status"><option value="">Todos</option><option value="true" ${status==='true'?'selected':''}>Ativos</option><option value="false" ${status==='false'?'selected':''}>Inativos</option></select></div><button class="btn secondary" id="ec-sup-clear">🧹 Limpar</button></div></div><div class="panel">${rows.length?`<table><thead><tr><th>👷 Supervisor</th><th>🪪 Matrícula</th><th>💼 Cargo / Setor</th><th>🎓 Curso NR-33 Supervisor</th><th>🚦 Situação</th><th>⚙️ Ações</th></tr></thead><tbody>${rows.map(s=>{const e=ecSupervisorEmployee(s),eff=ecSupervisorEffectiveStatus(s),t=e?ecSupervisorLatestTraining(e.id):null;return`<tr><td><strong>${empEsc(e?.nome||'Funcionário removido')}</strong></td><td>${empEsc(e?.matricula||'Não cadastrada')}</td><td>${empEsc(e?.cargo||'—')}<br><small>${empEsc(e?.setor||'—')}</small></td><td>${t?`<span class="status-pill ${ecSupervisorTrainingOk(e.id)?'ok':'bad'}">${ecSupervisorTrainingOk(e.id)?'●':'●'} ${fmtDate(t.dataVencimento)}</span>`:'<span class="status-pill bad">● Não cadastrado</span>'}</td><td><span class="status-pill ${eff.ativo?'ok':'bad'}"><span class="dot"></span>${eff.ativo?'Ativo':'Inativo'}</span>${!eff.ativo&&s.ativo!==false?`<br><small style="color:var(--red)">${empEsc(eff.motivo)}</small>`:''}</td><td><button class="action-link" data-edit-ec-supervisor="${s.id}">✏️ Editar</button><button class="action-link danger-link" data-del-ec-supervisor="${s.id}">🗑️ Remover</button></td></tr>`}).join('')}</tbody></table>`:'<div class="empty">Nenhum supervisor autorizado.</div>'}</div>`}
+  function openEcSupervisorModal(id=""){const current=(state.ecSupervisors||[]).find(x=>x.id===id),used=new Set((state.ecSupervisors||[]).filter(x=>x.id!==id).map(x=>x.employeeId)),emps=(state.employees||[]).filter(e=>!used.has(e.id));openModal(`<h2>${id?'✏️ Editar':'👷 Cadastrar'} Supervisor Autorizado</h2><form id="ec-supervisor-form"><div class="field"><label>Funcionário do Cadastro Geral *</label><select name="employeeId" required><option value="">Selecione</option>${emps.map(e=>`<option value="${e.id}" ${current?.employeeId===e.id?'selected':''}>${empEsc(e.nome)} · Matrícula ${empEsc(e.matricula||'não cadastrada')} · ${empEsc(e.cargo||'—')}</option>`).join('')}</select></div><div class="field"><label>Situação</label><select name="ativo"><option value="true" ${current?.ativo!==false?'selected':''}>Ativo</option><option value="false" ${current?.ativo===false?'selected':''}>Inativo</option></select></div><div class="note">A matrícula do Cadastro Geral será usada como senha no portal.</div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">💾 Salvar</button></div></form>`,ov=>ov.querySelector('#ec-supervisor-form').addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),emp=(state.employees||[]).find(x=>x.id===d.employeeId);if(!emp?.matricula){alert('Cadastre a matrícula deste funcionário no Cadastro Geral.');return}const rec={employeeId:d.employeeId,ativo:d.ativo==='true',updatedAt:new Date().toISOString()};if(current)Object.assign(current,rec);else(state.ecSupervisors||=[]).push({id:uid('ecsup'),...rec,createdAt:new Date().toISOString()});await saveState();closeModal();render()})),
+    (()=>{const sel=document.querySelector('#ec-supervisor-form [name="employeeId"]');if(!sel)return;const box=document.createElement('div');box.className='note';box.style.marginTop='4px';sel.closest('.field').insertAdjacentElement('afterend',box);const refresh=()=>{const emp=(state.employees||[]).find(x=>x.id===sel.value),t=emp?ecSupervisorLatestTraining(emp.id):null;if(!emp){box.textContent='';return}box.innerHTML=t?(ecSupervisorTrainingOk(emp.id)?`✅ Curso de Supervisor de Entrada (NR-33) em dia · válido até ${fmtDate(t.dataVencimento)}.`:`⚠️ Curso de Supervisor de Entrada (NR-33) vencido em ${fmtDate(t.dataVencimento)}. O supervisor será inativado automaticamente até renovar o curso no Plano Anual de Treinamento.`):'⚠️ Nenhum curso de Supervisor de Entrada (NR-33) cadastrado para este funcionário. Cadastre-o no módulo Treinamentos para manter o vínculo ativo.'};sel.addEventListener('change',refresh);refresh()})()}
+  function renderEcPortalSettings(root){const base=ecPortalUrl(),local=location.protocol==='file:';root.innerHTML=`<div class="page-head"><div><h2>📱 Portal de Emissão de PET</h2><div class="sub">QR Codes individuais para acesso do supervisor em cada espaço confinado.</div></div></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔗 Endereço público</h3></div><div style="padding:16px"><div class="field"><label>Endereço HTTPS onde o sistema foi publicado</label><input id="ec-public-url" type="url" value="${empEsc(state.ecPortalPublicUrl||'')}" placeholder="https://seu-site.github.io/sistema/"><small>Endereços file:/// não abrem em outro celular.</small></div><button class="btn" id="ec-save-url">💾 Salvar endereço</button>${local?'<div class="note" style="margin-top:12px">⚠️ Publique o sistema em um endereço HTTPS para o QR Code funcionar no celular.</div>':''}</div></div><div class="panel"><div class="panel-head"><h3>🏭 QR Codes por espaço</h3><span>${(state.confinedSpaces||[]).length}</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;padding:16px">${(state.confinedSpaces||[]).map(ec=>{const url=ecPortalUrl(ec.id),qr=url?`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(url)}`:'';return`<div class="panel" style="padding:14px;text-align:center"><h3>${empEsc(ec.tag)} · ${empEsc(ec.nome)}</h3>${qr?`<img src="${qr}" alt="QR Code ${empEsc(ec.tag)}" style="width:180px;height:180px;background:#fff;padding:8px;border-radius:8px">`:'<div class="empty">Informe o endereço público.</div>'}<p class="muted">📍 ${empEsc(ec.localizacao||'—')}</p>${url?`<button class="btn secondary" data-copy-ec-url="${empEsc(url)}">📋 Copiar link</button> <button class="btn secondary" data-print-ec-qr="${ec.id}">🖨️ Imprimir</button>`:''}</div>`}).join('')||'<div class="empty">Cadastre um espaço confinado para gerar o QR Code.</div>'}</div></div>`}
+  function showEcQrModal(id){const ec=ecById(id),url=ecPortalUrl(id);if(!ec)return;const qr=url?`https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(url)}`:'';openModal(`<h2>📱 QR Code · ${empEsc(ec.tag)}</h2><div style="text-align:center">${qr?`<img src="${qr}" style="width:260px;height:260px;background:#fff;padding:10px;border-radius:10px">`:'<div class="empty">Configure primeiro o endereço público do portal.</div>'}<h3>${empEsc(ec.nome)}</h3><p>${empEsc(ec.localizacao||'—')}</p></div><div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Fechar</button>${url?`<button class="btn" data-copy-ec-url="${empEsc(url)}">📋 Copiar link</button>`:''}</div>`)}
+  function setupSignatureCanvas(canvas,clearButton){const ctx=canvas.getContext('2d');let drawing=false,signed=false;const resize=()=>{const ratio=Math.max(window.devicePixelRatio||1,1),rect=canvas.getBoundingClientRect();canvas.width=Math.round(rect.width*ratio);canvas.height=Math.round(190*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.strokeStyle='#17202a'};resize();const point=e=>{const r=canvas.getBoundingClientRect(),t=e.touches?.[0]||e;return{x:t.clientX-r.left,y:t.clientY-r.top}};const start=e=>{e.preventDefault();drawing=true;signed=true;const p=point(e);ctx.beginPath();ctx.moveTo(p.x,p.y)};const move=e=>{if(!drawing)return;e.preventDefault();const p=point(e);ctx.lineTo(p.x,p.y);ctx.stroke()};const stop=()=>drawing=false;canvas.addEventListener('pointerdown',start);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',stop);canvas.addEventListener('pointerleave',stop);clearButton.addEventListener('click',()=>{ctx.clearRect(0,0,canvas.width,canvas.height);signed=false});return{isSigned:()=>signed,data:()=>canvas.toDataURL('image/png')}}
+  function renderEcPetPortal(){const app=document.getElementById('app'),spaceId=ecPortalSpaceId(),space=ecById(spaceId),active=(state.ecSupervisors||[]).filter(s=>ecSupervisorEmployee(s)&&ecSupervisorEffectiveStatus(s).ativo);let session=null;try{session=JSON.parse(sessionStorage.getItem('sst-ec-supervisor-session')||'null')}catch(e){}const supervisor=active.find(s=>s.id===session?.supervisorId),emp=ecSupervisorEmployee(supervisor);if(!supervisor||!emp){app.innerHTML=`<div class="brigade-mobile"><div class="brigade-mobile-shell"><div class="mobile-card"><img class="brand-logo" src="${FIXED_SYSTEM_LOGO}" alt="Partner" style="height:68px"><h2>🚧 Portal NR-33 · Emissão de PET</h2>${space?`<div class="note">🏭 ${empEsc(space.tag)} · ${empEsc(space.nome)}<br>📍 ${empEsc(space.localizacao||'—')}</div>`:''}<form id="ec-portal-login"><div class="field"><label>Supervisor autorizado</label><select name="supervisorId" required><option value="">Selecione seu nome</option>${active.map(s=>{const e=ecSupervisorEmployee(s);return`<option value="${s.id}">${empEsc(e.nome)}</option>`}).join('')}</select></div><div class="field"><label>Matrícula (senha)</label><input type="password" name="matricula" required inputmode="numeric"></div><button class="btn" style="width:100%">Entrar no portal</button></form>${active.length?'':'<div class="empty">Nenhum supervisor autorizado ativo.</div>'}</div></div></div>`;app.querySelector('#ec-portal-login')?.addEventListener('submit',e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),s=active.find(x=>x.id===d.supervisorId),u=ecSupervisorEmployee(s);if(!s||!u||String(u.matricula||'').trim()!==String(d.matricula||'').trim()){alert('Supervisor ou matrícula inválidos.');return}sessionStorage.setItem('sst-ec-supervisor-session',JSON.stringify({supervisorId:s.id,employeeId:u.id}));renderEcPetPortal()});return}
+    const next=`PET-${new Date().getFullYear()}/${String((state.pets||[]).length+1).padStart(3,'0')}`,spaces=space?[space]:(state.confinedSpaces||[]);
+    app.innerHTML=`<div class="brigade-mobile"><div class="brigade-mobile-shell"><div class="mobile-card"><h2>📜 Emitir PET</h2><div class="sub">Supervisor: <strong>${empEsc(emp.nome)}</strong></div><button class="btn secondary" id="ec-portal-logout">Sair</button></div><div class="mobile-card"><form id="ec-portal-pet-form"><div class="field"><label>Número da PET</label><input name="numeroPet" readonly value="${next}"></div><div class="field"><label>Espaço confinado</label><select name="ecId" required>${spaces.map(ec=>`<option value="${ec.id}">${empEsc(ec.tag)} · ${empEsc(ec.nome)}</option>`).join('')}</select></div><div class="field-row"><div class="field"><label>Data da emissão</label><input type="date" name="dataEmissao" required value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Validade</label><select name="validadeHoras"><option>4 horas</option><option selected>8 horas (Turno)</option><option>12 horas</option></select></div></div><div class="field"><label>Vigia designado *</label><select name="vigiaId" required><option value="">Selecione</option>${(state.employees||[]).map(e=>`<option value="${e.id}">${empEsc(e.nome)} · ${empEsc(e.cargo||'—')}</option>`).join('')}</select></div><div class="field"><label>Trabalhadores autorizados *</label><input name="trabalhadores" required placeholder="Nomes separados por vírgula"></div><div class="field"><label>Trabalho a executar *</label><textarea name="trabalhoExecutar" required></textarea></div><div class="field"><label>Verificações e controles adotados</label><textarea name="controles" placeholder="Isolamento, bloqueio, ventilação, monitoramento e resgate"></textarea></div><div class="field"><label>✍️ Assinatura do supervisor *</label><div style="border:2px solid var(--line);border-radius:10px;background:#fff;padding:6px"><canvas id="ec-signature" style="width:100%;height:190px;display:block;touch-action:none"></canvas></div><small>Assine escrevendo com o dedo, caneta digital ou mouse.</small><button type="button" class="btn secondary" id="ec-clear-signature" style="margin-top:7px">🧹 Limpar assinatura</button></div><button class="btn" style="width:100%">✅ Assinar e emitir PET</button></form></div></div></div>`;
+    app.querySelector('#ec-portal-logout').addEventListener('click',()=>{sessionStorage.removeItem('sst-ec-supervisor-session');renderEcPetPortal()});const sig=setupSignatureCanvas(app.querySelector('#ec-signature'),app.querySelector('#ec-clear-signature'));app.querySelector('#ec-portal-pet-form').addEventListener('submit',async e=>{e.preventDefault();if(!sig.isSigned()){alert('Faça a assinatura na tela antes de emitir a PET.');return}const d=Object.fromEntries(new FormData(e.target));state.pets.push({id:uid('pet'),status:'Ativa',...d,supervisorId:emp.id,supervisorAuthorizationId:supervisor.id,supervisorSignature:sig.data(),signedAt:new Date().toISOString(),issuedFromPortal:true});await saveState();app.innerHTML=`<div class="brigade-mobile"><div class="brigade-mobile-shell"><div class="mobile-card" style="text-align:center"><h2>✅ PET emitida</h2><p><strong>${empEsc(d.numeroPet)}</strong></p><p>A permissão foi assinada e registrada no sistema.</p><button class="btn" id="ec-new-pet">Emitir outra PET</button></div></div></div>`;app.querySelector('#ec-new-pet').addEventListener('click',renderEcPetPortal)})}
+  function openEcModalV2(id=""){const current=(state.confinedSpaces||[]).find(x=>x.id===id)||{};openModal(`<h2>${id?'✏️ Editar':'🏭 Cadastrar'} Espaço Confinado</h2><form id="ec-form-v2"><div class="grid-2"><div class="field"><label>TAG / Código *</label><input required name="tag" value="${empEsc(current.tag||'')}"></div><div class="field"><label>Nome do espaço *</label><input required name="nome" value="${empEsc(current.nome||'')}"></div><div class="field"><label>Localização *</label><input required name="localizacao" value="${empEsc(current.localizacao||'')}"></div><div class="field"><label>Volume / Dimensões</label><input name="dimensoes" value="${empEsc(current.dimensoes||'')}"></div></div><div class="field"><label>Aberturas de entrada e saída</label><input name="aberturas" value="${empEsc(current.aberturas||'')}"></div><div class="field"><label>⚠️ Riscos atmosféricos e físicos</label><textarea name="riscos">${empEsc(current.riscos||'')}</textarea></div><div class="field"><label>🔒 Isolamento / LOTO</label><textarea name="isolamento">${empEsc(current.isolamento||'')}</textarea></div><div class="field"><label>💨 Ventilação requerida</label><textarea name="ventilacao">${empEsc(current.ventilacao||'')}</textarea></div><div class="field"><label>🛟 Equipamentos de medição e resgate</label><textarea name="equipamentos">${empEsc(current.equipamentos||'')}</textarea></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">💾 Salvar</button></div></form>`,ov=>ov.querySelector('#ec-form-v2').addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));if((state.confinedSpaces||[]).some(x=>x.id!==id&&normalizeText(x.tag)===normalizeText(d.tag))){alert('Já existe um espaço com esta TAG.');return}if(id)Object.assign(current,d,{updatedAt:new Date().toISOString()});else state.confinedSpaces.push({id:uid('ec'),...d,createdAt:new Date().toISOString()});await saveState();closeModal();render()}))}
+  openEcModal=openEcModalV2;
+
+  const NR15_AGENTS = [
+    {code:"1",name:"Ruído contínuo ou intermitente",type:"Físico",method:"Quantitativa"},
+    {code:"2",name:"Ruído de impacto",type:"Físico",method:"Quantitativa"},
+    {code:"3",name:"Calor",type:"Físico",method:"Quantitativa"},
+    {code:"5",name:"Radiações ionizantes",type:"Físico",method:"Conforme norma específica"},
+    {code:"6",name:"Trabalho sob condições hiperbáricas",type:"Físico",method:"Qualitativa / requisitos técnicos"},
+    {code:"7",name:"Radiações não ionizantes",type:"Físico",method:"Qualitativa"},
+    {code:"8",name:"Vibração",type:"Físico",method:"Quantitativa"},
+    {code:"9",name:"Frio",type:"Físico",method:"Qualitativa"},
+    {code:"10",name:"Umidade",type:"Físico",method:"Qualitativa"},
+    {code:"11",name:"Agentes químicos com limite de tolerância",type:"Químico",method:"Quantitativa"},
+    {code:"12",name:"Poeiras minerais",type:"Químico",method:"Quantitativa"},
+    {code:"13",name:"Agentes químicos por inspeção no local",type:"Químico",method:"Qualitativa"},
+    {code:"13-A",name:"Benzeno",type:"Químico",method:"Avaliação específica"},
+    {code:"14",name:"Agentes biológicos",type:"Biológico",method:"Qualitativa"}
+  ];
+  function nr15Agent(code){return NR15_AGENTS.find(x=>x.code===String(code))||{code:code||"—",name:"Agente não identificado",type:"—",method:"—"}}
+  function nr15PgrHazard(a){ensurePgrHazards();return(state.pgrHazards||[]).find(h=>h.id===a?.pgrHazardId)||null}
+  function nr15Professional(a){return(state.nr15Professionals||[]).find(p=>p.id===a?.professionalId)||null}
+  function nr15HazardsForGhe(gheId){ensurePgrHazards();const ghe=(state.pgrGhes||[]).find(g=>g.id===gheId),ids=new Set(ghe?.hazardIds||[]);(state.pgrRisks||[]).filter(r=>r.gheId===gheId).forEach(r=>{if(r.perigoId)ids.add(r.perigoId);else{const h=(state.pgrHazards||[]).find(x=>normalizeText(x.nome)===normalizeText(r.perigo));if(h)ids.add(h.id)}});return(state.pgrHazards||[]).filter(h=>ids.has(h.id)).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'))}
+  function nr15Ghe(a){return(state.pgrGhes||[]).find(g=>g.id===a?.gheId)}
+  function nr15ResultPill(v){const cls=v==="Insalubridade caracterizada"?"bad":v==="Não caracterizada"?"ok":"warn";return `<span class="pill ${cls}">● ${empEsc(v||"Aguardando avaliação")}</span>`}
+  function nr15StatusPill(v){const cls=v==="Vigente"?"ok":v==="Revisão necessária"?"bad":"warn";return `<span class="pill ${cls}">● ${empEsc(v||"Em elaboração")}</span>`}
+  function nr15Filtered(root){const search=root.dataset.nr15Search||"",ghe=root.dataset.nr15Ghe||"",result=root.dataset.nr15Result||"",status=root.dataset.nr15Status||"",q=normalizeText(search);return(state.nr15Assessments||[]).filter(a=>{const g=nr15Ghe(a),ag=nr15PgrHazard(a),p=nr15Professional(a);return(!q||normalizeText([a.reportNumber,g?.codigo,g?.nome,g?.setor,ag?.nome,p?.nome,a.professional].join(" ")).includes(q))&&(!ghe||a.gheId===ghe)&&(!result||a.result===result)&&(!status||a.status===status)})}
+  function nr15Filters(root,count){const ghes=(state.pgrGhes||[]).filter(g=>g.ativo!==false);return `<div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${count} registro${count===1?'':'s'}</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="nr15-search" type="search" value="${empEsc(root.dataset.nr15Search||'')}" placeholder="GHE, setor, agente, laudo ou responsável"></div><div class="field"><label>GHE</label><select id="nr15-ghe"><option value="">Todos</option>${ghes.map(g=>`<option value="${g.id}" ${root.dataset.nr15Ghe===g.id?'selected':''}>${empEsc(g.codigo)} · ${empEsc(g.nome)}</option>`).join('')}</select></div><div class="field"><label>Resultado</label><select id="nr15-result"><option value="">Todos</option>${['Aguardando avaliação','Não caracterizada','Insalubridade caracterizada'].map(x=>`<option ${root.dataset.nr15Result===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Situação</label><select id="nr15-status"><option value="">Todas</option>${['Em elaboração','Vigente','Revisão necessária','Encerrado'].map(x=>`<option ${root.dataset.nr15Status===x?'selected':''}>${x}</option>`).join('')}</select></div><button class="btn secondary" id="nr15-clear">Limpar</button></div></div>`}
+  function nr15Table(rows,actions=true){if(!rows.length)return `<div class="empty-state">Nenhuma avaliação encontrada.</div>`;return `<div style="overflow:auto"><table><thead><tr><th>GHE / Setor</th><th>Agente do PGR / Anexo</th><th>Avaliação</th><th>Resultado / Grau</th><th>Laudo / Responsável</th><th>Revisão</th>${actions?'<th>Ações</th>':''}</tr></thead><tbody>${rows.map(a=>{const g=nr15Ghe(a),h=nr15PgrHazard(a),an=nr15Agent(a.agentCode),p=nr15Professional(a);return `<tr><td><strong>${empEsc(g?.codigo||'GHE removido')}</strong><br><span>${empEsc(g?.nome||'—')} · ${empEsc(g?.setor||'—')}</span></td><td><strong>${empEsc(h?.nome||'Agente do PGR não localizado')}</strong><br><span class="ca-tag">${empEsc(h?.tipo||'—')} · Anexo ${empEsc(an.code)}</span></td><td>${empEsc(a.evaluationType||an.method)}<br><small>${a.measurementValue?`${empEsc(a.measurementValue)} ${empEsc(a.unit||'')}`:'Sem medição informada'}${a.toleranceLimit?` · LT ${empEsc(a.toleranceLimit)} ${empEsc(a.unit||'')}`:''}</small></td><td>${nr15ResultPill(a.result)}<br><small>${empEsc(a.degree||'Não aplicável')}</small></td><td><strong>${empEsc(a.reportNumber||'Sem número')}</strong><br><small>${empEsc(p?.nome||a.professional||'Responsável não informado')}${(p?.registro||a.professionalRegistration)?` · ${empEsc(p?.registro||a.professionalRegistration)}`:''}</small></td><td>${fmtDate(a.nextReview)}<br>${nr15StatusPill(a.status)}</td>${actions?`<td class="row-actions"><button class="action-link" data-view-nr15="${a.id}">📄 Ver</button><button class="action-link" data-edit-nr15="${a.id}">✏️ Editar</button><button class="action-link" data-del-nr15="${a.id}">Remover</button></td>`:''}</tr>`}).join('')}</tbody></table></div>`}
+  function renderNr15Dash(root){const rows=nr15Filtered(root),characterized=rows.filter(a=>a.result==='Insalubridade caracterizada').length,pending=rows.filter(a=>a.result==='Aguardando avaliação').length,review=rows.filter(a=>a.status==='Revisão necessária'||(a.nextReview&&daysUntil(a.nextReview)<=30)).length,people=new Set(rows.flatMap(a=>{const g=nr15Ghe(a);return g?pgrGheEmployees(g).map(e=>e.id):[]})).size;root.innerHTML=`<div class="page-head"><div><h2>☣️ NR-15 · Painel de Insalubridade</h2><div class="sub">Gestão das avaliações de exposição por GHE, agentes, laudos e revisões.</div></div><button class="btn" id="btn-new-nr15">+ Nova Avaliação</button></div><div class="pgr-dashboard-cards"><div class="stat-card pgr-kpi mapped"><div class="pgr-kpi-icon">🧪</div><div><div class="num">${rows.length}</div><div class="label">Avaliações</div><small>Conforme os filtros</small></div></div><div class="stat-card pgr-kpi high"><div class="pgr-kpi-icon">⚠️</div><div><div class="num" style="color:var(--red)">${characterized}</div><div class="label">Caracterizadas</div><small>Com conclusão registrada</small></div></div><div class="stat-card pgr-kpi medium"><div class="pgr-kpi-icon">⏳</div><div><div class="num">${pending}</div><div class="label">Pendentes</div><small>Aguardando avaliação</small></div></div><div class="stat-card pgr-kpi people"><div class="pgr-kpi-icon">👥</div><div><div class="num">${people}</div><div class="label">Trabalhadores</div><small>Vinculados aos GHEs</small></div></div></div>${nr15Filters(root,rows.length)}<div class="panel"><div class="panel-head"><h3>📌 Avaliações prioritárias</h3><span>${review} revisão${review===1?'':'ões'} próxima${review===1?'':'s'}</span></div>${nr15Table(rows.slice(0,10))}</div>`}
+  function renderNr15Assessments(root){const rows=nr15Filtered(root);root.innerHTML=`<div class="page-head"><div><h2>🧪 Avaliações de Insalubridade</h2><div class="sub">Registro técnico por GHE e agente previsto nos anexos da NR-15.</div></div><button class="btn" id="btn-new-nr15">+ Nova Avaliação</button></div>${nr15Filters(root,rows.length)}<div class="panel">${nr15Table(rows)}</div>`}
+  function renderNr15Agents(root){ensurePgrHazards();const q=normalizeText(root.dataset.nr15AgentSearch||''),type=root.dataset.nr15AgentType||'',rows=(state.pgrHazards||[]).filter(h=>(!q||normalizeText([h.nome,h.tipo,h.descricao].join(' ')).includes(q))&&(!type||h.tipo===type));root.innerHTML=`<div class="page-head"><div><h2>☣️ Agentes vinculados ao PGR</h2><div class="sub">Os agentes usados no NR-15 vêm exclusivamente do Cadastro de Perigos do PGR.</div></div><button class="btn" id="btn-go-pgr-hazards">Abrir Cadastro de Perigos</button></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Pesquisa</h3><span>${rows.length} agente${rows.length===1?'':'s'}</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="nr15-agent-search" value="${empEsc(root.dataset.nr15AgentSearch||'')}" placeholder="Agente, tipo ou descrição"></div><div class="field"><label>Tipo</label><select id="nr15-agent-type"><option value="">Todos</option>${PGR_TIPOS.map(x=>`<option ${type===x?'selected':''}>${x}</option>`).join('')}</select></div><button class="btn secondary" id="nr15-agent-clear">Limpar</button></div></div><div class="panel">${rows.length?`<table><thead><tr><th>Agente do PGR</th><th>Tipo</th><th>Descrição</th><th>GHEs vinculados</th></tr></thead><tbody>${rows.map(h=>`<tr><td><strong>${empEsc(h.nome)}</strong></td><td><span class="ca-tag">${empEsc(h.tipo)}</span></td><td>${empEsc(h.descricao||'—')}</td><td>${(state.pgrGhes||[]).filter(g=>(g.hazardIds||[]).includes(h.id)).length}</td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">Nenhum agente cadastrado no PGR.</div>`}<div class="note" style="margin:14px">Cadastre e vincule os agentes aos GHEs no módulo PGR. O enquadramento no anexo da NR-15 é informado durante a avaliação técnica.</div></div>`}
+  function renderNr15Professionals(root){const q=normalizeText(root.dataset.nr15ProfSearch||''),rows=(state.nr15Professionals||[]).filter(p=>!q||normalizeText([p.nome,p.profissao,p.conselho,p.registro,p.email,p.telefone].join(' ')).includes(q));root.innerHTML=`<div class="page-head"><div><h2>👷 Responsáveis Técnicos</h2><div class="sub">Profissionais habilitados disponíveis para seleção nas avaliações e laudos NR-15.</div></div><button class="btn" id="btn-new-nr15-prof">+ Cadastrar Responsável</button></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Pesquisa</h3><span>${rows.length} profissional${rows.length===1?'':'is'}</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="nr15-prof-search" value="${empEsc(root.dataset.nr15ProfSearch||'')}" placeholder="Nome, profissão, conselho ou registro"></div><button class="btn secondary" id="nr15-prof-clear">Limpar</button></div></div><div class="panel">${rows.length?`<table><thead><tr><th>Responsável</th><th>Profissão</th><th>Conselho / Registro</th><th>Contato</th><th>Situação</th><th>Ações</th></tr></thead><tbody>${rows.map(p=>`<tr><td><strong>${empEsc(p.nome)}</strong></td><td>${empEsc(p.profissao||'—')}</td><td>${empEsc(p.conselho||'—')} · ${empEsc(p.registro||'—')}</td><td>${empEsc(p.email||'—')}<br><small>${empEsc(p.telefone||'')}</small></td><td>${nr15StatusPill(p.ativo===false?'Inativo':'Vigente')}</td><td class="row-actions"><button class="action-link" data-edit-nr15-prof="${p.id}">✏️ Editar</button><button class="action-link" data-del-nr15-prof="${p.id}">Remover</button></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">Nenhum responsável técnico cadastrado.</div>`}</div>`}
+  function openNr15ProfessionalModal(id=""){const p=(state.nr15Professionals||[]).find(x=>x.id===id)||{};openModal(`<h2>${id?'Editar':'Cadastrar'} Responsável Técnico</h2><form id="nr15-prof-form"><div class="grid-2"><div class="field"><label>Nome completo *</label><input name="nome" required value="${empEsc(p.nome||'')}"></div><div class="field"><label>Profissão / habilitação *</label><input name="profissao" required value="${empEsc(p.profissao||'')}" placeholder="Ex.: Engenheiro de Segurança do Trabalho"></div><div class="field"><label>Conselho profissional *</label><input name="conselho" required value="${empEsc(p.conselho||'')}" placeholder="Ex.: CREA"></div><div class="field"><label>Número do registro *</label><input name="registro" required value="${empEsc(p.registro||'')}"></div><div class="field"><label>E-mail</label><input type="email" name="email" value="${empEsc(p.email||'')}"></div><div class="field"><label>Telefone</label><input name="telefone" value="${empEsc(p.telefone||'')}"></div><div class="field"><label>Situação</label><select name="ativo"><option value="true" ${p.ativo!==false?'selected':''}>Ativo</option><option value="false" ${p.ativo===false?'selected':''}>Inativo</option></select></div></div><div class="field"><label>Observações</label><textarea name="observacoes">${empEsc(p.observacoes||'')}</textarea></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn" type="submit">💾 Salvar</button></div></form>`,ov=>ov.querySelector('#nr15-prof-form').addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));d.ativo=d.ativo==='true';d.updatedAt=new Date().toISOString();if(id)Object.assign(p,d);else(state.nr15Professionals||=[]).push({id:uid('nr15prof'),...d,createdAt:new Date().toISOString()});await saveState();closeModal();render()}))}
+  function renderNr15Reports(root){const rows=nr15Filtered(root);root.innerHTML=`<div class="page-head"><div><h2>📄 Laudos e Revisões</h2><div class="sub">Controle de documentos, responsáveis técnicos, vigência e próximas revisões.</div></div><button class="btn" id="btn-new-nr15">+ Novo Registro</button></div>${nr15Filters(root,rows.length)}<div class="panel">${nr15Table(rows)}</div>`}
+  function openNr15Modal(id=""){const current=(state.nr15Assessments||[]).find(x=>x.id===id)||{},ghes=(state.pgrGhes||[]).filter(g=>g.ativo!==false),today=new Date().toISOString().slice(0,10);openModal(`<h2>${id?'Editar':'Nova'} Avaliação NR-15</h2><form id="nr15-form"><div class="grid-2"><div class="field"><label>GHE *</label><select name="gheId" required><option value="">Selecione</option>${ghes.map(g=>`<option value="${g.id}" ${current.gheId===g.id?'selected':''}>${empEsc(g.codigo)} · ${empEsc(g.nome)} · ${empEsc(g.setor)}</option>`).join('')}</select></div><div class="field"><label>Agente / Anexo *</label><select name="agentCode" required><option value="">Selecione</option>${NR15_AGENTS.map(a=>`<option value="${a.code}" ${current.agentCode===a.code?'selected':''}>Anexo ${a.code} · ${empEsc(a.name)}</option>`).join('')}</select></div><div class="field"><label>Tipo de avaliação</label><select name="evaluationType">${['Quantitativa','Qualitativa','Conforme norma específica'].map(x=>`<option ${current.evaluationType===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Frequência / jornada de exposição</label><input name="exposureFrequency" value="${empEsc(current.exposureFrequency||'')}" placeholder="Ex.: habitual, 8 h/dia"></div><div class="field"><label>Valor medido</label><input name="measurementValue" value="${empEsc(current.measurementValue||'')}" placeholder="Valor da avaliação"></div><div class="field"><label>Unidade</label><input name="unit" value="${empEsc(current.unit||'')}" placeholder="Ex.: dB(A), °C, m/s², ppm"></div><div class="field"><label>Limite de tolerância aplicado</label><input name="toleranceLimit" value="${empEsc(current.toleranceLimit||'')}" placeholder="Conforme anexo e condição"></div><div class="field"><label>Metodologia / equipamento</label><input name="methodology" value="${empEsc(current.methodology||'')}" placeholder="Método, aparelho e calibração"></div><div class="field"><label>Resultado técnico *</label><select name="result">${['Aguardando avaliação','Não caracterizada','Insalubridade caracterizada'].map(x=>`<option ${current.result===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Grau</label><select name="degree">${['Não aplicável','Mínimo (10%)','Médio (20%)','Máximo (40%)'].map(x=>`<option ${current.degree===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Data da avaliação</label><input type="date" name="evaluationDate" value="${current.evaluationDate||today}"></div><div class="field"><label>Próxima revisão</label><input type="date" name="nextReview" value="${current.nextReview||''}"></div><div class="field"><label>Número do laudo</label><input name="reportNumber" value="${empEsc(current.reportNumber||'')}" placeholder="Ex.: LTI-2026/001"></div><div class="field"><label>Situação do laudo</label><select name="status">${['Em elaboração','Vigente','Revisão necessária','Encerrado'].map(x=>`<option ${current.status===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Responsável técnico *</label><input name="professional" required value="${empEsc(current.professional||'')}" placeholder="Nome do profissional habilitado"></div><div class="field"><label>Registro profissional</label><input name="professionalRegistration" value="${empEsc(current.professionalRegistration||'')}" placeholder="Conselho e número"></div></div><div class="field"><label>Medidas de controle coletivo / administrativas</label><textarea name="collectiveControls" placeholder="Descreva as medidas existentes e recomendadas">${empEsc(current.collectiveControls||'')}</textarea></div><div class="field"><label>EPIs e controles individuais</label><textarea name="epiControls" placeholder="EPIs, CA, treinamento, uso e verificação de eficácia">${empEsc(current.epiControls||'')}</textarea></div><div class="field"><label>Observações e conclusão</label><textarea name="observations">${empEsc(current.observations||'')}</textarea></div><div class="note">O sistema organiza os dados; a caracterização e o grau dependem da análise do profissional legalmente habilitado.</div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn" type="submit">💾 Salvar Avaliação</button></div></form>`,ov=>ov.querySelector('#nr15-form').addEventListener('submit',async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));const rec={...data,updatedAt:new Date().toISOString()};if(id)Object.assign(current,rec);else(state.nr15Assessments||=[]).push({id:uid('nr15'),...rec,createdAt:new Date().toISOString()});await saveState();closeModal();render()}))}
+  function openNr15Details(id){const a=(state.nr15Assessments||[]).find(x=>x.id===id);if(!a)return;const g=nr15Ghe(a),ag=nr15Agent(a.agentCode),people=g?pgrGheEmployees(g):[];openModal(`<h2>📄 ${empEsc(a.reportNumber||'Registro de avaliação NR-15')}</h2><div class="panel" style="padding:16px"><h3>${empEsc(g?.codigo||'—')} · ${empEsc(g?.nome||'GHE não localizado')}</h3><p><strong>Setor:</strong> ${empEsc(g?.setor||'—')} &nbsp; <strong>Trabalhadores vinculados:</strong> ${people.length}</p><p><strong>Agente:</strong> Anexo ${empEsc(ag.code)} · ${empEsc(ag.name)} (${empEsc(ag.type)})</p><p><strong>Avaliação:</strong> ${empEsc(a.evaluationType||ag.method)} · ${empEsc(a.measurementValue||'sem valor informado')} ${empEsc(a.unit||'')} ${a.toleranceLimit?`· LT ${empEsc(a.toleranceLimit)} ${empEsc(a.unit||'')}`:''}</p><p><strong>Resultado:</strong> ${empEsc(a.result||'—')} · <strong>Grau:</strong> ${empEsc(a.degree||'—')}</p><p><strong>Data:</strong> ${fmtDate(a.evaluationDate)} · <strong>Revisão:</strong> ${fmtDate(a.nextReview)} · <strong>Situação:</strong> ${empEsc(a.status||'—')}</p><p><strong>Responsável:</strong> ${empEsc(a.professional||'—')} ${a.professionalRegistration?`· ${empEsc(a.professionalRegistration)}`:''}</p><hr><p><strong>Medidas coletivas/administrativas:</strong><br>${empEsc(a.collectiveControls||'—')}</p><p><strong>EPIs/controles individuais:</strong><br>${empEsc(a.epiControls||'—')}</p><p><strong>Observações e conclusão:</strong><br>${empEsc(a.observations||'—')}</p></div><div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Fechar</button><button class="btn" onclick="window.print()">🖨️ Imprimir</button></div>`)}
+
+  function openNr15ModalV2(id=""){
+    ensurePgrHazards();
+    const current=(state.nr15Assessments||[]).find(x=>x.id===id)||{},ghes=(state.pgrGhes||[]).filter(g=>g.ativo!==false),professionals=(state.nr15Professionals||[]).filter(p=>p.ativo!==false),today=new Date().toISOString().slice(0,10);
+    openModal(`<h2>${id?'Editar':'Nova'} Avaliação NR-15</h2><form id="nr15-form-v2"><div class="grid-2">
+      <div class="field"><label>GHE do PGR *</label><select id="nr15-form-ghe" name="gheId" required><option value="">Selecione</option>${ghes.map(g=>`<option value="${g.id}" ${current.gheId===g.id?'selected':''}>${empEsc(g.codigo)} · ${empEsc(g.nome)} · ${empEsc(g.setor)}</option>`).join('')}</select></div>
+      <div class="field"><label>Agente vinculado ao PGR *</label><select id="nr15-form-hazard" name="pgrHazardId" required><option value="">Selecione primeiro o GHE</option></select><small id="nr15-hazard-help">Somente agentes vinculados ao GHE selecionado serão exibidos.</small></div>
+      <div class="field"><label>Anexo aplicável da NR-15 *</label><select name="agentCode" required><option value="">Selecione</option>${NR15_AGENTS.map(a=>`<option value="${a.code}" ${current.agentCode===a.code?'selected':''}>Anexo ${a.code} · ${empEsc(a.name)}</option>`).join('')}</select></div>
+      <div class="field"><label>Tipo de avaliação</label><select name="evaluationType">${['Quantitativa','Qualitativa','Conforme norma específica'].map(x=>`<option ${current.evaluationType===x?'selected':''}>${x}</option>`).join('')}</select></div>
+      <div class="field"><label>Frequência / jornada de exposição</label><input name="exposureFrequency" value="${empEsc(current.exposureFrequency||'')}" placeholder="Ex.: habitual, 8 h/dia"></div><div class="field"><label>Valor medido</label><input name="measurementValue" value="${empEsc(current.measurementValue||'')}"></div><div class="field"><label>Unidade</label><input name="unit" value="${empEsc(current.unit||'')}" placeholder="Ex.: dB(A), °C, m/s², ppm"></div><div class="field"><label>Limite de tolerância aplicado</label><input name="toleranceLimit" value="${empEsc(current.toleranceLimit||'')}"></div>
+      <div class="field"><label>Metodologia / equipamento</label><input name="methodology" value="${empEsc(current.methodology||'')}"></div><div class="field"><label>Resultado técnico *</label><select name="result">${['Aguardando avaliação','Não caracterizada','Insalubridade caracterizada'].map(x=>`<option ${current.result===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Grau</label><select name="degree">${['Não aplicável','Mínimo (10%)','Médio (20%)','Máximo (40%)'].map(x=>`<option ${current.degree===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Data da avaliação</label><input type="date" name="evaluationDate" value="${current.evaluationDate||today}"></div><div class="field"><label>Próxima revisão</label><input type="date" name="nextReview" value="${current.nextReview||''}"></div><div class="field"><label>Número do laudo</label><input name="reportNumber" value="${empEsc(current.reportNumber||'')}"></div><div class="field"><label>Situação do laudo</label><select name="status">${['Em elaboração','Vigente','Revisão necessária','Encerrado'].map(x=>`<option ${current.status===x?'selected':''}>${x}</option>`).join('')}</select></div>
+      <div class="field"><label>Responsável técnico cadastrado *</label><select name="professionalId" required><option value="">Selecione</option>${professionals.map(p=>`<option value="${p.id}" ${current.professionalId===p.id?'selected':''}>${empEsc(p.nome)} · ${empEsc(p.conselho)} ${empEsc(p.registro)}</option>`).join('')}</select>${professionals.length?'':'<small>Nenhum responsável ativo cadastrado.</small>'}</div><div class="field" style="align-self:end"><button type="button" class="btn secondary" id="btn-register-prof-from-assessment">+ Cadastrar responsável técnico</button></div>
+    </div><div class="field"><label>Medidas de controle coletivo / administrativas</label><textarea name="collectiveControls">${empEsc(current.collectiveControls||'')}</textarea></div><div class="field"><label>EPIs e controles individuais</label><textarea name="epiControls">${empEsc(current.epiControls||'')}</textarea></div><div class="field"><label>Observações e conclusão</label><textarea name="observations">${empEsc(current.observations||'')}</textarea></div><div class="note">O agente é proveniente do PGR e precisa estar vinculado ao GHE selecionado.</div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn" type="submit">💾 Salvar Avaliação</button></div></form>`,ov=>{
+      const gheSel=ov.querySelector('#nr15-form-ghe'),hazardSel=ov.querySelector('#nr15-form-hazard'),help=ov.querySelector('#nr15-hazard-help');
+      const fillHazards=()=>{const rows=nr15HazardsForGhe(gheSel.value);hazardSel.innerHTML=`<option value="">${rows.length?'Selecione o agente':'Nenhum agente vinculado a este GHE'}</option>${rows.map(h=>`<option value="${h.id}" ${current.pgrHazardId===h.id?'selected':''}>${empEsc(h.nome)} · ${empEsc(h.tipo)}</option>`).join('')}`;help.textContent=rows.length?`${rows.length} agente(s) vinculados no PGR.`:'Vincule um agente ao GHE no Cadastro de GHE do PGR.'};
+      gheSel.addEventListener('change',fillHazards);fillHazards();
+      ov.querySelector('#btn-register-prof-from-assessment').addEventListener('click',()=>openNr15ProfessionalModal());
+      ov.querySelector('#nr15-form-v2').addEventListener('submit',async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target)),p=(state.nr15Professionals||[]).find(x=>x.id===data.professionalId);if(!p){alert('Selecione um responsável técnico cadastrado.');return;}data.professional=p.nome;data.professionalRegistration=`${p.conselho} ${p.registro}`.trim();data.updatedAt=new Date().toISOString();if(id)Object.assign(current,data);else(state.nr15Assessments||=[]).push({id:uid('nr15'),...data,createdAt:new Date().toISOString()});await saveState();closeModal();render()});
+    });
+  }
+  openNr15Modal=openNr15ModalV2;
+  function openNr15DetailsV2(id){const a=(state.nr15Assessments||[]).find(x=>x.id===id);if(!a)return;const g=nr15Ghe(a),h=nr15PgrHazard(a),an=nr15Agent(a.agentCode),p=nr15Professional(a),people=g?pgrGheEmployees(g):[];openModal(`<h2>📄 ${empEsc(a.reportNumber||'Registro de avaliação NR-15')}</h2><div class="panel" style="padding:16px"><h3>${empEsc(g?.codigo||'—')} · ${empEsc(g?.nome||'GHE não localizado')}</h3><p><strong>Setor:</strong> ${empEsc(g?.setor||'—')} &nbsp; <strong>Trabalhadores vinculados:</strong> ${people.length}</p><p><strong>Agente do PGR:</strong> ${empEsc(h?.nome||'—')} (${empEsc(h?.tipo||'—')})</p><p><strong>Enquadramento:</strong> Anexo ${empEsc(an.code)} · ${empEsc(an.name)}</p><p><strong>Avaliação:</strong> ${empEsc(a.evaluationType||an.method)} · ${empEsc(a.measurementValue||'sem valor informado')} ${empEsc(a.unit||'')} ${a.toleranceLimit?`· LT ${empEsc(a.toleranceLimit)} ${empEsc(a.unit||'')}`:''}</p><p><strong>Resultado:</strong> ${empEsc(a.result||'—')} · <strong>Grau:</strong> ${empEsc(a.degree||'—')}</p><p><strong>Data:</strong> ${fmtDate(a.evaluationDate)} · <strong>Revisão:</strong> ${fmtDate(a.nextReview)} · <strong>Situação:</strong> ${empEsc(a.status||'—')}</p><p><strong>Responsável técnico:</strong> ${empEsc(p?.nome||a.professional||'—')} · ${empEsc(p?`${p.conselho} ${p.registro}`:a.professionalRegistration||'—')}</p><hr><p><strong>Medidas coletivas/administrativas:</strong><br>${empEsc(a.collectiveControls||'—')}</p><p><strong>EPIs/controles individuais:</strong><br>${empEsc(a.epiControls||'—')}</p><p><strong>Observações e conclusão:</strong><br>${empEsc(a.observations||'—')}</p></div><div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Fechar</button><button class="btn" onclick="window.print()">🖨️ Imprimir</button></div>`)}
+  openNr15Details=openNr15DetailsV2;
 
   function renderShell(){
     if(!currentUser) {
@@ -10327,10 +10538,19 @@ function renderPcmsoDash(root){
       if(currentTab === "ec-dash") renderEcDash(main);
       else if(currentTab === "ec-inventory") renderEcInventory(main);
       else if(currentTab === "ec-pets") renderEcPets(main);
+      else if(currentTab === "ec-supervisors") renderEcSupervisors(main);
+      else if(currentTab === "ec-portal") renderEcPortalSettings(main);
     } else if(currentModule === "pgr"){
       if(currentTab === "pgr-dash") renderPgrDash(main);
       else if(currentTab === "pgr-list") renderPgrList(main);
+      else if(currentTab === "pgr-ghe") renderPgrGhe(main);
       else if(currentTab === "pgr-hazards") renderPgrHazards(main);
+    } else if(currentModule === "nr15"){
+      if(currentTab === "nr15-dash") renderNr15Dash(main);
+      else if(currentTab === "nr15-assessments") renderNr15Assessments(main);
+      else if(currentTab === "nr15-agents") renderNr15Agents(main);
+      else if(currentTab === "nr15-professionals") renderNr15Professionals(main);
+      else if(currentTab === "nr15-reports") renderNr15Reports(main);
     } else if(currentModule === "epi"){
       if(currentTab === "epi-dash") renderEpiDash(main);
       else if(currentTab === "epi-items") renderEpiItems(main);
@@ -10348,6 +10568,7 @@ function renderPcmsoDash(root){
       else if(currentTab === "fire-brigadistas") renderFireBrigadistas(main);
       else if(currentTab === "fire-schedule") renderFireSchedule(main);
       else if(currentTab === "fire-inspections") renderFireInspections(main);
+      else if(currentTab === "fire-corrective-plan") renderFireCorrectivePlan(main);
     } else if(currentModule === "cipa"){
       if(currentTab === "cipa-dash") renderCipaDash(main);
       else if(currentTab === "cipa-membros") renderCipaMembros(main);
@@ -10531,6 +10752,31 @@ function renderPcmsoDash(root){
     }));
     root.querySelector("#btn-new-ec")?.addEventListener("click", openEcModal);
     root.querySelector("#btn-new-pet")?.addEventListener("click", openPetModal);
+    const refreshEcDash=()=>{renderEcDash(root);attachMainListeners(root)};
+    root.querySelector("#ec-dash-search")?.addEventListener("input",e=>{root.dataset.ecSearch=e.currentTarget.value;root.dataset.petSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;refreshEcDash();const i=root.querySelector('#ec-dash-search');i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#ec-dash-status")?.addEventListener("change",e=>{root.dataset.petStatus=e.currentTarget.value;refreshEcDash()});
+    root.querySelector("#ec-dash-clear")?.addEventListener("click",()=>{delete root.dataset.ecSearch;delete root.dataset.petSearch;delete root.dataset.petStatus;refreshEcDash()});
+    const refreshEcInventory=()=>{renderEcInventory(root);attachMainListeners(root)};
+    root.querySelector("#ec-search")?.addEventListener("input",e=>{root.dataset.ecSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;refreshEcInventory();const i=root.querySelector('#ec-search');i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#ec-location")?.addEventListener("change",e=>{root.dataset.ecLocation=e.currentTarget.value;refreshEcInventory()});
+    root.querySelector("#ec-clear")?.addEventListener("click",()=>{delete root.dataset.ecSearch;delete root.dataset.ecLocation;refreshEcInventory()});
+    const refreshEcPets=()=>{renderEcPets(root);attachMainListeners(root)};
+    root.querySelector("#pet-search")?.addEventListener("input",e=>{root.dataset.petSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;refreshEcPets();const i=root.querySelector('#pet-search');i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#pet-space")?.addEventListener("change",e=>{root.dataset.petSpace=e.currentTarget.value;refreshEcPets()});
+    root.querySelector("#pet-status")?.addEventListener("change",e=>{root.dataset.petStatus=e.currentTarget.value;refreshEcPets()});
+    root.querySelector("#pet-clear")?.addEventListener("click",()=>{delete root.dataset.petSearch;delete root.dataset.petSpace;delete root.dataset.petStatus;refreshEcPets()});
+    root.querySelectorAll("[data-ec-qr]").forEach(b=>b.addEventListener("click",e=>showEcQrModal(e.currentTarget.dataset.ecQr)));
+    root.querySelectorAll("[data-edit-ec]").forEach(b=>b.addEventListener("click",e=>openEcModal(e.currentTarget.dataset.editEc)));
+    root.querySelector("#btn-new-ec-supervisor")?.addEventListener("click",()=>openEcSupervisorModal());
+    const refreshEcSup=()=>{renderEcSupervisors(root);attachMainListeners(root)};
+    root.querySelector("#ec-sup-search")?.addEventListener("input",e=>{root.dataset.ecSupSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;refreshEcSup();const i=root.querySelector('#ec-sup-search');i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#ec-sup-status")?.addEventListener("change",e=>{root.dataset.ecSupStatus=e.currentTarget.value;refreshEcSup()});
+    root.querySelector("#ec-sup-clear")?.addEventListener("click",()=>{delete root.dataset.ecSupSearch;delete root.dataset.ecSupStatus;refreshEcSup()});
+    root.querySelectorAll("[data-edit-ec-supervisor]").forEach(b=>b.addEventListener("click",e=>openEcSupervisorModal(e.currentTarget.dataset.editEcSupervisor)));
+    root.querySelectorAll("[data-del-ec-supervisor]").forEach(b=>b.addEventListener("click",async e=>{const id=e.currentTarget.dataset.delEcSupervisor,s=(state.ecSupervisors||[]).find(x=>x.id===id);if(!s||!confirm('Remover este supervisor autorizado?'))return;state.ecSupervisors=(state.ecSupervisors||[]).filter(x=>x.id!==id);await saveState();render()}));
+    root.querySelector("#ec-save-url")?.addEventListener("click",async()=>{const input=root.querySelector('#ec-public-url'),value=input.value.trim();if(value&&!/^https?:\/\//i.test(value)){alert('Informe um endereço iniciado por https://');return}state.ecPortalPublicUrl=value;await saveState();renderEcPortalSettings(root);attachMainListeners(root)});
+    root.querySelectorAll("[data-copy-ec-url]").forEach(b=>b.addEventListener("click",async e=>{try{await navigator.clipboard.writeText(e.currentTarget.dataset.copyEcUrl);alert('Link copiado.')}catch(err){prompt('Copie o link:',e.currentTarget.dataset.copyEcUrl)}}));
+    root.querySelectorAll("[data-print-ec-qr]").forEach(b=>b.addEventListener("click",e=>showEcQrModal(e.currentTarget.dataset.printEcQr)));
     root.querySelector("#btn-new-pgr")?.addEventListener("click", openPgrModal);
     const applyPgrDashFilters=()=>{renderPgrDash(root);attachMainListeners(root)};
     root.querySelector("#pgr-dash-search")?.addEventListener("input",e=>{root.dataset.pgrDashSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;applyPgrDashFilters();const i=root.querySelector('#pgr-dash-search');i?.focus();i?.setSelectionRange(p,p)});
@@ -10541,6 +10787,37 @@ function renderPcmsoDash(root){
     const applyPgrFilters=()=>{renderPgrList(root);attachMainListeners(root)};
     root.querySelector("#pgr-search")?.addEventListener("input",e=>{root.dataset.pgrSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;applyPgrFilters();const i=root.querySelector('#pgr-search');i?.focus();i?.setSelectionRange(p,p)});
     root.querySelector("#pgr-filter-setor")?.addEventListener("change",e=>{root.dataset.pgrSetor=e.currentTarget.value;applyPgrFilters()});root.querySelector("#pgr-filter-tipo")?.addEventListener("change",e=>{root.dataset.pgrTipo=e.currentTarget.value;applyPgrFilters()});root.querySelector("#pgr-filter-nivel")?.addEventListener("change",e=>{root.dataset.pgrNivel=e.currentTarget.value;applyPgrFilters()});root.querySelector("#pgr-clear-filters")?.addEventListener("click",()=>{delete root.dataset.pgrSearch;delete root.dataset.pgrSetor;delete root.dataset.pgrTipo;delete root.dataset.pgrNivel;applyPgrFilters()});root.querySelectorAll("[data-pgr-exposed]").forEach(b=>b.addEventListener("click",e=>openPgrExposedModal(e.currentTarget.dataset.pgrExposed)));root.querySelectorAll("[data-edit-pgr]").forEach(b=>b.addEventListener("click",e=>openPgrModal(e.currentTarget.dataset.editPgr)));
+    root.querySelector("#btn-new-ghe")?.addEventListener("click",()=>openPgrGheModal());
+    const applyGheFilters=()=>{renderPgrGhe(root);attachMainListeners(root)};
+    root.querySelector("#ghe-search")?.addEventListener("input",e=>{root.dataset.gheSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;applyGheFilters();const i=root.querySelector('#ghe-search');i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#ghe-setor")?.addEventListener("change",e=>{root.dataset.gheSetor=e.currentTarget.value;applyGheFilters()});
+    root.querySelector("#ghe-situacao")?.addEventListener("change",e=>{root.dataset.gheSituacao=e.currentTarget.value;applyGheFilters()});
+    root.querySelector("#ghe-clear")?.addEventListener("click",()=>{delete root.dataset.gheSearch;delete root.dataset.gheSetor;delete root.dataset.gheSituacao;applyGheFilters()});
+    root.querySelectorAll("[data-ghe-people]").forEach(b=>b.addEventListener("click",e=>openPgrGhePeopleModal(e.currentTarget.dataset.ghePeople)));
+    root.querySelectorAll("[data-ghe-job]").forEach(b=>b.addEventListener("click",e=>openPgrGheJobModal(e.currentTarget.dataset.gheJob)));
+    root.querySelectorAll("[data-edit-ghe]").forEach(b=>b.addEventListener("click",e=>openPgrGheModal(e.currentTarget.dataset.editGhe)));
+    root.querySelectorAll("[data-del-ghe]").forEach(b=>b.addEventListener("click",async e=>{const id=e.currentTarget.dataset.delGhe,g=(state.pgrGhes||[]).find(x=>x.id===id);if(!g||!confirm(`Remover o GHE "${g.codigo} - ${g.nome}"?`))return;state.pgrGhes=(state.pgrGhes||[]).filter(x=>x.id!==id);await saveState();render()}));
+    root.querySelector("#btn-new-nr15")?.addEventListener("click",()=>openNr15Modal());
+    const applyNr15Filters=()=>{if(currentTab==='nr15-dash')renderNr15Dash(root);else if(currentTab==='nr15-reports')renderNr15Reports(root);else renderNr15Assessments(root);attachMainListeners(root)};
+    root.querySelector("#nr15-search")?.addEventListener("input",e=>{root.dataset.nr15Search=e.currentTarget.value;const p=e.currentTarget.selectionStart;applyNr15Filters();const i=root.querySelector('#nr15-search');i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#nr15-ghe")?.addEventListener("change",e=>{root.dataset.nr15Ghe=e.currentTarget.value;applyNr15Filters()});
+    root.querySelector("#nr15-result")?.addEventListener("change",e=>{root.dataset.nr15Result=e.currentTarget.value;applyNr15Filters()});
+    root.querySelector("#nr15-status")?.addEventListener("change",e=>{root.dataset.nr15Status=e.currentTarget.value;applyNr15Filters()});
+    root.querySelector("#nr15-clear")?.addEventListener("click",()=>{delete root.dataset.nr15Search;delete root.dataset.nr15Ghe;delete root.dataset.nr15Result;delete root.dataset.nr15Status;applyNr15Filters()});
+    root.querySelectorAll("[data-view-nr15]").forEach(b=>b.addEventListener("click",e=>openNr15Details(e.currentTarget.dataset.viewNr15)));
+    root.querySelectorAll("[data-edit-nr15]").forEach(b=>b.addEventListener("click",e=>openNr15Modal(e.currentTarget.dataset.editNr15)));
+    root.querySelectorAll("[data-del-nr15]").forEach(b=>b.addEventListener("click",async e=>{const id=e.currentTarget.dataset.delNr15,a=(state.nr15Assessments||[]).find(x=>x.id===id);if(!a||!confirm('Remover esta avaliação NR-15?'))return;state.nr15Assessments=(state.nr15Assessments||[]).filter(x=>x.id!==id);await saveState();render()}));
+    const applyNr15Agents=()=>{renderNr15Agents(root);attachMainListeners(root)};
+    root.querySelector("#nr15-agent-search")?.addEventListener("input",e=>{root.dataset.nr15AgentSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;applyNr15Agents();const i=root.querySelector('#nr15-agent-search');i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#nr15-agent-type")?.addEventListener("change",e=>{root.dataset.nr15AgentType=e.currentTarget.value;applyNr15Agents()});
+    root.querySelector("#nr15-agent-clear")?.addEventListener("click",()=>{delete root.dataset.nr15AgentSearch;delete root.dataset.nr15AgentType;applyNr15Agents()});
+    root.querySelector("#btn-go-pgr-hazards")?.addEventListener("click",()=>{currentModule='pgr';currentTab='pgr-hazards';renderShell()});
+    root.querySelector("#btn-new-nr15-prof")?.addEventListener("click",()=>openNr15ProfessionalModal());
+    const applyNr15Prof=()=>{renderNr15Professionals(root);attachMainListeners(root)};
+    root.querySelector("#nr15-prof-search")?.addEventListener("input",e=>{root.dataset.nr15ProfSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;applyNr15Prof();const i=root.querySelector('#nr15-prof-search');i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#nr15-prof-clear")?.addEventListener("click",()=>{delete root.dataset.nr15ProfSearch;applyNr15Prof()});
+    root.querySelectorAll("[data-edit-nr15-prof]").forEach(b=>b.addEventListener("click",e=>openNr15ProfessionalModal(e.currentTarget.dataset.editNr15Prof)));
+    root.querySelectorAll("[data-del-nr15-prof]").forEach(b=>b.addEventListener("click",async e=>{const id=e.currentTarget.dataset.delNr15Prof,p=(state.nr15Professionals||[]).find(x=>x.id===id);if(!p)return;if((state.nr15Assessments||[]).some(a=>a.professionalId===id)){alert('Este responsável está vinculado a avaliações NR-15. Inative-o em vez de remover.');return;}if(!confirm(`Remover o responsável técnico "${p.nome}"?`))return;state.nr15Professionals=(state.nr15Professionals||[]).filter(x=>x.id!==id);await saveState();render()}));
     root.querySelector("#btn-new-emp")?.addEventListener("click", openEmployeeModal);
     root.querySelector("#btn-new-item")?.addEventListener("click", openItemModal);
     root.querySelector("#btn-new-delivery")?.addEventListener("click", openDeliveryModal);
@@ -10554,6 +10831,11 @@ function renderPcmsoDash(root){
     root.querySelectorAll("[data-view-pcmso-exams]").forEach(b=>b.addEventListener("click",e=>openPcmsoExamsModal(e.currentTarget.dataset.viewPcmsoExams)));
     root.querySelectorAll("[data-edit-pcmso]").forEach(b=>b.addEventListener("click",e=>openPcmsoModal(e.currentTarget.dataset.editPcmso)));
     root.querySelector("#btn-new-fire")?.addEventListener("click", openFireModal);
+    const applyFireDashFilters=()=>{renderFireDash(root);attachMainListeners(root)};
+    root.querySelector("#fire-dash-search")?.addEventListener("input",e=>{root.dataset.fireDashSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;applyFireDashFilters();const i=root.querySelector("#fire-dash-search");i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#fire-dash-group")?.addEventListener("change",e=>{root.dataset.fireDashGroup=e.currentTarget.value;applyFireDashFilters()});
+    root.querySelector("#fire-dash-status")?.addEventListener("change",e=>{root.dataset.fireDashStatus=e.currentTarget.value;applyFireDashFilters()});
+    root.querySelector("#fire-dash-clear")?.addEventListener("click",()=>{delete root.dataset.fireDashSearch;delete root.dataset.fireDashGroup;delete root.dataset.fireDashStatus;applyFireDashFilters()});
     root.querySelector("#btn-new-brigadista")?.addEventListener("click",()=>openFireBrigadistaModal());
     const applyBrigFilters=()=>{renderFireBrigadistas(root);attachMainListeners(root)};
     root.querySelector("#brig-search")?.addEventListener("input",e=>{root.dataset.brigSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;applyBrigFilters();const i=root.querySelector("#brig-search");i?.focus();i?.setSelectionRange(p,p)});
@@ -10591,6 +10873,12 @@ function renderPcmsoDash(root){
     [["#fire-insp-group","fireInspGroup"],["#fire-insp-brigadista","fireInspBrigadista"],["#fire-insp-result","fireInspResult"],["#fire-insp-start","fireInspStart"],["#fire-insp-end","fireInspEnd"]].forEach(([sel,key])=>root.querySelector(sel)?.addEventListener("change",e=>{root.dataset[key]=e.currentTarget.value;applyFireInspectionFilters()}));
     root.querySelector("#fire-insp-clear")?.addEventListener("click",()=>{["fireInspSearch","fireInspGroup","fireInspBrigadista","fireInspResult","fireInspStart","fireInspEnd"].forEach(k=>delete root.dataset[k]);applyFireInspectionFilters()});
     root.querySelectorAll("[data-edit-fire-insp]").forEach(b=>b.addEventListener("click",e=>openFireInspectionPlanModal(null,e.currentTarget.dataset.editFireInsp)));
+    const applyFireActionFilters=()=>{renderFireCorrectivePlan(root);attachMainListeners(root)};
+    root.querySelector("#fire-action-search")?.addEventListener("input",e=>{root.dataset.fireActionSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;applyFireActionFilters();const i=root.querySelector("#fire-action-search");i?.focus();i?.setSelectionRange(p,p)});
+    root.querySelector("#fire-action-group")?.addEventListener("change",e=>{root.dataset.fireActionGroup=e.currentTarget.value;applyFireActionFilters()});
+    root.querySelector("#fire-action-status")?.addEventListener("change",e=>{root.dataset.fireActionStatus=e.currentTarget.value;applyFireActionFilters()});
+    root.querySelector("#fire-action-clear")?.addEventListener("click",()=>{delete root.dataset.fireActionSearch;delete root.dataset.fireActionGroup;delete root.dataset.fireActionStatus;applyFireActionFilters()});
+    root.querySelectorAll("[data-edit-fire-action]").forEach(b=>b.addEventListener("click",e=>openFireCorrectiveActionModal(e.currentTarget.dataset.editFireAction)));
     root.querySelector("#btn-new-cipa-membro")?.addEventListener("click", openCipaMemberModal);
     root.querySelector("#btn-new-cipa-eleicao")?.addEventListener("click", openCipaElectionModal);
 
@@ -11228,6 +11516,10 @@ function renderPcmsoDash(root){
   function render(){
     if(!loaded) {
       loadState();
+      return;
+    }
+    if(isEcPortalMode()){
+      renderEcPetPortal();
       return;
     }
     if(isBrigadistaPortalMode()){
