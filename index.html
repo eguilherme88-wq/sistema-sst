@@ -2745,6 +2745,23 @@ body.cipa-terminal-mode .urna-confirm{
     return state.employees.filter(e => !userByEmployeeId(e.id));
   }
 
+  // Traz do banco apenas o que outros dispositivos mudaram (votos, links,
+  // liberação do terminal, status da urna e eleições novas), SEM apagar
+  // processos eleitorais ou alterações desta tela. Retorna true se algo mudou.
+  function mesclarEleicoesDoBanco(freshList){
+    if(!Array.isArray(freshList)) return false;
+    freshList.forEach(ensureElectionVotingFields);
+    const antes = JSON.stringify(state.cipaElections || []);
+    const local = JSON.parse(antes);
+    window.cipaMergeVotes({ cipaElections: freshList }, { cipaElections: local });
+    const ids = new Set(local.map(e => e.id));
+    freshList.forEach(f => { if(!ids.has(f.id)) local.push(f); });
+    local.forEach(ensureElectionVotingFields);
+    if(JSON.stringify(local) === antes) return false;
+    state.cipaElections = local;
+    return true;
+  }
+
   function stopCipaPoll(){
     if(cipaPollInterval){ clearInterval(cipaPollInterval); cipaPollInterval = null; }
   }
@@ -2764,11 +2781,7 @@ body.cipa-terminal-mode .urna-confirm{
             const data = snap.data();
             if(data && data.json){
               const fresh = JSON.parse(data.json);
-              if(!fresh.cipaElections) return;
-              fresh.cipaElections.forEach(ensureElectionVotingFields);
-              if(JSON.stringify(fresh.cipaElections) === JSON.stringify(state.cipaElections)) return;
-              state.cipaElections = fresh.cipaElections;
-              onChange();
+              if(mesclarEleicoesDoBanco(fresh.cipaElections)) onChange();
             }
           }
           return;
@@ -2776,11 +2789,7 @@ body.cipa-terminal-mode .urna-confirm{
         const res = await window.storage.get(STORAGE_KEY, true);
         if(res && res.value){
           const fresh = JSON.parse(res.value);
-          if(!fresh.cipaElections) return;
-          fresh.cipaElections.forEach(ensureElectionVotingFields);
-          if(JSON.stringify(fresh.cipaElections) === JSON.stringify(state.cipaElections)) return;
-          state.cipaElections = fresh.cipaElections;
-          onChange();
+          if(mesclarEleicoesDoBanco(fresh.cipaElections)) onChange();
         }
       }catch(e){}
     }, 4000);
@@ -2834,7 +2843,26 @@ body.cipa-terminal-mode .urna-confirm{
     try{
       await window.storage.set(STORAGE_KEY, JSON.stringify(state), true);
       return true;
-    }catch(e){ return false; }
+    }catch(e){
+      avisarFalhaSalvamento(window.__lastSaveError || e);
+      return false;
+    }
+  }
+
+  // Aviso visível (não bloqueante) quando o banco de dados recusa a gravação.
+  function avisarFalhaSalvamento(err){
+    try{
+      document.getElementById("sst-save-error")?.remove();
+      const box = document.createElement("div");
+      box.id = "sst-save-error";
+      box.setAttribute("role","alert");
+      box.style.cssText = "position:fixed;left:50%;top:calc(12px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:99999;max-width:min(640px,calc(100vw - 24px));background:#b91c1c;color:#fff;padding:12px 40px 12px 16px;border-radius:8px;box-shadow:0 8px 24px rgba(0,0,0,.25);font:13px/1.45 Arial,sans-serif";
+      const msg = String(err?.message || err || "erro desconhecido");
+      box.innerHTML = `<strong>⚠️ As alterações NÃO foram salvas no banco de dados.</strong><br>${msg.replace(/</g,"&lt;")}<button type="button" aria-label="Fechar" style="position:absolute;right:8px;top:6px;background:none;border:0;color:#fff;font-size:18px;cursor:pointer">×</button>`;
+      box.querySelector("button").addEventListener("click", () => box.remove());
+      document.body.appendChild(box);
+      setTimeout(() => box.remove(), 20000);
+    }catch(e){}
   }
 
   function fmtDate(d){
@@ -7525,8 +7553,7 @@ function renderPcmsoDash(root){
       if(!snap || !snap.exists || !snap.exists()) return false;
       const fresh = JSON.parse(snap.data().json);
       if(Array.isArray(fresh.cipaElections)){
-        state.cipaElections = fresh.cipaElections;
-        state.cipaElections.forEach(ensureElectionVotingFields);
+        mesclarEleicoesDoBanco(fresh.cipaElections);
         return true;
       }
     }catch(e){ console.warn("Não foi possível atualizar as eleições da CIPA:", e); }
@@ -11925,9 +11952,17 @@ function renderPcmsoDash(root){
       if(!el) return;
       if(el.candidatos.length === 0){ alert("Cadastre ao menos um candidato antes de abrir a urna."); return; }
       if(!confirm("Abrir a urna eletrônica para votação?\n\nApós aberta, não será possível cadastrar novos candidatos até o encerramento.")) return;
+      const statusAnterior = el.status;
       el.urnaStatus = "Aberta";
       el.status = "Votação";
-      await saveState(); render();
+      const ok = await saveState();
+      if(!ok){
+        el.urnaStatus = "Fechada";
+        el.status = statusAnterior;
+        alert("❌ Não foi possível abrir a urna porque o sistema não conseguiu salvar no banco de dados.\n\n" + String(window.__lastSaveError?.message || "Verifique a conexão e tente novamente."));
+      }
+      currentVotacaoElectionId = el.id;
+      render();
     });
 
     root.querySelector("#btn-cipa-encerrar-urna")?.addEventListener("click", async () => {
