@@ -1067,8 +1067,122 @@ header.top-header.sst-header{display:block;padding:0;position:sticky;top:0;z-ind
   window.firebaseApp = firebaseApp;
   window.firestoreDb = db;
   window.firestoreStateRef = doc(db, "sst_erp_state", "main");
-  window.firestoreGetDoc = () => getDoc(window.firestoreStateRef);
-  window.firestoreGetFreshDoc = () => getDocFromServer(window.firestoreStateRef);
+  // ---- ARQUIVOS EMBUTIDOS (fotos, logos, assinaturas) FORA DO DOCUMENTO PRINCIPAL
+  // O Firestore aceita no máximo 1 MB por documento e todo o sistema fica em
+  // um único documento (sst_erp_state/main). Imagens em base64 ("data:...")
+  // ocupavam a maior parte desse espaço. Agora, ao salvar, cada imagem grande
+  // vai para um documento próprio (sstblob_<hash>) e no documento principal
+  // fica só a referência "sstblob:<hash>". Ao ler, as referências são trocadas
+  // de volta pelas imagens, então o restante do sistema não percebe diferença.
+  const SST_BLOB_MIN = 4096;          // strings "data:" a partir de ~4 KB saem do principal
+  const SST_BLOB_CHUNK = 700000;
+  const SST_BLOB_COLS = ["sst_erp_state", "sst_fds_files", "sst_erp_backups"];
+  const sstBlobCache = new Map();      // id -> dataURL
+  const sstBlobByValue = new Map();    // dataURL -> id
+  const sstBlobStored = new Set();     // ids confirmados no banco
+  const sstBlobKey = id => `sstblob_${id}`;
+  const sstIsPerm = e => /permission|insufficient|unauthori/i.test(String(e?.code||"")+" "+String(e?.message||""));
+
+  async function sstHash(str){
+    if(window.crypto?.subtle && window.TextEncoder){
+      const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str));
+      return Array.from(new Uint8Array(buf)).slice(0,20).map(b=>b.toString(16).padStart(2,"0")).join("");
+    }
+    let h1 = 0xdeadbeef, h2 = 0x41c6ce57, h3 = 0x9e3779b9, h4 = 0x85ebca6b;
+    for(let i=0;i<str.length;i++){ const c=str.charCodeAt(i); h1=Math.imul(h1^c,2654435761); h2=Math.imul(h2^c,1597334677); h3=Math.imul(h3^c,2246822507); h4=Math.imul(h4^c,3266489909); }
+    return [h1,h2,h3,h4,str.length].map(x=>(x>>>0).toString(16).padStart(8,"0")).join("");
+  }
+  async function sstBlobSave(id, value){
+    if(sstBlobStored.has(id)) return;
+    for(const col of SST_BLOB_COLS){
+      try{
+        const meta = await getDoc(doc(db,col,sstBlobKey(id)));
+        if(meta.exists()){ sstBlobStored.add(id); return; }
+      }catch(e){ if(!sstIsPerm(e)) throw e; }
+    }
+    let lastErr = null;
+    for(const col of SST_BLOB_COLS){
+      try{
+        if(value.length <= SST_BLOB_CHUNK){
+          await setDoc(doc(db,col,sstBlobKey(id)), { tipo:"sst-blob", data:value, chunks:0, size:value.length, createdAt:serverTimestamp() });
+        }else{
+          const n = Math.ceil(value.length / SST_BLOB_CHUNK);
+          for(let i=0;i<n;i++) await setDoc(doc(db,col,`${sstBlobKey(id)}__${i}`), { tipo:"sst-blob-parte", data:value.slice(i*SST_BLOB_CHUNK,(i+1)*SST_BLOB_CHUNK), idx:i });
+          await setDoc(doc(db,col,sstBlobKey(id)), { tipo:"sst-blob", chunks:n, size:value.length, createdAt:serverTimestamp() });
+        }
+        sstBlobStored.add(id);
+        return;
+      }catch(e){ lastErr = e; if(!sstIsPerm(e)) break; }
+    }
+    throw lastErr || new Error("Não foi possível gravar a imagem no banco.");
+  }
+  async function sstBlobLoad(id){
+    if(sstBlobCache.has(id)) return sstBlobCache.get(id);
+    for(const col of SST_BLOB_COLS){
+      try{
+        const meta = await getDoc(doc(db,col,sstBlobKey(id)));
+        if(!meta.exists()) continue;
+        const m = meta.data();
+        let value = "";
+        if(!m.chunks) value = String(m.data||"");
+        else{
+          const parts = await Promise.all(Array.from({length:m.chunks},(_,i)=>getDoc(doc(db,col,`${sstBlobKey(id)}__${i}`))));
+          value = parts.map(p=>p.exists()?String(p.data().data||""):"").join("");
+        }
+        sstBlobCache.set(id,value); sstBlobByValue.set(value,id); sstBlobStored.add(id);
+        return value;
+      }catch(e){ if(!sstIsPerm(e)) console.warn("Falha ao ler imagem", id, e); }
+    }
+    return null;
+  }
+  // Troca strings "data:..." grandes por referências (gravando as imagens).
+  async function sstExternalizeJson(json){
+    const re = /"(data:[^"\\]*(?:\\.[^"\\]*)*)"/g;
+    const hits = [];
+    let m;
+    while((m = re.exec(json))){ if(m[1].length >= SST_BLOB_MIN) hits.push({start:m.index, end:m.index+m[0].length, raw:m[1]}); }
+    if(!hits.length) return json;
+    const ids = await Promise.all(hits.map(async h => {
+      const value = h.raw.includes("\\") ? JSON.parse(`"${h.raw}"`) : h.raw;
+      let id = sstBlobByValue.get(value);
+      if(!id){ id = await sstHash(value); sstBlobByValue.set(value,id); sstBlobCache.set(id,value); }
+      await sstBlobSave(id, value);
+      return id;
+    }));
+    let out = "", pos = 0;
+    hits.forEach((h,i) => { out += json.slice(pos,h.start) + `"sstblob:${ids[i]}"`; pos = h.end; });
+    return out + json.slice(pos);
+  }
+  // Troca as referências "sstblob:<id>" de volta pelas imagens.
+  async function sstRehydrateJson(json){
+    if(typeof json !== "string" || !json.includes("sstblob:")) return json;
+    const re = /"sstblob:([0-9a-f]{16,64})"/g;
+    const ids = new Set(); let m;
+    while((m = re.exec(json))) ids.add(m[1]);
+    await Promise.all([...ids].filter(id=>!sstBlobCache.has(id)).map(sstBlobLoad));
+    // Referência sem imagem encontrada fica como está (não se perde ao salvar de novo).
+    return json.replace(re, (full,id) => sstBlobCache.has(id) ? JSON.stringify(sstBlobCache.get(id)) : full);
+  }
+  const sstRehydrateObj = async o => (o == null ? o : JSON.parse(await sstRehydrateJson(JSON.stringify(o))));
+  const sstExternalizeObj = async o => (o == null ? o : JSON.parse(await sstExternalizeJson(JSON.stringify(o))));
+  async function sstWrapSnap(snap){
+    if(!snap || !snap.exists()) return snap;
+    const d = snap.data();
+    if(typeof d?.json !== "string") return snap;
+    const json = await sstRehydrateJson(d.json);
+    return { id: snap.id, exists: () => true, data: () => ({ ...d, json }) };
+  }
+  function sstTamanhoPorParte(json){
+    try{
+      const o = JSON.parse(json);
+      return Object.keys(o).map(k=>[k,new Blob([JSON.stringify(o[k])]).size]).sort((a,b)=>b[1]-a[1]).slice(0,4)
+        .map(([k,b])=>`${k}: ${(b/1024).toFixed(0)} KB`).join(" · ");
+    }catch(e){ return ""; }
+  }
+  window.sstTamanhoPorParte = sstTamanhoPorParte;
+
+  window.firestoreGetDoc = async () => sstWrapSnap(await getDoc(window.firestoreStateRef));
+  window.firestoreGetFreshDoc = async () => sstWrapSnap(await getDocFromServer(window.firestoreStateRef));
   // A emissão pelo portal adiciona a PET ao estado mais recente em uma transação.
   window.firestoreCreatePortalPet = async (pet) => runTransaction(db, async tx => {
     const snap = await tx.get(window.firestoreStateRef);
@@ -1208,7 +1322,7 @@ header.top-header.sst-header{display:block;padding:0;position:sticky;top:0;z-ind
     // A gravação principal é obrigatória e continua propagando qualquer erro.
     // É feita em transação: as FDS gravadas por outra sessão (outra aba,
     // outro computador ou celular) não são apagadas por um estado antigo.
-    return await runTransaction(db, async tx => {
+    const gravado = await runTransaction(db, async tx => {
       const snap = await tx.get(window.firestoreStateRef);
       let out = jsonString;
       if(snap.exists() && typeof snap.data()?.json === "string"){
@@ -1223,15 +1337,29 @@ header.top-header.sst-header{display:block;padding:0;position:sticky;top:0;z-ind
         }catch(cipaMergeError){ console.warn("Mescla dos votos da CIPA não aplicada:", cipaMergeError); }
         if(merged) out = JSON.stringify(merged);
       }
+      // Fotos, logos e assinaturas saem do documento principal.
+      out = await sstExternalizeJson(out);
       const bytes = new Blob([out]).size;
       if(bytes > 1040000){
-        const err = new Error(`O banco principal ficou com ${(bytes/1024).toFixed(0)} KB e o Firestore aceita no máximo 1.024 KB por documento. Remova fotos/logos grandes ou arquivos embutidos.`);
+        const partes = sstTamanhoPorParte(out);
+        const err = new Error(`O banco principal ficou com ${(bytes/1024).toFixed(0)} KB e o Firestore aceita no máximo 1.024 KB por documento.${partes ? " Maiores partes: " + partes + "." : ""}`);
         err.code = "fds/tamanho-excedido"; throw err;
       }
       tx.set(window.firestoreStateRef, { json: out, updatedAt: serverTimestamp() });
       return out;
     });
+    return await sstRehydrateJson(gravado);
   };
+  // As demais gravações em transação também guardam imagens fora do
+  // documento principal e devolvem os dados já com as imagens.
+  {
+    const criarPet = window.firestoreCreatePortalPet, editarPet = window.firestoreEditPet;
+    const votar = window.firestoreCipaVote, salvarLink = window.firestoreCipaSaveLink;
+    window.firestoreCreatePortalPet = async (pet) => sstRehydrateObj(await criarPet(await sstExternalizeObj(pet)));
+    window.firestoreEditPet = async (id, changes, editor) => sstRehydrateObj(await editarPet(id, await sstExternalizeObj(changes), editor));
+    window.firestoreCipaVote = async (voto) => sstRehydrateObj(await votar(voto));
+    window.firestoreCipaSaveLink = async (...a) => sstRehydrateObj(await salvarLink(...a));
+  }
   // Mescla o cadastro de FDS: vence o registro com "updatedAt" mais recente;
   // exclusões ficam registradas em fdsDeleted para não "ressuscitar" produtos.
   window.fdsMergeStates = (fresh, mine) => {
