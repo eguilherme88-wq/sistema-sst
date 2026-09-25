@@ -1795,6 +1795,72 @@ body.cipa-terminal-mode .urna-confirm{
 @media(max-width:900px){.cipa-dashboard-cards{grid-template-columns:repeat(2,1fr)}.cipa-action-filters{grid-template-columns:1fr}.calendar-event{grid-template-columns:1fr}.calendar-status{text-align:left}}
 @media(max-width:560px){.cipa-dashboard-cards{grid-template-columns:1fr}.cipa-calendar-toolbar{align-items:stretch;flex-direction:column}.calendar-legend{padding:0}}
 </style>
+<style>
+/* ===== CIPA · pictogramas e dimensionamento dos subitens ===== */
+.cipa-picto{display:inline-block;vertical-align:middle;flex:0 0 auto;pointer-events:none}
+button .cipa-picto,a .cipa-picto{pointer-events:none}
+nav button .nav-picto{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:var(--panel-2);color:var(--ink-dim);flex:0 0 28px;transition:background .15s,color .15s}
+nav button:hover .nav-picto{color:var(--ink)}
+nav button.active .nav-picto{background:var(--yellow);color:var(--yellow-ink,#1b1b1b)}
+nav button .nav-label{line-height:1.25}
+
+.cipa-scope .page-head{align-items:center;margin-bottom:22px}
+.cipa-head-left{display:flex;align-items:center;gap:14px;min-width:0}
+.cipa-head-picto{width:52px;height:52px;border-radius:14px;display:grid;place-items:center;flex:0 0 52px;background:color-mix(in srgb,var(--yellow) 18%,transparent);color:var(--amber);border:1px solid color-mix(in srgb,var(--yellow) 40%,transparent)}
+.cipa-scope .panel{border-radius:12px;overflow:hidden}
+.cipa-scope .panel-head{gap:12px;flex-wrap:wrap}
+.cipa-scope .panel-head h3{display:flex;align-items:center;gap:8px}
+.cipa-scope .panel table{width:100%}
+.cipa-scope .panel > table,.cipa-scope .panel div > table{min-width:640px}
+.cipa-scope .panel th{white-space:nowrap}
+.cipa-scope td{vertical-align:middle}
+/* células de ação voltam a ser células de tabela (antes viravam flex e quebravam a linha) */
+.cipa-scope td.row-actions{display:table-cell;text-align:right;white-space:nowrap}
+.cipa-scope td.row-actions > * + *{margin-left:10px}
+.cipa-scope .panel:has(> table){overflow-x:auto}
+.cipa-scope .hero .stat-card,.cipa-scope .cipa-kpi{border-radius:12px}
+.cipa-kpi-icon{color:var(--amber)}
+.cipa-kpi-icon.ok{color:var(--green);background:color-mix(in srgb,var(--green) 14%,transparent)}
+.cipa-kpi-icon.info{color:#2563eb;background:color-mix(in srgb,#2563eb 12%,transparent)}
+.cipa-kpi-icon.warn{color:var(--amber);background:color-mix(in srgb,var(--amber) 14%,transparent)}
+.cipa-kpi-icon.violet{color:#7c3aed;background:color-mix(in srgb,#7c3aed 12%,transparent)}
+.cipa-votacao-kpis{margin-top:0}
+
+/* Processo Eleitoral em cartões */
+.cipa-el-grid{display:grid;gap:16px}
+.cipa-el-card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.cipa-el-top{display:flex;align-items:center;gap:14px;padding:16px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.cipa-el-badge{width:46px;height:46px;border-radius:12px;display:grid;place-items:center;background:color-mix(in srgb,var(--yellow) 18%,transparent);color:var(--amber);flex:0 0 46px}
+.cipa-el-title{flex:1 1 220px;min-width:0}
+.cipa-el-title .gestao{font-family:var(--font-head);font-size:19px;font-weight:800}
+.cipa-el-title .meta{font-size:12px;color:var(--ink-dim);margin-top:2px}
+.cipa-el-pills{display:flex;gap:8px;flex-wrap:wrap}
+.cipa-el-pills .status-pill{display:inline-flex;align-items:center;gap:6px}
+.cipa-el-timeline{list-style:none;margin:0;padding:20px 20px 8px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));position:relative}
+.cipa-el-step{position:relative;text-align:center;padding:0 6px}
+.cipa-el-step::before{content:"";position:absolute;top:21px;left:-50%;width:100%;height:3px;background:var(--line);z-index:0}
+.cipa-el-step:first-child::before{display:none}
+.cipa-el-step.done + .cipa-el-step::before{background:var(--green)}
+.cipa-el-dot{position:relative;z-index:1;width:44px;height:44px;border-radius:50%;margin:0 auto 8px;display:grid;place-items:center;background:var(--panel-2);color:var(--ink-dim);border:2px solid var(--line)}
+.cipa-el-step.done .cipa-el-dot{background:var(--green);border-color:var(--green);color:#fff}
+.cipa-el-step.current .cipa-el-dot{background:var(--yellow);border-color:var(--yellow);color:#1b1b1b;box-shadow:0 0 0 5px color-mix(in srgb,var(--yellow) 25%,transparent)}
+.cipa-el-step .lbl{font-size:12px;font-weight:700}
+.cipa-el-step .dt{font-size:12px;color:var(--ink-dim);margin-top:2px}
+.cipa-el-stats{display:flex;flex-wrap:wrap;gap:10px;padding:12px 20px 16px}
+.cipa-el-chip{display:inline-flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);font-size:12px}
+.cipa-el-chip strong{font-size:13px}
+.cipa-el-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;padding:12px 20px;border-top:1px solid var(--line);background:var(--soft,var(--panel-2))}
+.cipa-el-actions .btn{font-size:12px;padding:8px 13px}
+.cipa-el-actions .btn.danger{background:transparent;border:1px solid color-mix(in srgb,var(--red) 45%,transparent);color:var(--red)}
+.cipa-el-obs{padding:0 20px 14px;font-size:12px;color:var(--ink-dim)}
+@media(max-width:700px){
+  .cipa-el-timeline{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:18px}
+  .cipa-el-step:nth-child(3)::before{display:none}
+  .cipa-el-actions{justify-content:stretch}.cipa-el-actions .btn{flex:1 1 auto;justify-content:center}
+  .cipa-head-picto{width:44px;height:44px;flex-basis:44px}
+}
+</style>
+
 
 
 <style>
@@ -7116,6 +7182,56 @@ function renderPcmsoDash(root){
 
   // ================= FIM MÓDULO: CONTROLE DE TERCEIROS =================
 
+
+  // ===== Pictogramas do módulo CIPA (SVG de traço, herdam a cor do texto) =====
+  const CIPA_PICTO_PATHS = {
+    dash:'<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+    users:'<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.6c2.9-.3 5 1.3 5.5 4.4"/>',
+    archive:'<rect x="3" y="4" width="18" height="5" rx="1.2"/><path d="M5 9v10a1.5 1.5 0 0 0 1.5 1.5h11A1.5 1.5 0 0 0 19 19V9"/><path d="M10 13h4"/>',
+    process:'<rect x="5" y="3.5" width="14" height="18" rx="2"/><path d="M9 3.5h6v3H9z"/><path d="m8.5 13 2.3 2.3 4.7-4.8"/>',
+    ballot:'<path d="M4 13h16v7.5H4z"/><path d="M8 13V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V13"/><path d="m10 8.5 1.5 1.5 2.8-2.9"/><path d="M8.5 16.5h7"/>',
+    calendar:'<rect x="3.5" y="5" width="17" height="15.5" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/><path d="M8 14h2M12 14h2M16 14h.5M8 17h2M12 17h2"/>',
+    medical:'<rect x="3.5" y="6.5" width="17" height="13" rx="2"/><path d="M9 6.5V5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5v1.5"/><path d="M12 10v6M9 13h6"/>',
+    minutes:'<path d="M6 3.5h8.5L19 8v12.5H6z"/><path d="M14 3.5V8h5"/><path d="M9 12h7M9 15h7M9 18h4"/>',
+    target:'<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.6"/><path d="M12 3.5V1.8M20.5 12h1.7"/>',
+    megaphone:'<path d="M4 10v4h3l7 4V6l-7 4z"/><path d="M7 14l1.5 5h2.5l-1.3-4.5"/><path d="M17.5 9.5a3.5 3.5 0 0 1 0 5"/>',
+    pen:'<path d="M4 20l1-4.5L15.5 5a2.1 2.1 0 0 1 3 3L8 18.5z"/><path d="M13.5 7l3 3"/><path d="M13 20h7"/>',
+    handshake:'<path d="M2.5 9.5 6 6l4 2 2-1.5 3.5.5 4 3.5"/><path d="M2.5 9.5 7 15l2 1.5 2 1 2-1 4.5-4.5 2-1.5"/><path d="m9 11 2.2 2.2a1.5 1.5 0 0 0 2.1 0L15 11.5"/>',
+    seat:'<path d="M7 11V5.5A1.5 1.5 0 0 1 8.5 4h7A1.5 1.5 0 0 1 17 5.5V11"/><path d="M5 11h14v4H5z"/><path d="M7 15v5M17 15v5"/>',
+    pdf:'<path d="M6 3.5h8.5L19 8v12.5H6z"/><path d="M14 3.5V8h5"/><path d="M9 14.5h6M9 17.5h4M9 11.5h2"/>',
+    trash:'<path d="M4.5 6.5h15M9.5 6.5V4.5h5v2M6.5 6.5l1 13.5h9l1-13.5"/><path d="M10 10.5v6M14 10.5v6"/>',
+    lock:'<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/><path d="M12 14.5v2"/>',
+    unlock:'<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 7.6-1.7"/><path d="M12 14.5v2"/>',
+    check:'<circle cx="12" cy="12" r="8.5"/><path d="m8.2 12.3 2.6 2.6 5-5.2"/>',
+    clock:'<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>',
+    percent:'<path d="M19 5 5 19"/><circle cx="7" cy="7" r="2.5"/><circle cx="17" cy="17" r="2.5"/>',
+    arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>'
+  };
+  const CIPA_TAB_PICTO = {
+    "cipa-dash":"dash","cipa-membros":"users","cipa-historico":"archive","cipa-eleicao":"process",
+    "cipa-votacao":"ballot","cipa-calendario":"calendar","cipa-cat":"medical","cipa-reunioes":"minutes","cipa-acoes":"target"
+  };
+  function cipaPicto(name, size=20, stroke=1.8){
+    const d = CIPA_PICTO_PATHS[name]; if(!d) return "";
+    return `<svg class="cipa-picto" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  }
+  function semEmojiInicial(txt){ return String(txt||"").replace(/^[^\p{L}\p{N}<]+/u,""); }
+  // Coloca o pictograma no título de cada subitem da CIPA.
+  function decorateCipaPage(main){
+    main.classList.add("cipa-scope");
+    const head = main.querySelector(".page-head");
+    const h2 = head?.querySelector("h2");
+    const picto = CIPA_TAB_PICTO[currentTab];
+    if(!head || !h2 || !picto || head.querySelector(".cipa-head-picto")) return;
+    h2.innerHTML = semEmojiInicial(h2.innerHTML);
+    const bloco = h2.parentElement === head ? h2 : h2.parentElement;
+    const wrap = document.createElement("div");
+    wrap.className = "cipa-head-left";
+    wrap.innerHTML = `<div class="cipa-head-picto">${cipaPicto(picto, 26)}</div>`;
+    head.insertBefore(wrap, bloco);
+    wrap.appendChild(bloco);
+  }
+
   function renderCipaDash(root){
     const membrosAtivos = activeCipaMembers();
     const totalMembros = membrosAtivos.length;
@@ -7140,10 +7256,10 @@ function renderPcmsoDash(root){
       </div>
 
       <div class="cipa-dashboard-cards">
-        <div class="cipa-kpi"><div class="cipa-kpi-icon">👥</div><div><div class="num">${totalMembros}</div><div class="label">Membros na Comissão</div></div></div>
-        <div class="cipa-kpi"><div class="cipa-kpi-icon">⏳</div><div><div class="num" style="color:var(${mandatosCriticos>0?'--red':'--green'})">${mandatosCriticos}</div><div class="label">Mandatos Vencidos/Vencendo</div></div></div>
-        <div class="cipa-kpi"><div class="cipa-kpi-icon">🎯</div><div><div class="num" style="color:var(${acoesAtrasadas>0?'--red':'--amber'})">${acoesPendentes}</div><div class="label">Ações do Plano em Aberto</div></div></div>
-        <div class="cipa-kpi"><div class="cipa-kpi-icon">📅</div><div><div class="num cipa-date-kpi">${proxima ? fmtDate(proxima.data) : "—"}</div><div class="label">Próxima Reunião ${proxima?.tipo==="Extraordinária"?"Extraordinária":""}</div></div></div>
+        <div class="cipa-kpi"><div class="cipa-kpi-icon info">${cipaPicto("users",24)}</div><div><div class="num">${totalMembros}</div><div class="label">Membros na Comissão</div></div></div>
+        <div class="cipa-kpi"><div class="cipa-kpi-icon warn">${cipaPicto("clock",24)}</div><div><div class="num" style="color:var(${mandatosCriticos>0?'--red':'--green'})">${mandatosCriticos}</div><div class="label">Mandatos Vencidos/Vencendo</div></div></div>
+        <div class="cipa-kpi"><div class="cipa-kpi-icon violet">${cipaPicto("target",24)}</div><div><div class="num" style="color:var(${acoesAtrasadas>0?'--red':'--amber'})">${acoesPendentes}</div><div class="label">Ações do Plano em Aberto</div></div></div>
+        <div class="cipa-kpi"><div class="cipa-kpi-icon ok">${cipaPicto("calendar",24)}</div><div><div class="num cipa-date-kpi">${proxima ? fmtDate(proxima.data) : "—"}</div><div class="label">Próxima Reunião ${proxima?.tipo==="Extraordinária"?"Extraordinária":""}</div></div></div>
       </div>
 
       <div class="panel" style="margin-bottom:20px;">
@@ -7327,6 +7443,59 @@ function renderPcmsoDash(root){
   }
 
   function renderCipaEleicao(root){
+    const hoje = new Date().toISOString().slice(0,10);
+    const lista = (state.cipaElections || []).slice().sort((x,y)=>String(y.gestao||"").localeCompare(String(x.gestao||"")));
+    const etapa = (feito, atual) => feito ? "done" : atual ? "current" : "";
+    const cards = lista.map(el => {
+      ensureElectionVotingFields(el);
+      const encerrada = el.urnaStatus === "Encerrada";
+      const aberta = el.urnaStatus === "Aberta";
+      const inscrAtual = !!(el.dataInscricaoInicio && el.dataInscricaoFim && hoje >= el.dataInscricaoInicio && hoje <= el.dataInscricaoFim);
+      const passos = [
+        { picto:"megaphone", lbl:"Edital", dt:fmtDate(el.dataEdital), st: etapa(!!el.dataEdital && hoje >= el.dataEdital, false) },
+        { picto:"pen", lbl:"Inscrições", dt:`${fmtDate(el.dataInscricaoInicio)} a ${fmtDate(el.dataInscricaoFim)}`, st: etapa(!!el.dataInscricaoFim && (hoje > el.dataInscricaoFim || aberta || encerrada), inscrAtual) },
+        { picto:"ballot", lbl:"Eleição", dt:fmtDate(el.dataEleicao), st: etapa(encerrada, aberta) },
+        { picto:"handshake", lbl:"Posse", dt:fmtDate(el.dataPosse), st: etapa(encerrada && !!el.dataPosse && hoje >= el.dataPosse, encerrada && !!el.dataPosse && hoje < el.dataPosse) }
+      ];
+      const stClass = el.status==="Concluída" ? "ok" : "warn";
+      const urnaClass = encerrada ? "ok" : aberta ? "warn" : "bad";
+      const urnaPicto = encerrada ? "check" : aberta ? "unlock" : "lock";
+      const numVotos = el.votantes.length || el.totalVotantes || 0;
+      const numCand = el.candidatos.length || el.totalInscritos || 0;
+      return `
+        <article class="cipa-el-card">
+          <div class="cipa-el-top">
+            <div class="cipa-el-badge">${cipaPicto("process",24)}</div>
+            <div class="cipa-el-title">
+              <div class="gestao">Gestão ${empEsc(el.gestao)}</div>
+              <div class="meta">Edital publicado em ${fmtDate(el.dataEdital)} · Posse prevista para ${fmtDate(el.dataPosse)}</div>
+            </div>
+            <div class="cipa-el-pills">
+              <span class="status-pill ${stClass}"><span class="dot"></span>${empEsc(el.status||"—")}</span>
+              ${el.status==="Planejada" ? "" : `<span class="status-pill ${urnaClass}">${cipaPicto(urnaPicto,14,2)} Urna ${empEsc(el.urnaStatus)}</span>`}
+            </div>
+          </div>
+          <ol class="cipa-el-timeline">
+            ${passos.map(p=>`<li class="cipa-el-step ${p.st}">
+              <div class="cipa-el-dot">${p.st==="done" ? cipaPicto("check",20,2) : cipaPicto(p.picto,20)}</div>
+              <div class="lbl">${p.lbl}</div>
+              <div class="dt">${p.dt}</div>
+            </li>`).join("")}
+          </ol>
+          <div class="cipa-el-stats">
+            <span class="cipa-el-chip">${cipaPicto("seat",16)} <strong>${numCand}</strong> candidato(s)</span>
+            <span class="cipa-el-chip">${cipaPicto("ballot",16)} <strong>${numVotos}</strong> voto(s)</span>
+            <span class="cipa-el-chip">${cipaPicto("users",16)} Vagas: <strong>${el.vagasTitulares||0}</strong> titular(es) · <strong>${el.vagasSuplentes||0}</strong> suplente(s)</span>
+          </div>
+          ${el.observacoes ? `<div class="cipa-el-obs">${empEsc(el.observacoes)}</div>` : ""}
+          <div class="cipa-el-actions">
+            <button type="button" class="btn secondary" data-pdf-cipa-edital="${el.id}">${cipaPicto("pdf",16)} Edital (PDF)</button>
+            <button type="button" class="btn" data-goto-votacao="${el.id}">${cipaPicto("ballot",16)} Votação ${cipaPicto("arrow",14)}</button>
+            ${checkPermission("Administrador") ? `<button type="button" class="btn danger" data-del-cipa-eleicao="${el.id}">${cipaPicto("trash",16)} Remover</button>` : ""}
+          </div>
+        </article>`;
+    }).join("");
+
     root.innerHTML = `
       <div class="page-head">
         <div>
@@ -7335,34 +7504,7 @@ function renderPcmsoDash(root){
         </div>
         ${checkPermission("Master") ? `<button class="btn" id="btn-new-cipa-eleicao">+ Novo Processo Eleitoral</button>` : ""}
       </div>
-      <div class="panel">
-        ${state.cipaElections.length === 0 ? `<div class="empty">Nenhum processo eleitoral cadastrado.</div>` : `
-        <table>
-          <thead><tr><th>Gestão</th><th>Edital</th><th>Inscrições</th><th>Eleição</th><th>Posse</th><th>Votantes</th><th>Status</th><th>Urna</th><th></th><th></th>${checkPermission("Administrador")?'<th></th>':''}</tr></thead>
-          <tbody>
-            ${state.cipaElections.map(el=>{
-              ensureElectionVotingFields(el);
-              const stClass = el.status==="Concluída" ? "ok" : el.status==="Planejada" ? "warn" : "warn";
-              const urnaClass = el.urnaStatus==="Encerrada" ? "ok" : el.urnaStatus==="Aberta" ? "warn" : "bad";
-              const numVotos = el.votantes.length || el.totalVotantes || 0;
-              const numCand = el.candidatos.length || el.totalInscritos || 0;
-              return `<tr>
-                <td><strong>${el.gestao}</strong></td>
-                <td>${fmtDate(el.dataEdital)}</td>
-                <td>${fmtDate(el.dataInscricaoInicio)} — ${fmtDate(el.dataInscricaoFim)}</td>
-                <td>${fmtDate(el.dataEleicao)}</td>
-                <td>${fmtDate(el.dataPosse)}</td>
-                <td>${numVotos} votos (${numCand} candidatos)</td>
-                <td><span class="status-pill ${stClass}"><span class="dot"></span>${el.status}</span></td>
-                <td>${el.status==="Planejada" ? "—" : `<span class="status-pill ${urnaClass}"><span class="dot"></span>${el.urnaStatus}</span>`}</td>
-                <td class="row-actions"><button class="action-link" data-pdf-cipa-edital="${el.id}">📄 Edital (PDF)</button></td>
-                <td class="row-actions"><button class="action-link" data-goto-votacao="${el.id}">🗳️ Votação</button></td>
-                ${checkPermission("Administrador") ? `<td class="row-actions"><button class="action-link" data-del-cipa-eleicao="${el.id}">Remover</button></td>` : ''}
-              </tr>`;
-            }).join("")}
-          </tbody>
-        </table>`}
-      </div>
+      ${lista.length === 0 ? `<div class="panel"><div class="empty">Nenhum processo eleitoral cadastrado.</div></div>` : `<div class="cipa-el-grid">${cards}</div>`}
     `;
   }
 
@@ -7418,11 +7560,11 @@ function renderPcmsoDash(root){
         }
       </div>
 
-      <div class="hero">
-        <div class="stat-card"><div class="num">${totalEleitores}</div><div class="label">Eleitores Aptos a Votar</div></div>
-        <div class="stat-card"><div class="num">${votantes.length}</div><div class="label">Votos Registrados na Urna</div></div>
-        <div class="stat-card"><div class="num">${participacao}%</div><div class="label">Participação (Comparecimento)</div></div>
-        <div class="stat-card"><div class="num">${candidatos.length}</div><div class="label">Candidatos Inscritos</div></div>
+      <div class="cipa-dashboard-cards cipa-votacao-kpis">
+        <div class="cipa-kpi"><div class="cipa-kpi-icon info">${cipaPicto("users",24)}</div><div><div class="num">${totalEleitores}</div><div class="label">Eleitores Aptos a Votar</div></div></div>
+        <div class="cipa-kpi"><div class="cipa-kpi-icon warn">${cipaPicto("ballot",24)}</div><div><div class="num">${votantes.length}</div><div class="label">Votos Registrados na Urna</div></div></div>
+        <div class="cipa-kpi"><div class="cipa-kpi-icon ok">${cipaPicto("percent",24)}</div><div><div class="num">${participacao}%</div><div class="label">Participação (Comparecimento)</div></div></div>
+        <div class="cipa-kpi"><div class="cipa-kpi-icon violet">${cipaPicto("seat",24)}</div><div><div class="num">${candidatos.length}</div><div class="label">Candidatos Inscritos</div></div></div>
       </div>
 
       <div class="panel">
@@ -11460,7 +11602,9 @@ function renderPcmsoDash(root){
     } else {
       navItems = tabsForCurrentMod
         .filter(t => availableTabs.includes(t.id))
-        .map(t => `<button data-tab="${t.id}" class="${currentTab===t.id?'active':''}">${t.name}</button>`).join("");
+        .map(t => (currentModule === "cipa" && CIPA_TAB_PICTO[t.id])
+          ? `<button data-tab="${t.id}" class="${currentTab===t.id?'active':''}"><span class="nav-picto">${cipaPicto(CIPA_TAB_PICTO[t.id],17)}</span><span class="nav-label">${semEmojiInicial(t.name)}</span></button>`
+          : `<button data-tab="${t.id}" class="${currentTab===t.id?'active':''}">${t.name}</button>`).join("");
     }
 
     app.innerHTML = `
@@ -11549,6 +11693,7 @@ function renderPcmsoDash(root){
   function renderContent(){
     const main = document.getElementById("main-content");
     if(!main) return;
+    main.classList.toggle("cipa-scope", currentModule === "cipa");
 
     if(currentTab === "my-account-tab") {
       renderChangeMyPasswordCard(main);
@@ -11619,6 +11764,7 @@ function renderPcmsoDash(root){
       else if(currentTab === "cipa-cat") renderCipaCAT(main);
       else if(currentTab === "cipa-reunioes") renderCipaReunioes(main);
       else if(currentTab === "cipa-acoes") renderCipaAcoes(main);
+      decorateCipaPage(main);
     } else if(currentModule === "terceiros"){
       if(currentTab === "terc-dash") renderTercDash(main);
       else if(currentTab === "terc-empresas") renderTercEmpresas(main);
@@ -12231,7 +12377,7 @@ function renderPcmsoDash(root){
 
     root.querySelectorAll("[data-del-cipa-eleicao]").forEach(b => b.addEventListener("click", async e => {
       if(confirm("Remover este processo eleitoral?")) {
-        state.cipaElections = state.cipaElections.filter(x => x.id !== e.target.dataset.delCipaEleicao);
+        state.cipaElections = state.cipaElections.filter(x => x.id !== b.dataset.delCipaEleicao);
         await saveState(); render();
       }
     }));
