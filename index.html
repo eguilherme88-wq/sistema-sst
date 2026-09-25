@@ -923,6 +923,15 @@
 .fdsp-detail .fds-detail-actions .btn{min-height:44px;flex:1 1 220px;justify-content:center;text-align:center}
 @media(max-width:520px){.fdsp-list button{grid-template-columns:1fr auto 12px;grid-template-areas:"p s c" "t t c"}.fdsp-card-pictos{grid-area:p;width:auto}.fdsp-list .fds-signal{grid-area:s}.fdsp-card-txt{grid-area:t}.fdsp-chev{grid-area:c}.fdsp-head h1{font-size:17px}}
 @media print{.fds-toast{display:none}}
+.fdsp-sync{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:10px;font-size:12px;color:var(--ink-dim)}
+.fdsp-sync button{all:unset;cursor:pointer;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);font-weight:600;color:var(--ink)}
+.fdsp-sync-err{color:var(--amber)}
+.fds-diag{padding:14px 18px}
+.fds-diag-list{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:8px}
+.fds-diag-list li{display:flex;gap:10px;align-items:flex-start;font-size:13px}
+.fds-diag-list li>span{flex:0 0 22px;height:22px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12px;color:#fff}
+.fds-diag-list li.ok>span{background:var(--green)}.fds-diag-list li.bad>span{background:var(--red)}.fds-diag-list li.warn>span{background:var(--amber)}
+.fds-diag-list small{display:block;color:var(--ink-dim);margin-top:2px;line-height:1.4}
 /* ---- FDS: leitura do PDF, cadastro rápido e diagrama de Hommel ---- */
 .fds-head-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .fds-haz-cell{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
@@ -1043,31 +1052,58 @@
   // (cada documento do Firestore aceita até 1 MB). Coleção: sst_fds_files.
   const FDS_FILES = "sst_fds_files";
   const FDS_CHUNK = 700000;
-  window.fdsFileSave = async (fdsId, meta, base64) => {
-    const parts=[];
+  // Os PDFs são gravados em partes. Tenta primeiro a coleção própria
+  // (sst_fds_files); se as regras do Firestore não a liberarem, usa a mesma
+  // coleção do banco principal (sst_erp_state), que já tem permissão de
+  // gravação, e por último a coleção de backups.
+  const FDS_FILE_COLS = ["sst_fds_files", "sst_erp_state", "sst_erp_backups"];
+  const fdsFileKey = (col, id) => col === "sst_fds_files" ? id : `fdsfile_${id}`;
+  const fdsIsPerm = e => /permission|insufficient|unauthori/i.test(String(e?.code || "") + " " + String(e?.message || ""));
+  const fdsOrder = pref => [pref, ...FDS_FILE_COLS.filter(c => c !== pref)].filter(c => FDS_FILE_COLS.includes(c));
+  async function fdsSaveIn(col, fdsId, meta, base64){
+    const key = fdsFileKey(col, fdsId), parts = [];
     for(let i=0;i<base64.length;i+=FDS_CHUNK) parts.push(base64.slice(i,i+FDS_CHUNK));
-    let oldChunks=0;
-    try{ const old=await getDoc(doc(db,FDS_FILES,fdsId)); if(old.exists()) oldChunks=Number(old.data().chunks)||0; }catch(e){}
-    for(let i=0;i<parts.length;i++) await setDoc(doc(db,FDS_FILES,`${fdsId}__${i}`),{data:parts[i],idx:i,fdsId});
-    await setDoc(doc(db,FDS_FILES,fdsId),{name:meta.name||"fds.pdf",type:meta.type||"application/pdf",size:meta.size||0,chunks:parts.length,updatedAt:serverTimestamp()});
-    for(let i=parts.length;i<oldChunks;i++){ try{ await deleteDoc(doc(db,FDS_FILES,`${fdsId}__${i}`)); }catch(e){} }
-    return {chunks:parts.length};
+    let oldChunks = 0;
+    try{ const old = await getDoc(doc(db,col,key)); if(old.exists()) oldChunks = Number(old.data().chunks)||0; }catch(e){}
+    for(let i=0;i<parts.length;i++) await setDoc(doc(db,col,`${key}__${i}`),{data:parts[i],idx:i,fdsId,tipo:"fds-pdf-parte"});
+    await setDoc(doc(db,col,key),{name:meta.name||"fds.pdf",type:meta.type||"application/pdf",size:meta.size||0,chunks:parts.length,fdsId,tipo:"fds-pdf",updatedAt:serverTimestamp()});
+    for(let i=parts.length;i<oldChunks;i++){ try{ await deleteDoc(doc(db,col,`${key}__${i}`)); }catch(e){} }
+  }
+  window.fdsFileSave = async (fdsId, meta, base64, preferida) => {
+    const erros = [];
+    for(const col of fdsOrder(preferida || FDS_FILES)){
+      try{ await fdsSaveIn(col, fdsId, meta, base64); return {colecao: col}; }
+      catch(e){ erros.push(`${col}: ${e?.code||e?.message||e}`); if(!fdsIsPerm(e)) { const err = new Error(erros.join(" | ")); err.code = e?.code; throw err; } }
+    }
+    const err = new Error("Nenhuma coleção do Firestore permitiu gravar o PDF (" + erros.join(" | ") + ")");
+    err.code = "permission-denied"; throw err;
   };
-  window.fdsFileLoad = async (fdsId) => {
-    const meta=await getDoc(doc(db,FDS_FILES,fdsId));
-    if(!meta.exists()) throw new Error("Arquivo da FDS não encontrado no banco.");
-    const m=meta.data(), n=Number(m.chunks)||0;
-    const parts=await Promise.all(Array.from({length:n},(_,i)=>getDoc(doc(db,FDS_FILES,`${fdsId}__${i}`))));
-    const b64=parts.map(p=>p.exists()?String(p.data().data||""):"").join("");
-    const bin=atob(b64), bytes=new Uint8Array(bin.length);
-    for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
-    return {blob:new Blob([bytes],{type:m.type||"application/pdf"}), name:m.name||"fds.pdf"};
+  window.fdsFileLoad = async (fdsId, colecao) => {
+    let lastErr = null;
+    for(const col of fdsOrder(colecao || FDS_FILES)){
+      try{
+        const key = fdsFileKey(col, fdsId), meta = await getDoc(doc(db,col,key));
+        if(!meta.exists()) continue;
+        const m = meta.data(), n = Number(m.chunks)||0;
+        const parts = await Promise.all(Array.from({length:n},(_,i)=>getDoc(doc(db,col,`${key}__${i}`))));
+        const b64 = parts.map(p=>p.exists()?String(p.data().data||""):"").join("");
+        const bin = atob(b64), bytes = new Uint8Array(bin.length);
+        for(let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+        return {blob:new Blob([bytes],{type:m.type||"application/pdf"}), name:m.name||"fds.pdf"};
+      }catch(e){ lastErr = e; }
+    }
+    throw lastErr || new Error("Arquivo da FDS não encontrado no banco.");
   };
-  window.fdsFileDelete = async (fdsId) => {
-    const meta=await getDoc(doc(db,FDS_FILES,fdsId));
-    const n=meta.exists()?Number(meta.data().chunks)||0:0;
-    for(let i=0;i<n;i++){ try{ await deleteDoc(doc(db,FDS_FILES,`${fdsId}__${i}`)); }catch(e){} }
-    if(meta.exists()) await deleteDoc(doc(db,FDS_FILES,fdsId));
+  window.fdsFileDelete = async (fdsId, colecao) => {
+    for(const col of (colecao ? [colecao] : FDS_FILE_COLS)){
+      try{
+        const key = fdsFileKey(col, fdsId), meta = await getDoc(doc(db,col,key));
+        if(!meta.exists()) continue;
+        const n = Number(meta.data().chunks)||0;
+        for(let i=0;i<n;i++){ try{ await deleteDoc(doc(db,col,`${key}__${i}`)); }catch(e){} }
+        await deleteDoc(doc(db,col,key));
+      }catch(e){ if(colecao) throw e; }
+    }
   };
   window.firestoreSetDoc = async (jsonString) => {
     // Tenta conservar a versão anterior. Se as regras do Firebase ainda não
@@ -1086,10 +1122,47 @@
       console.warn("Backup separado indisponível; salvamento principal continuará.", backupError);
     }
     // A gravação principal é obrigatória e continua propagando qualquer erro.
-    await setDoc(window.firestoreStateRef, {
-      json: jsonString,
-      updatedAt: serverTimestamp()
+    // É feita em transação: as FDS gravadas por outra sessão (outra aba,
+    // outro computador ou celular) não são apagadas por um estado antigo.
+    return await runTransaction(db, async tx => {
+      const snap = await tx.get(window.firestoreStateRef);
+      let out = jsonString;
+      if(snap.exists() && typeof snap.data()?.json === "string"){
+        try{ out = JSON.stringify(window.fdsMergeStates(JSON.parse(snap.data().json), JSON.parse(jsonString))); }
+        catch(mergeError){ console.warn("Mescla das FDS não aplicada:", mergeError); }
+      }
+      const bytes = new Blob([out]).size;
+      if(bytes > 1040000){
+        const err = new Error(`O banco principal ficou com ${(bytes/1024).toFixed(0)} KB e o Firestore aceita no máximo 1.024 KB por documento. Remova fotos/logos grandes ou arquivos embutidos.`);
+        err.code = "fds/tamanho-excedido"; throw err;
+      }
+      tx.set(window.firestoreStateRef, { json: out, updatedAt: serverTimestamp() });
+      return out;
     });
+  };
+  // Mescla o cadastro de FDS: vence o registro com "updatedAt" mais recente;
+  // exclusões ficam registradas em fdsDeleted para não "ressuscitar" produtos.
+  window.fdsMergeStates = (fresh, mine) => {
+    const t = x => String(x?.updatedAt || x?.createdAt || "");
+    const deleted = {...(fresh.fdsDeleted||{}), ...(mine.fdsDeleted||{})};
+    Object.entries(fresh.fdsDeleted||{}).forEach(([id,at])=>{ if(String(at)>String(deleted[id]||"")) deleted[id]=at; });
+    const byId = new Map();
+    (fresh.fdsList||[]).forEach(f => byId.set(f.id, f));
+    (mine.fdsList||[]).forEach(f => { const o = byId.get(f.id); if(!o || t(f) >= t(o)) byId.set(f.id, f); });
+    const list = [...byId.values()].filter(f => !(deleted[f.id] && String(deleted[f.id]) >= t(f)));
+    const ids = new Set(list.map(f => f.id));
+    const cutoff = new Date(Date.now()-180*86400000).toISOString();
+    Object.keys(deleted).forEach(id => { if(String(deleted[id]) < cutoff) delete deleted[id]; });
+    mine.fdsList = list; mine.fdsDeleted = deleted;
+    // Riscos/perigos do PGR gerados por FDS que esta sessão ainda não conhecia.
+    const mineRisk = new Set((mine.pgrRisks||[]).map(r=>r.id));
+    const mineHaz = new Set((mine.pgrHazards||[]).map(h=>h.id));
+    const localIds = new Set((JSON.parse(JSON.stringify(mine.__fdsKnown||[]))));
+    (fresh.pgrRisks||[]).forEach(r => { if(r.fdsId && ids.has(r.fdsId) && !mineRisk.has(r.id) && !localIds.has(r.fdsId)) (mine.pgrRisks ||= []).push(r); });
+    (fresh.pgrHazards||[]).forEach(h => { if(h.fdsId && ids.has(h.fdsId) && !mineHaz.has(h.id) && !localIds.has(h.fdsId)) (mine.pgrHazards ||= []).push(h); });
+    delete mine.__fdsKnown;
+    if(!mine.fdsPortalPublicUrl && fresh.fdsPortalPublicUrl) mine.fdsPortalPublicUrl = fresh.fdsPortalPublicUrl;
+    return mine;
   };
 </script>
 <style>
@@ -2390,6 +2463,7 @@ body.cipa-terminal-mode .urna-confirm{
     if(!Array.isArray(state.ecSupervisors)) state.ecSupervisors=[];
     if(typeof state.ecPortalPublicUrl!=="string") state.ecPortalPublicUrl="";
     if(!Array.isArray(state.fdsList)) state.fdsList=[];
+    if(!state.fdsDeleted||typeof state.fdsDeleted!=="object") state.fdsDeleted={};
     if(typeof state.fdsPortalPublicUrl!=="string") state.fdsPortalPublicUrl="";
     (state.fireInspections||[]).forEach(inspection=>ensureFireCorrectiveActionsForInspection(inspection));
     if(!Array.isArray(state.stockMovements)) state.stockMovements=[];
@@ -2608,10 +2682,21 @@ body.cipa-terminal-mode .urna-confirm{
     let savedToFirestore = false;
     try{
       if(window.firestoreSetDoc){
-        await window.firestoreSetDoc(JSON.stringify(state));
+        window.__lastSaveError = null;
+        const known = (state.fdsList||[]).map(f=>f.id);
+        const saved = await window.firestoreSetDoc(JSON.stringify({...state, __fdsKnown: known}));
         savedToFirestore = true;
+        if(typeof saved === "string"){
+          try{
+            const m = JSON.parse(saved);
+            state.fdsList = m.fdsList || []; state.fdsDeleted = m.fdsDeleted || {};
+            if(Array.isArray(m.pgrRisks)) state.pgrRisks = m.pgrRisks;
+            if(Array.isArray(m.pgrHazards)) state.pgrHazards = m.pgrHazards;
+            if(m.fdsPortalPublicUrl) state.fdsPortalPublicUrl = m.fdsPortalPublicUrl;
+          }catch(e){}
+        }
       }
-    }catch(e){ console.error("Falha ao salvar no Firestore:", e); }
+    }catch(e){ window.__lastSaveError = e; console.error("Falha ao salvar no Firestore:", e); }
 
     const art = await getArtifactCapability();
     if(art){
@@ -11908,6 +11993,7 @@ function renderPcmsoDash(root){
 
   function fdsEnsureState(){
     if(!Array.isArray(state.fdsList)) state.fdsList=[];
+    if(!state.fdsDeleted||typeof state.fdsDeleted!=="object") state.fdsDeleted={};
     if(typeof state.fdsPortalPublicUrl!=="string") state.fdsPortalPublicUrl="";
   }
   function fdsTxt(v){ const s=String(v||"").trim(); return s?empEsc(s).replace(/\n/g,"<br>"):""; }
@@ -12035,7 +12121,7 @@ function renderPcmsoDash(root){
     const keys=new Set(targets.map(t=>t.key)),before=state.pgrRisks.length;
     state.pgrRisks=state.pgrRisks.filter(r=>!(r.fdsId===f.id&&r.fdsAuto&&!keys.has(fdsRiskKey(r))));
     removed=before-state.pgrRisks.length;
-    f.pgrLastSync=new Date().toISOString();
+    f.pgrLastSync=new Date().toISOString(); f.updatedAt=f.pgrLastSync;
     return {added,updated,removed};
   }
   function fdsUnlinkFromPgr(f){
@@ -12092,9 +12178,9 @@ function renderPcmsoDash(root){
     if(win){ try{ win.document.write('<p style="font:16px system-ui;padding:24px">Carregando a FDS…</p>'); }catch(e){} }
     try{
       if(!window.fdsFileLoad) throw new Error("Conexão com o banco indisponível.");
-      const {blob,name}=await window.fdsFileLoad(f.id);
+      const {blob,name}=await window.fdsFileLoad(f.id,f.arquivoColecao);
       const url=URL.createObjectURL(blob);
-      if(win&&!win.closed){ win.location.href=url; }
+      if(win&&!win.closed){ try{ win.document.body.innerHTML=`<p style="font:16px system-ui;padding:24px">Se a FDS não abrir sozinha, <a href="${url}" download="${empEsc(name||"fds.pdf")}">toque aqui para abrir o PDF</a>.</p>`; }catch(e){} win.location.href=url; }
       else openModal(`<h3>📄 ${empEsc(f.nomeComercial)}</h3><p>O navegador bloqueou a nova janela. Toque no botão abaixo para abrir a FDS.</p><div class="modal-actions"><button class="btn secondary" type="button" onclick="closeModal()">Fechar</button><a class="btn" href="${url}" target="_blank" rel="noopener" download="${empEsc(name||"fds.pdf")}">📄 Abrir FDS</a></div>`);
     }catch(err){
       console.error("Falha ao abrir FDS:",err);
@@ -12561,14 +12647,15 @@ function renderPcmsoDash(root){
       try{
         if(!window.fdsFileSave) throw new Error("Conexão com o banco indisponível.");
         busy("Enviando PDF…");
-        await window.fdsFileSave(recId,{name:file.name,type:"application/pdf",size:file.size},await fdsReadFileBase64(file));
-        Object.assign(rec,{arquivoArmazenado:true,arquivoNome:file.name,arquivoTamanho:file.size,arquivoEnviadoEm:new Date().toISOString()});
+        const salvo=await window.fdsFileSave(recId,{name:file.name,type:"application/pdf",size:file.size},await fdsReadFileBase64(file),cur?.arquivoColecao);
+        if(cur?.arquivoArmazenado&&cur.arquivoColecao&&salvo?.colecao&&cur.arquivoColecao!==salvo.colecao){ try{ await window.fdsFileDelete(recId,cur.arquivoColecao); }catch(e){} }
+        Object.assign(rec,{arquivoArmazenado:true,arquivoColecao:salvo?.colecao||"sst_fds_files",arquivoNome:file.name,arquivoTamanho:file.size,arquivoEnviadoEm:new Date().toISOString()});
       }catch(err){
         console.error("Falha ao armazenar PDF da FDS:",err);
-        if(!confirm("Não foi possível armazenar o PDF no banco ("+String(err?.code||err?.message||"erro")+").\nVerifique as regras do Firestore para a coleção sst_fds_files ou use o campo de link.\n\nDeseja salvar os demais dados da FDS mesmo assim?")){ busy(""); return false; }
+        if(!confirm("O PDF NÃO foi anexado.\n\nMotivo: "+String(err?.message||err?.code||"erro")+"\n\nAs informações lidas do PDF podem ser salvas mesmo assim, e você pode informar um link para a FDS (site do fornecedor, Drive).\nUse também o botão 🩺 Diagnosticar na aba Portal Público.\n\nSalvar os dados sem o PDF?")){ busy(""); return false; }
       }
     }else if(removeFile&&cur?.arquivoArmazenado){
-      try{ await window.fdsFileDelete?.(recId); }catch(err){ console.warn(err); }
+      try{ await window.fdsFileDelete?.(recId,cur.arquivoColecao); }catch(err){ console.warn(err); }
       Object.assign(rec,{arquivoArmazenado:false,arquivoNome:"",arquivoTamanho:0});
     }
     let target=cur;
@@ -12581,7 +12668,8 @@ function renderPcmsoDash(root){
     if(target.pgrSync){ const r=fdsSyncPgr(target); msg=`PGR atualizado: ${r.added} risco(s) incluído(s), ${r.updated} atualizado(s)${r.removed?`, ${r.removed} removido(s)`:""}.`; }
     const ok=await saveState();
     closeModal(); render();
-    fdsToast(ok===false?"⚠️ Não foi possível confirmar o salvamento.":`✅ FDS salva. ${msg}`);
+    if(ok===false){ alert("⚠️ A FDS NÃO foi gravada no banco de dados, por isso ela não aparece no portal nem em outros aparelhos.\n\nMotivo: "+String(window.__lastSaveError?.message||window.__lastSaveError?.code||"conexão indisponível")+"\n\nUse o botão 🩺 Diagnosticar na aba Portal Público."); }
+    else fdsToast(`✅ FDS salva e publicada. ${msg}`);
     return true;
   }
   function fdsHommelFields(f,{compact=false}={}){
@@ -12840,8 +12928,9 @@ function renderPcmsoDash(root){
     const n=fdsPgrRisks(f).filter(r=>r.fdsAuto).length;
     if(!confirm(`Excluir a FDS "${f.nomeComercial}"?${n?`\n\n${n} risco(s) gerado(s) automaticamente no PGR também serão removidos.`:""}\n\nPrefira marcar o produto como Inativo para manter o histórico.`)) return;
     fdsUnlinkFromPgr(f);
-    if(f.arquivoArmazenado){ try{ await window.fdsFileDelete?.(f.id); }catch(e){ console.warn(e); } }
+    if(f.arquivoArmazenado){ try{ await window.fdsFileDelete?.(f.id,f.arquivoColecao); }catch(e){ console.warn(e); } }
     state.fdsList=state.fdsList.filter(x=>x.id!==f.id);
+    state.fdsDeleted={...(state.fdsDeleted||{}),[f.id]:new Date().toISOString()};
     await saveState(); closeModal(); render(); fdsToast("🗑️ FDS excluída.");
   }
   async function fdsSyncOne(id){
@@ -13039,9 +13128,13 @@ function renderPcmsoDash(root){
           ${base?`<img src="${fdsQrSrc(base,220)}" alt="QR Code do portal de FDS" class="fds-qr-img"><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px"><button class="btn" data-fds-poster="">🪧 Imprimir cartaz</button><button class="btn secondary" data-fds-print-sector="">🖨️ Relação geral</button></div>`:'<div class="empty">Informe o endereço público para gerar o QR Code.</div>'}
         </div></div>
       </div>
+      <div class="panel"><div class="panel-head"><h3>🩺 Diagnóstico do portal</h3><button class="btn secondary" id="fds-diag-run">🩺 Diagnosticar</button></div>
+        <div id="fds-diag-box" class="fds-diag"><div class="muted">Confere se as FDS estão gravadas no servidor, se aparecem no portal, o tamanho do banco, a permissão para PDFs e o endereço do QR Code.</div></div>
+      </div>
       <div class="panel"><div class="panel-head"><h3>🏢 QR Codes por setor</h3><span>Abrem o portal já filtrado no setor</span></div>
         ${setores.length?`<div class="fds-qr-grid">${setores.map(s=>{const u=fdsPortalUrl(s);return`<div class="fds-qr-card"><h4>${empEsc(s)}</h4>${u?`<img src="${fdsQrSrc(u,160)}" alt="QR Code ${empEsc(s)}" loading="lazy" class="fds-qr-img">`:'<div class="muted">Sem endereço público</div>'}<small class="muted">${pub.filter(f=>(f.setores||[]).includes(s)).length} produto(s)</small>${u?`<div class="fds-qr-actions"><button class="btn secondary" data-fds-poster="${empEsc(s)}">🪧 Cartaz</button><button class="btn secondary" data-fds-copy="${empEsc(u)}">📋 Link</button></div>`:""}</div>`}).join("")}</div>`:'<div class="empty">Nenhum produto publicado com setor vinculado.</div>'}
       </div>`;
+    root.querySelector("#fds-diag-run").addEventListener("click",()=>fdsRunDiagnostics(root.querySelector("#fds-diag-box")));
     root.querySelector("#fds-save-url").addEventListener("click",async()=>{
       const val=root.querySelector("#fds-public-url").value.trim();
       if(val&&!/^https?:\/\//i.test(val)){ alert("Informe um endereço iniciado por https://"); return; }
@@ -13053,8 +13146,54 @@ function renderPcmsoDash(root){
   }
 
   // ----------------------- Portal público (#fds-portal) -----------------------
+  async function fdsRunDiagnostics(box){
+    box.innerHTML=`<div class="fds-imp-loading"><span class="fds-spin"></span> Verificando o banco de dados no servidor…</div>`;
+    const items=[],add=(ok,title,detail="")=>items.push({ok,title,detail});
+    let missing=[];
+    try{
+      const snap=await (window.firestoreGetFreshDoc||window.firestoreGetDoc)();
+      if(!snap?.exists?.()) add(false,"Documento principal não encontrado no Firestore");
+      else{
+        const json=snap.data().json||"",kb=new Blob([json]).size/1024,srv=JSON.parse(json),sl=Array.isArray(srv.fdsList)?srv.fdsList:[];
+        const pubSrv=sl.filter(f=>f.publicarPortal!==false&&f.status!=="Inativo");
+        missing=(state.fdsList||[]).filter(f=>!sl.some(x=>x.id===f.id));
+        add(!missing.length,`FDS gravadas no servidor: ${sl.length} · nesta tela: ${(state.fdsList||[]).length}`,missing.length?`Não estão no servidor: ${missing.map(f=>f.nomeComercial).join(", ")}. Use “Regravar no banco”. Se voltarem a sumir, outra aba, computador ou celular com uma versão antiga do sistema está sobrescrevendo os dados: feche/recarregue todas as abas abertas e publique esta versão do index.html no site.`:"");
+        add(pubSrv.length>0,`Produtos visíveis no portal (lidos do servidor): ${pubSrv.length}`,pubSrv.length?"":"Abra a FDS, marque “Publicar no portal” e deixe a situação como Ativo.");
+        add(kb<900,`Tamanho do banco principal: ${kb.toFixed(0)} KB de 1.024 KB permitidos`,kb>=900?"Próximo do limite do Firestore: reduza imagens embutidas (logos, fotos, assinaturas).":"");
+        const upd=snap.data().updatedAt?.toDate?.(); if(upd) add(true,`Última gravação no servidor: ${upd.toLocaleString("pt-BR")}`);
+      }
+    }catch(e){ add(false,"Não foi possível ler o banco no servidor",String(e?.code||e?.message||e)); }
+    try{
+      if(!window.fdsFileSave) throw new Error("função indisponível");
+      const t=await window.fdsFileSave("__diagnostico",{name:"teste.pdf",type:"application/pdf",size:4},"dGVzdA==");
+      await window.fdsFileLoad("__diagnostico",t?.colecao);
+      await window.fdsFileDelete("__diagnostico",t?.colecao);
+      add(true,`Anexo de PDFs funcionando (gravação e leitura na coleção ${t?.colecao})`,t?.colecao!=="sst_fds_files"?"A coleção própria sst_fds_files está bloqueada pelas regras; o sistema usa automaticamente uma coleção já liberada.":"");
+    }catch(e){ add(false,"Anexo de PDFs bloqueado pelas regras do Firestore",`${e?.message||e?.code||e}. Nas regras do Firestore, inclua: match /sst_fds_files/{id} { allow read: if true; allow write: if <mesma regra usada em sst_erp_state>; }`); }
+    const base=fdsPortalBase();
+    add(!!base&&/^https:/i.test(base),base?`Endereço usado no QR Code: ${base}`:"Endereço público não configurado",base&&!/^https:/i.test(base)?"Use um endereço https:// para abrir no celular.":"");
+    if(base&&/^https?:/.test(location.protocol)){ try{ const u=new URL(base); if(u.origin!==location.origin) add(null,"O QR Code abre outro site",`Este sistema está em ${location.origin}, mas o QR Code abre ${u.origin}. Esse site precisa ter esta mesma versão do index.html.`); }catch(e){} }
+    box.innerHTML=`<ul class="fds-diag-list">${items.map(i=>`<li class="${i.ok===true?"ok":i.ok===false?"bad":"warn"}"><span>${i.ok===true?"✔":i.ok===false?"✖":"!"}</span><div><strong>${empEsc(i.title)}</strong>${i.detail?`<small>${empEsc(i.detail)}</small>`:""}</div></li>`).join("")}</ul>${missing.length?`<button class="btn" id="fds-diag-resave">💾 Regravar no banco</button>`:""}`;
+    box.querySelector("#fds-diag-resave")?.addEventListener("click",async()=>{ missing.forEach(f=>{f.updatedAt=new Date().toISOString();}); const ok=await saveState(); if(ok===false) alert("Falha ao gravar: "+String(window.__lastSaveError?.message||window.__lastSaveError?.code||"conexão indisponível")); fdsRunDiagnostics(box); });
+  }
+  let fdsPortalFetchedAt=0,fdsPortalFetching=false,fdsPortalError="";
+  async function fdsPortalRefresh(){
+    if(fdsPortalFetching) return; fdsPortalFetching=true;
+    try{
+      const get=window.firestoreGetFreshDoc||window.firestoreGetDoc;
+      const snap=await get();
+      if(snap?.exists?.()){ const d=JSON.parse(snap.data().json||"{}"); state.fdsList=Array.isArray(d.fdsList)?d.fdsList:[]; if(d.companyLogo) state.companyLogo=d.companyLogo; }
+      fdsPortalError="";
+    }catch(e){ console.warn("Portal FDS: leitura do servidor falhou",e); fdsPortalError=String(e?.code||e?.message||e); }
+    finally{ fdsPortalFetching=false; fdsPortalFetchedAt=Date.now(); }
+    const q=document.getElementById("fdsp-q");
+    if(isFdsPortalMode()&&!(q&&document.activeElement===q)) renderFdsPortal();
+  }
+  setInterval(()=>{ if(loaded&&isFdsPortalMode()&&!document.hidden&&!fdsPortalParams().get("p")) fdsPortalRefresh(); },60000);
+  document.addEventListener("visibilitychange",()=>{ if(loaded&&isFdsPortalMode()&&!document.hidden&&Date.now()-fdsPortalFetchedAt>15000) fdsPortalRefresh(); });
   function renderFdsPortal(){
     fdsPortalActive=true; fdsEnsureState();
+    if(!fdsPortalFetchedAt&&!fdsPortalFetching) fdsPortalRefresh();
     const app=document.getElementById("app"),params=fdsPortalParams(),setor=params.get("setor")||"",picto=params.get("perigo")||"",pid=params.get("p")||"";
     const list=fdsPublicList(),setores=fdsAllSectorNames(list);
     const header=`<header class="fdsp-head"><img src="${fdsLogo()}" alt="Logomarca" class="fdsp-logo"><div><h1>Fichas com Dados de Segurança</h1><p>Consulta de produtos químicos · NR-26 · ABNT NBR 14725</p></div></header>`;
@@ -13078,7 +13217,8 @@ function renderPcmsoDash(root){
     const paint=()=>{
       const q=empPlain(fdsPortalQuery);
       const rows=list.filter(f=>(!setor||(f.setores||[]).includes(setor))&&(!picto||(f.pictogramas||[]).includes(picto))&&(!q||empPlain([f.nomeComercial,f.fabricante,f.codigoInterno,f.numeroOnu,...(f.componentes||[]).flatMap(c=>[c.nome,c.cas])].join(" ")).includes(q)));
-      app.querySelector("#fdsp-results").innerHTML=`<div class="fdsp-count">${rows.length} produto${rows.length===1?"":"s"}${setor?` em ${empEsc(setor)}`:""}</div>${rows.length?`<ul class="fdsp-list">${rows.map(f=>`<li><button type="button" data-fdsp-open="${f.id}"><span class="fdsp-card-pictos">${(f.pictogramas||[]).filter(c=>FDS_GHS_SYMBOL[c]).map(c=>fdsGhsSvg(c,34)).join("")||'<span class="fdsp-nopicto">sem pictograma</span>'}${fdsHommelSvg(f,34)}</span><span class="fdsp-card-txt"><strong>${empEsc(f.nomeComercial)}</strong><small>${empEsc(f.fabricante||"")}${(f.setores||[]).length?` · ${empEsc(f.setores.join(", "))}`:""}</small></span>${fdsSignalBadge(f)}<span class="fdsp-chev">›</span></button></li>`).join("")}</ul>`:`<div class="fdsp-empty">${list.length?"Nenhum produto encontrado com esses filtros.":"Nenhuma FDS publicada ainda."}</div>`}`;
+      app.querySelector("#fdsp-results").innerHTML=`<div class="fdsp-count">${rows.length} produto${rows.length===1?"":"s"}${setor?` em ${empEsc(setor)}`:""}</div>${rows.length?`<ul class="fdsp-list">${rows.map(f=>`<li><button type="button" data-fdsp-open="${f.id}"><span class="fdsp-card-pictos">${(f.pictogramas||[]).filter(c=>FDS_GHS_SYMBOL[c]).map(c=>fdsGhsSvg(c,34)).join("")||'<span class="fdsp-nopicto">sem pictograma</span>'}${fdsHommelSvg(f,34)}</span><span class="fdsp-card-txt"><strong>${empEsc(f.nomeComercial)}</strong><small>${empEsc(f.fabricante||"")}${(f.setores||[]).length?` · ${empEsc(f.setores.join(", "))}`:""}</small></span>${fdsSignalBadge(f)}<span class="fdsp-chev">›</span></button></li>`).join("")}</ul>`:`<div class="fdsp-empty">${list.length?"Nenhum produto encontrado com esses filtros.":fdsPortalFetching&&!fdsPortalFetchedAt?"Carregando as FDS…":state.fdsList.length?`Há ${state.fdsList.length} produto(s) cadastrado(s), mas nenhum está publicado. No sistema, abra a FDS e marque “Publicar no portal” (o produto também precisa estar Ativo).`:"Nenhuma FDS publicada ainda."}</div>`}<div class="fdsp-sync">${fdsPortalError?`<span class="fdsp-sync-err">⚠️ Sem conexão com o banco (${empEsc(fdsPortalError)}). Mostrando a última leitura.</span>`:fdsPortalFetchedAt?`Atualizado às ${new Date(fdsPortalFetchedAt).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}`:""} <button type="button" id="fdsp-refresh">🔄 Atualizar</button></div>`;
+      app.querySelector("#fdsp-refresh")?.addEventListener("click",()=>{ app.querySelector("#fdsp-refresh").textContent="Atualizando…"; fdsPortalRefresh(); });
     };
     paint();
     const qi=app.querySelector("#fdsp-q"); let t=null;
