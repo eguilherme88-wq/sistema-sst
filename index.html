@@ -710,6 +710,11 @@
   .pgr-epi-chips{display:flex;flex-wrap:wrap;gap:5px;}
   .pgr-epi{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);font-size:11.5px;font-weight:600;line-height:1.2;}
   .pgr-medida-txt{font-size:12px;color:var(--ink-dim);margin-top:6px;line-height:1.4;}
+  .pgr-medida-sim{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:700;color:var(--green);background:color-mix(in srgb,var(--green) 14%,transparent);border:1px solid color-mix(in srgb,var(--green) 40%,transparent)}
+  .pgr-medida-sim:hover{background:color-mix(in srgb,var(--green) 24%,transparent)}
+  .pgr-medida-sim:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+  .pgr-medida-nao{font-size:12px;font-weight:600;color:var(--ink-dim)}
+  .pgr-medida-modal-txt{white-space:pre-line;line-height:1.55;font-size:13px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;max-height:45vh;overflow:auto}
   .pgr-tipo{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap;}
   .hz-table{table-layout:fixed;min-width:1040px;}
   .hz-table th,.hz-table td{padding:14px;vertical-align:middle;}
@@ -1860,6 +1865,89 @@ nav button .nav-label{line-height:1.25}
   .cipa-head-picto{width:44px;height:44px;flex-basis:44px}
 }
 </style>
+<style>
+/* ===== Calendário CIPA (NR-05) ===== */
+.cc-grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:18px;margin-bottom:20px}
+.cc-body{padding:16px 18px}
+.cc-radio{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.cc-radio label{flex:1 1 200px;display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:11px 12px;cursor:pointer;background:var(--panel-2);font-size:13px;margin:0}
+.cc-radio label.on{border-color:var(--yellow);box-shadow:0 0 0 2px color-mix(in srgb,var(--yellow) 30%,transparent)}
+.cc-radio small{display:block;color:var(--ink-dim);font-size:11px;margin-top:2px;font-weight:400}
+.cc-radio input{margin:3px 0 0;width:auto!important;flex:0 0 auto;padding:0}
+.cc-hint{font-size:11px;color:var(--ink-dim);margin-top:4px;line-height:1.45}
+.cc-dim-result{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:14px 0}
+.cc-dim-box{border:1px solid var(--line);border-radius:10px;padding:12px;text-align:center;background:var(--panel-2)}
+.cc-dim-box .n{font-family:var(--font-head);font-size:28px;font-weight:800;line-height:1.1}
+.cc-dim-box .t{font-size:11px;color:var(--ink-dim);margin-top:4px}
+.cc-dim-box.hl{border-color:var(--yellow);background:color-mix(in srgb,var(--yellow) 12%,var(--panel))}
+.cc-alert{border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.45;margin-top:10px;border:1px solid color-mix(in srgb,var(--amber) 45%,transparent);background:color-mix(in srgb,var(--amber) 10%,transparent)}
+.cc-alert.ok{border-color:color-mix(in srgb,var(--green) 45%,transparent);background:color-mix(in srgb,var(--green) 10%,transparent)}
+.cc-quadro{overflow-x:auto;margin-top:12px;border:1px solid var(--line);border-radius:8px}
+.cc-quadro table{min-width:900px;font-size:11px;table-layout:auto!important;width:100%}
+.cc-quadro th,.cc-quadro td{padding:5px 6px!important;text-align:center;white-space:nowrap!important;width:auto!important}.cc-quadro th{font-size:10px;letter-spacing:0}
+.cc-quadro td.sel{background:var(--yellow);color:#1b1b1b;font-weight:800}
+.cc-quadro tr.gr-on td:first-child{font-weight:800;color:var(--amber)}
+.cc-mandato{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin-bottom:18px;overflow:hidden}
+.cc-mandato-head{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:14px 18px;border-bottom:1px solid var(--line)}
+.cc-mandato-head .ttl{flex:1 1 240px}
+.cc-mandato-head .ttl b{font-family:var(--font-head);font-size:18px}
+.cc-mandato-head .ttl div{font-size:12px;color:var(--ink-dim);margin-top:2px}
+.cc-mandato-actions{display:flex;gap:8px;flex-wrap:wrap}
+.cc-mandato-actions .btn{font-size:12px;padding:8px 12px}
+.cc-steps{list-style:none;margin:0;padding:6px 18px 10px}
+.cc-step{display:grid;grid-template-columns:40px minmax(0,1fr) 190px;gap:12px;align-items:center;padding:10px 0;border-bottom:1px dashed var(--line)}
+.cc-step:last-child{border-bottom:0}
+.cc-step-ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--panel-2);color:var(--amber)}
+.cc-step.key .cc-step-ic{background:var(--yellow);color:#1b1b1b}
+.cc-step-txt b{font-size:13px}
+.cc-step-txt .r{font-size:11px;color:var(--ink-dim);margin-top:2px;line-height:1.4}
+.cc-step-txt .w{font-size:11px;color:var(--red);margin-top:3px;font-weight:600}
+.cc-date{display:flex;flex-direction:column;gap:3px;align-items:stretch}
+.cc-date input{margin:0;padding:7px 8px}
+.cc-date .meta{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:3px 6px;font-size:10px;color:var(--ink-dim)}.cc-date .meta > span{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}
+.cc-tag{font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;background:var(--panel-2)}
+.cc-tag.edit{background:color-mix(in srgb,#2563eb 14%,transparent);color:#2563eb}
+.cc-reset{all:unset;cursor:pointer;font-size:10px;text-decoration:underline;color:var(--ink-dim)}
+.cc-reunioes{padding:4px 18px 16px}
+.cc-reunioes h4{margin:6px 0 10px;font-size:13px;display:flex;gap:8px;align-items:center}
+.cc-reunioes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.cc-reunioes-grid label{font-size:11px;color:var(--ink-dim);margin-bottom:3px;display:flex;justify-content:space-between}
+.cc-reunioes-grid input{margin:0;padding:7px 8px}
+.cc-reunioes-grid .edit input{border-color:#2563eb}
+@media(max-width:980px){.cc-grid2{grid-template-columns:1fr}}
+@media(max-width:620px){.cc-step{grid-template-columns:36px minmax(0,1fr)}.cc-date{grid-column:1/-1}.cc-dim-result{grid-template-columns:1fr 1fr}}
+</style>
+<style>
+/* ===== Integração de Funcionários ===== */
+.integ-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+.integ-filters{display:grid;grid-template-columns:minmax(220px,2fr) 1fr 1fr auto;gap:12px;align-items:end;padding:14px 18px}
+.integ-filters .field{margin:0}
+.integ-emp small{display:block;font-size:11px;color:var(--ink-dim);margin-top:2px}
+.integ-alert{font-size:11px;color:var(--red);font-weight:700;margin-top:3px}
+.integ-conteudos{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 4px}
+.integ-conteudos label{display:flex;gap:8px;align-items:flex-start;font-size:12px;font-weight:500;color:var(--ink);background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:0;cursor:pointer;line-height:1.35}
+.integ-conteudos input{width:auto!important;margin:2px 0 0;flex:0 0 auto}
+.integ-conteudos label{position:relative;padding-right:28px}
+.integ-conteudos label > span{flex:1 1 auto}
+.integ-rm{all:unset;cursor:pointer;position:absolute;top:6px;right:8px;font-size:12px;line-height:1;color:var(--ink-dim);padding:2px 4px;border-radius:4px}
+.integ-rm:hover{color:var(--red);background:color-mix(in srgb,var(--red) 12%,transparent)}
+.integ-add{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) auto;gap:8px;margin-top:10px}
+.integ-add input{margin:0}
+.integ-carga{display:flex;align-items:center;gap:6px}
+.integ-carga input{margin:0;width:100%;min-width:0}
+.integ-carga span{font-size:12px;color:var(--ink-dim)}
+@media(max-width:560px){.integ-add{grid-template-columns:1fr}}
+.integ-conteudos small{display:block;color:var(--ink-dim);font-size:10px;margin-top:2px}
+.integ-riscos{border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--panel-2);font-size:12px;max-height:180px;overflow:auto;margin-bottom:12px}
+.integ-riscos ul{margin:4px 0 0;padding-left:18px}
+.integ-riscos li{margin:3px 0}
+.integ-progress{height:6px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:6px;max-width:120px}
+.integ-progress span{display:block;height:100%;background:var(--green)}
+@media(max-width:900px){.integ-kpis{grid-template-columns:repeat(2,1fr)}.integ-filters{grid-template-columns:1fr 1fr}.integ-conteudos{grid-template-columns:1fr}}
+@media(max-width:560px){.integ-kpis{grid-template-columns:1fr}.integ-filters{grid-template-columns:1fr}}
+</style>
+
+
 
 
 
@@ -2160,6 +2248,7 @@ nav button .nav-label{line-height:1.25}
     roleMatrix: [],
     roleTrainingCompliance: [],
     annualTrainingPlan: [],
+    employeeIntegrations: [],
     cipaMembers: [],
     cipaElections: [],
     cipaMeetings: [],
@@ -2220,7 +2309,8 @@ nav button .nav-label{line-height:1.25}
       { id: "train-dash", name: "📊 Dashboard Treinamentos" },
       { id: "role-matrix", name: "📋 Matriz de Procedimento por Função" },
       { id: "train-list", name: "🎓 Matriz de Cursos" },
-      { id: "annual-plan", name: "📅 Plano Anual de Treinamento" }
+      { id: "annual-plan", name: "📅 Plano Anual de Treinamento" },
+      { id: "train-integracao", name: "🤝 Integração de Funcionários" }
     ],
     ec: [
       { id: "ec-dash", name: "📊 Dashboard NR-33" },
@@ -2293,7 +2383,8 @@ nav button .nav-label{line-height:1.25}
       { id: "employees", name: "👥 Funcionários" },
       { id: "employee-dossier", name: "📁 Dossiê do Funcionário" },
       { id: "geral-setores", name: "🏢 Cadastro de Setores" },
-      { id: "geral-cargos", name: "💼 Cadastro de Cargos" }
+      { id: "geral-cargos", name: "💼 Cadastro de Cargos" },
+      { id: "geral-cipa-calendario", name: "📆 Calendário CIPA (NR-05)" }
     ]
   };
 
@@ -2742,6 +2833,11 @@ nav button .nav-label{line-height:1.25}
   // Aplica migrações/valores-padrão em uma base carregada (de qualquer origem)
   // para manter compatibilidade com estados salvos por versões anteriores.
   function applyStateMigrations(){
+    // O Processo Eleitoral não é mais vinculado ao Plano de Ação: remove as
+    // ações que eram geradas automaticamente para as etapas da eleição.
+    if(Array.isArray(state.cipaActions)){
+      state.cipaActions = state.cipaActions.filter(a => !(a && a.origem === "Processo Eleitoral CIPA" && a.eleicaoId));
+    }
     if(!Array.isArray(state.fireBrigadistas)) state.fireBrigadistas=[];
     if(!Array.isArray(state.fireCorrectiveActions)) state.fireCorrectiveActions=[];
     if(!Array.isArray(state.pgrGhes)) state.pgrGhes=[];
@@ -4130,6 +4226,330 @@ nav button .nav-label{line-height:1.25}
     });
   }
 
+
+  // =====================================================================
+  // INTEGRAÇÃO DE FUNCIONÁRIOS (Treinamentos)
+  // Registro da integração/capacitação inicial de SST de cada funcionário
+  // (NR-01, 1.7.1: capacitação na admissão, antes de iniciar as atividades),
+  // com os riscos e EPIs do PGR a que ele está exposto e a Ficha de Integração.
+  // =====================================================================
+  const INTEG_CONTEUDOS = [
+    { k:"empresa",    t:"Apresentação da empresa e da política de SST" },
+    { k:"riscos",     t:"Riscos ocupacionais do cargo e do setor", r:"PGR · NR-01" },
+    { k:"epis",       t:"EPIs do cargo: uso, guarda e conservação", r:"NR-06" },
+    { k:"os",         t:"Ordem de Serviço de SST", r:"NR-01, 1.4.1 c" },
+    { k:"recusa",     t:"Direito de recusa em risco grave e iminente", r:"NR-01, 1.4.3" },
+    { k:"emergencia", t:"Emergência, rotas de fuga e combate a incêndio", r:"NR-23" },
+    { k:"acidente",   t:"Primeiros socorros e comunicação de acidentes" },
+    { k:"cipa",       t:"CIPA e canais de denúncia de assédio", r:"NR-05" }
+  ];
+  // Catálogo de conteúdos (editável): começa com os itens padrão.
+  function integCatalogo(){
+    if(!Array.isArray(state.integConteudos)){
+      state.integConteudos = INTEG_CONTEUDOS.map(c => ({ ...c }));
+    }
+    return state.integConteudos;
+  }
+  // Conteúdos de um registro: usa a cópia salva com a integração (histórico),
+  // ou o catálogo atual para registros antigos.
+  function integConteudosDoRegistro(reg){
+    if(reg && Array.isArray(reg.conteudosDetalhe) && reg.conteudosDetalhe.length) return reg.conteudosDetalhe;
+    const feitos = new Set(reg?.conteudos || []);
+    return integCatalogo().map(c => ({ ...c, ok: feitos.has(c.k) }));
+  }
+  function integMinutos(reg){
+    if(!reg) return 0;
+    if(reg.cargaMinutos != null && reg.cargaMinutos !== "") return Math.max(0, Math.round(Number(reg.cargaMinutos)||0));
+    return Math.max(0, Math.round((Number(String(reg.cargaHoraria||"").replace(",", "."))||0) * 60));
+  }
+  function integFmtCarga(reg){
+    const m = integMinutos(reg);
+    if(!m) return "";
+    const h = Math.floor(m/60), mm = m%60;
+    return h && mm ? `${h} h ${mm} min` : h ? `${h} h` : `${mm} min`;
+  }
+
+  function integFuncionariosAtivos(){
+    return (state.employees || []).filter(e => !/deslig|inativ|demit|encerr/i.test(String(e.situacao || e.status || "")));
+  }
+  function integRegistro(empId){
+    return (state.employeeIntegrations || []).find(x => x.employeeId === empId) || null;
+  }
+  function integSituacao(reg){
+    if(!reg) return { st:"Pendente", cls:"bad" };
+    if(reg.status === "Realizada") return { st:"Realizada", cls:"ok" };
+    const hoje = new Date().toISOString().slice(0,10);
+    if(reg.data && reg.data < hoje) return { st:"Atrasada", cls:"bad" };
+    return { st:"Agendada", cls:"warn" };
+  }
+  // Riscos do PGR a que o funcionário está exposto (por GHE ou setor/cargo) e EPIs.
+  function integRiscosDoFuncionario(emp){
+    const riscos = (state.pgrRisks || []).filter(r => { try{ return pgrExposedEmployees(r).some(e => e.id === emp.id); }catch(e){ return false; } });
+    const epis = new Map();
+    riscos.forEach(r => { try{ pgrEpisOfRisk(r).forEach(i => epis.set(i.id, i)); }catch(e){} });
+    return { riscos, epis:[...epis.values()] };
+  }
+
+  function renderIntegracaoFuncionarios(root){
+    if(!Array.isArray(state.employeeIntegrations)) state.employeeIntegrations = [];
+    const podeEditar = checkPermission("Master"), podeExcluir = checkPermission("Administrador");
+    const hoje = new Date().toISOString().slice(0,10);
+    const q = normalizeText(root.dataset.integQ || "");
+    const fSt = root.dataset.integSt || "";
+    const fSetor = root.dataset.integSetor || "";
+    const ativos = integFuncionariosAtivos();
+    const linhas = ativos.map(e => ({ e, reg: integRegistro(e.id), sit: integSituacao(integRegistro(e.id)) }));
+    const cont = { Realizada:0, Pendente:0, Agendada:0, Atrasada:0 };
+    linhas.forEach(l => cont[l.sit.st]++);
+    const recentesSem = linhas.filter(l => l.sit.st !== "Realizada" && l.e.admissao && l.e.admissao >= ccDate.add(hoje,-30)).length;
+    const setores = [...new Set(ativos.map(e => e.setor).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+    const ordem = { Atrasada:0, Pendente:1, Agendada:2, Realizada:3 };
+    const lista = linhas
+      .filter(l => !q || normalizeText([l.e.nome,l.e.matricula,l.e.cargo,l.e.setor,l.reg?.responsavel].join(" ")).includes(q))
+      .filter(l => !fSt || l.sit.st === fSt)
+      .filter(l => !fSetor || l.e.setor === fSetor)
+      .sort((a,b) => ordem[a.sit.st]-ordem[b.sit.st] || String(b.e.admissao||"").localeCompare(String(a.e.admissao||"")) || String(a.e.nome||"").localeCompare(String(b.e.nome||""),"pt-BR"));
+
+    root.innerHTML = `
+      <div class="page-head">
+        <div>
+          <h2>🤝 Integração de Funcionários</h2>
+          <div class="sub">Capacitação inicial de SST na admissão, antes do início das atividades (NR-01, 1.7.1).</div>
+        </div>
+        ${podeEditar ? `<button class="btn" type="button" id="btn-integ-nova">+ Registrar Integração</button>` : ""}
+      </div>
+
+      <div class="cipa-dashboard-cards integ-kpis">
+        <div class="cipa-kpi"><div class="cipa-kpi-icon ok">${cipaPicto("check",24)}</div><div><div class="num">${cont.Realizada}</div><div class="label">Integrados<br><span style="font-size:11px;">de ${ativos.length} funcionário(s)</span></div></div></div>
+        <div class="cipa-kpi"><div class="cipa-kpi-icon warn">${cipaPicto("clock",24)}</div><div><div class="num">${cont.Pendente}</div><div class="label">Sem integração</div></div></div>
+        <div class="cipa-kpi"><div class="cipa-kpi-icon info">${cipaPicto("calendar",24)}</div><div><div class="num">${cont.Agendada}</div><div class="label">Agendadas${cont.Atrasada?` · <b style="color:var(--red)">${cont.Atrasada} atrasada(s)</b>`:""}</div></div></div>
+        <div class="cipa-kpi"><div class="cipa-kpi-icon violet">${cipaPicto("users",24)}</div><div><div class="num" style="color:var(${recentesSem?'--red':'--green'})">${recentesSem}</div><div class="label">Admitidos há até 30 dias<br>sem integração</div></div></div>
+      </div>
+
+      <div class="panel" style="margin-bottom:18px;">
+        <div class="panel-head"><h3>🔎 Filtros</h3><span class="panel-note">${lista.length} de ${linhas.length} funcionário(s)</span></div>
+        <div class="integ-filters">
+          <div class="field"><label>Pesquisar</label><input id="integ-q" value="${empEsc(root.dataset.integQ||"")}" placeholder="Nome, matrícula, cargo, setor ou responsável..."></div>
+          <div class="field"><label>Situação</label><select id="integ-st"><option value="">Todas</option>${["Pendente","Agendada","Atrasada","Realizada"].map(x=>`<option ${fSt===x?'selected':''}>${x}</option>`).join("")}</select></div>
+          <div class="field"><label>Setor</label><select id="integ-setor"><option value="">Todos</option>${setores.map(x=>`<option ${fSetor===x?'selected':''}>${empEsc(x)}</option>`).join("")}</select></div>
+          <button type="button" class="btn secondary" id="integ-limpar">Limpar</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>👥 Funcionários e situação da integração</h3></div>
+        ${lista.length ? `<div style="overflow-x:auto;"><table>
+          <thead><tr><th>Funcionário</th><th>Cargo / Setor</th><th>Admissão</th><th>Integração</th><th>Conteúdo</th><th>Situação</th><th style="text-align:right;">Ações</th></tr></thead>
+          <tbody>${lista.map(({e,reg,sit}) => {
+            const itensReg = reg ? integConteudosDoRegistro(reg) : [];
+            const feitos = itensReg.filter(c => c.ok).length;
+            const totalItens = itensReg.length || 1;
+            const pct = Math.round(feitos / totalItens * 100);
+            const novo = !reg && e.admissao && e.admissao >= ccDate.add(hoje,-30);
+            return `<tr>
+              <td class="integ-emp"><strong>${empEsc(e.nome||"—")}</strong>${e.matricula?`<small>Matr. ${empEsc(e.matricula)}</small>`:""}${novo?`<div class="integ-alert">Admitido recentemente</div>`:""}</td>
+              <td>${empEsc(e.cargo||e.funcao||"—")}<br><span style="font-size:11px;color:var(--ink-dim);">${empEsc(e.setor||"—")}</span></td>
+              <td>${e.admissao?fmtDate(e.admissao):"—"}</td>
+              <td>${reg ? `${fmtDate(reg.data)}<br><span style="font-size:11px;color:var(--ink-dim);">${empEsc(reg.responsavel||"—")}${integFmtCarga(reg)?` · ${integFmtCarga(reg)}`:""}</span>` : "—"}</td>
+              <td>${reg ? `${feitos}/${itensReg.length} itens<div class="integ-progress"><span style="width:${pct}%"></span></div>` : "—"}</td>
+              <td><span class="status-pill ${sit.cls}"><span class="dot"></span>${sit.st}</span></td>
+              <td style="text-align:right;white-space:nowrap;"><div class="row-actions">
+                ${podeEditar ? `<button class="action-link" data-integ-edit="${e.id}">${reg?"✏️ Editar":"➕ Registrar"}</button>` : ""}
+                ${reg ? `<button class="action-link" data-integ-ficha="${e.id}">📄 Ficha</button>` : ""}
+                ${reg && podeExcluir ? `<button class="action-link" data-integ-del="${e.id}">Remover</button>` : ""}
+              </div></td>
+            </tr>`; }).join("")}</tbody></table></div>`
+          : `<div class="empty">${ativos.length ? "Nenhum funcionário encontrado com esses filtros." : "Cadastre os funcionários em Geral / Pessoas › Funcionários."}</div>`}
+      </div>
+    `;
+
+    const rerender = () => renderIntegracaoFuncionarios(root);
+    const qInp = root.querySelector("#integ-q");
+    qInp.addEventListener("input", () => {
+      root.dataset.integQ = qInp.value;
+      const pos = qInp.selectionStart; rerender();
+      const n = root.querySelector("#integ-q"); n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){}
+    });
+    root.querySelector("#integ-st").addEventListener("change", ev => { root.dataset.integSt = ev.target.value; rerender(); });
+    root.querySelector("#integ-setor").addEventListener("change", ev => { root.dataset.integSetor = ev.target.value; rerender(); });
+    root.querySelector("#integ-limpar").addEventListener("click", () => { delete root.dataset.integQ; delete root.dataset.integSt; delete root.dataset.integSetor; rerender(); });
+    root.querySelector("#btn-integ-nova")?.addEventListener("click", () => openIntegracaoModal(null, rerender));
+    root.querySelectorAll("[data-integ-edit]").forEach(b => b.addEventListener("click", () => openIntegracaoModal(b.dataset.integEdit, rerender)));
+    root.querySelectorAll("[data-integ-ficha]").forEach(b => b.addEventListener("click", () => printFichaIntegracao(b.dataset.integFicha)));
+    root.querySelectorAll("[data-integ-del]").forEach(b => b.addEventListener("click", async () => {
+      if(!confirm(`Remover o registro de integração de ${employeeName(b.dataset.integDel)}?`)) return;
+      state.employeeIntegrations = state.employeeIntegrations.filter(x => x.employeeId !== b.dataset.integDel);
+      await saveState(); rerender();
+    }));
+  }
+
+  function openIntegracaoModal(empId, onSaved){
+    const ativos = integFuncionariosAtivos().slice().sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"));
+    if(!ativos.length){ alert("Cadastre os funcionários em Geral / Pessoas antes de registrar a integração."); return; }
+    const reg = empId ? integRegistro(empId) : null;
+    const hoje = new Date().toISOString().slice(0,10);
+    const selId = empId || (ativos.find(e => !integRegistro(e.id)) || ativos[0]).id;
+    const catalogo = integCatalogo();
+    // Itens exibidos: catálogo atual + itens que só existem no histórico deste registro.
+    const itensModal = catalogo.map(c => ({ ...c }));
+    if(reg) integConteudosDoRegistro(reg).forEach(c => { if(!itensModal.some(x => x.k === c.k)) itensModal.push({ k:c.k, t:c.t, r:c.r, historico:true }); });
+    const marcados = new Set(reg ? integConteudosDoRegistro(reg).filter(c=>c.ok).map(c=>c.k) : catalogo.map(c=>c.k));
+    const minAtual = reg ? integMinutos(reg) : 240;
+
+    const blocoRiscos = id => {
+      const emp = ativos.find(e => e.id === id);
+      if(!emp) return "";
+      const { riscos, epis } = integRiscosDoFuncionario(emp);
+      return `<b>⚠️ Riscos do PGR para ${empEsc(emp.cargo||emp.funcao||"este cargo")} · ${empEsc(emp.setor||"—")}</b>
+        ${riscos.length ? `<ul>${riscos.map(r=>`<li>${empEsc(r.perigo||"—")} <span style="color:var(--ink-dim)">(${empEsc(r.tipo||"—")})</span></li>`).join("")}</ul>` : `<div style="color:var(--ink-dim);margin-top:4px;">Nenhum risco do PGR vinculado a este setor/cargo.</div>`}
+        ${epis.length ? `<div style="margin-top:8px;"><b>🦺 EPIs do cargo:</b> ${epis.map(i=>`${empEsc(i.nome)}${i.ca?` (CA ${empEsc(i.ca)})`:""}`).join(", ")}</div>` : ""}`;
+    };
+
+    openModal(`
+      <h3>🤝 ${reg ? "Editar" : "Registrar"} Integração</h3>
+      <form id="integ-form">
+        <div class="field"><label>Funcionário</label>
+          <select name="employeeId" id="integ-emp" ${reg?"disabled":""}>
+            ${ativos.map(e=>`<option value="${e.id}" ${e.id===selId?"selected":""}>${empEsc(e.nome)}${e.cargo?` · ${empEsc(e.cargo)}`:""}${integRegistro(e.id)&&!reg?" (já tem integração)":""}</option>`).join("")}
+          </select></div>
+        <div class="integ-riscos" id="integ-riscos">${blocoRiscos(selId)}</div>
+        <div class="field-row">
+          <div class="field"><label>Data da integração</label><input type="date" name="data" required value="${reg?.data || hoje}"></div>
+          <div class="field"><label>Situação</label><select name="status">${["Realizada","Agendada"].map(x=>`<option ${(reg?.status||"Realizada")===x?"selected":""}>${x}</option>`).join("")}</select></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Responsável / Instrutor</label><input name="responsavel" required value="${empEsc(reg?.responsavel || currentUser?.name || "")}" placeholder="Nome de quem conduziu"></div>
+          <div class="field"><label>Carga horária</label>
+            <div class="integ-carga">
+              <input type="number" name="cargaH" min="0" max="99" step="1" value="${Math.floor(minAtual/60)}" aria-label="Horas"><span>h</span>
+              <input type="number" name="cargaM" min="0" max="59" step="5" value="${minAtual%60}" aria-label="Minutos"><span>min</span>
+            </div></div>
+        </div>
+        <div class="field"><label>Modalidade</label><select name="modalidade">${["Presencial","Semipresencial","A distância"].map(x=>`<option ${(reg?.modalidade||"Presencial")===x?"selected":""}>${x}</option>`).join("")}</select></div>
+        <label style="margin-top:4px;">Conteúdo abordado</label>
+        <div class="integ-conteudos" id="integ-conteudos"></div>
+        <div class="integ-add">
+          <input id="integ-novo-txt" placeholder="Cadastrar novo conteúdo (ex.: Procedimento de bloqueio LOTO)">
+          <input id="integ-novo-ref" placeholder="Norma/ref. (opcional)">
+          <button type="button" class="btn secondary" id="integ-novo-btn">+ Adicionar</button>
+        </div>
+        <div class="cc-hint">O conteúdo cadastrado fica disponível para as próximas integrações. O ✕ tira o item da lista; integrações já registradas mantêm o histórico.</div>
+        <div class="field" style="margin-top:10px;"><label>Observações</label><textarea name="observacoes" rows="2" placeholder="Ex.: acompanhado pelo líder do setor, visita às áreas...">${empEsc(reg?.observacoes||"")}</textarea></div>
+        <div class="modal-actions">
+          <button type="button" class="btn secondary" onclick="window.closeModal()">Cancelar</button>
+          <button type="submit" class="btn">Salvar Integração</button>
+        </div>
+      </form>
+    `, ov => {
+      const sel = ov.querySelector("#integ-emp");
+      sel.addEventListener("change", () => { ov.querySelector("#integ-riscos").innerHTML = blocoRiscos(sel.value); });
+      const grid = ov.querySelector("#integ-conteudos");
+      const lerMarcados = () => { grid.querySelectorAll('input[name="conteudos"]').forEach(i => { if(i.checked) marcados.add(i.value); else marcados.delete(i.value); }); };
+      const desenhar = () => {
+        grid.innerHTML = itensModal.map(c => `<label><input type="checkbox" name="conteudos" value="${empEsc(c.k)}" ${marcados.has(c.k)?"checked":""}><span>${empEsc(c.t)}${c.r?`<small>${empEsc(c.r)}</small>`:""}${c.historico?`<small>(removido da lista)</small>`:""}</span>${c.historico?"":`<button type="button" class="integ-rm" data-integ-rm="${empEsc(c.k)}" title="Remover da lista de conteúdos" aria-label="Remover ${empEsc(c.t)}">✕</button>`}</label>`).join("");
+        grid.querySelectorAll("[data-integ-rm]").forEach(b => b.addEventListener("click", ev => {
+          ev.preventDefault(); ev.stopPropagation();
+          const k = b.dataset.integRm;
+          const item = itensModal.find(x => x.k === k);
+          if(!item || !confirm(`Remover "${item.t}" da lista de conteúdos?\n\nIntegrações já registradas mantêm este item no histórico.`)) return;
+          lerMarcados();
+          state.integConteudos = integCatalogo().filter(x => x.k !== k);
+          const idx = itensModal.findIndex(x => x.k === k);
+          if(reg && integConteudosDoRegistro(reg).some(x => x.k === k)) itensModal[idx] = { ...item, historico:true };
+          else { itensModal.splice(idx,1); marcados.delete(k); }
+          saveState(); desenhar();
+        }));
+      };
+      desenhar();
+      const addTxt = ov.querySelector("#integ-novo-txt"), addRef = ov.querySelector("#integ-novo-ref");
+      const adicionar = () => {
+        const t = addTxt.value.trim();
+        if(!t){ addTxt.focus(); return; }
+        if(itensModal.some(x => normalizeText(x.t) === normalizeText(t))){ alert("Este conteúdo já está na lista."); return; }
+        lerMarcados();
+        const novo = { k: uid("integc"), t, r: addRef.value.trim() };
+        integCatalogo().push(novo);
+        itensModal.push({ ...novo });
+        marcados.add(novo.k);
+        addTxt.value = ""; addRef.value = "";
+        saveState(); desenhar(); addTxt.focus();
+      };
+      ov.querySelector("#integ-novo-btn").addEventListener("click", adicionar);
+      [addTxt, addRef].forEach(i => i.addEventListener("keydown", ev => { if(ev.key === "Enter"){ ev.preventDefault(); adicionar(); } }));
+      ov.querySelector("#integ-form").addEventListener("submit", async ev => {
+        ev.preventDefault();
+        const fd = new FormData(ev.target);
+        const employeeId = reg ? reg.employeeId : sel.value;
+        const existente = integRegistro(employeeId);
+        if(existente && !reg && !confirm(`${employeeName(employeeId)} já tem integração registrada. Substituir pelos dados deste formulário?`)) return;
+        const dados = {
+          employeeId, data: fd.get("data"), status: fd.get("status"),
+          responsavel: String(fd.get("responsavel")||"").trim(),
+          cargaMinutos: Math.max(0, (parseInt(fd.get("cargaH"),10)||0) * 60 + Math.min(59, parseInt(fd.get("cargaM"),10)||0)),
+          modalidade: fd.get("modalidade"), conteudos: fd.getAll("conteudos"),
+          observacoes: String(fd.get("observacoes")||"").trim(), updatedAt: new Date().toISOString()
+        };
+        const marc = new Set(dados.conteudos);
+        dados.conteudosDetalhe = itensModal.filter(c => !c.historico || marc.has(c.k)).map(c => ({ k:c.k, t:c.t, r:c.r||"", ok: marc.has(c.k) }));
+        dados.cargaHoraria = dados.cargaMinutos ? String(Math.round(dados.cargaMinutos/60*100)/100) : "";
+        if(!dados.cargaMinutos && !confirm("A carga horária está zerada. Salvar mesmo assim?")) return;
+        if(dados.status === "Realizada" && dados.data > hoje){ alert("Uma integração realizada não pode ter data futura. Use a situação \"Agendada\"."); return; }
+        if(existente) Object.assign(existente, dados);
+        else state.employeeIntegrations.push({ id: uid("integ"), createdAt: new Date().toISOString(), ...dados });
+        await saveState(); window.closeModal(); onSaved && onSaved();
+      });
+    });
+  }
+
+  function printFichaIntegracao(empId){
+    const emp = (state.employees || []).find(e => e.id === empId);
+    const reg = integRegistro(empId);
+    if(!emp || !reg) return;
+    const { riscos, epis } = integRiscosDoFuncionario(emp);
+    const esc = empEsc;
+    const w = window.open("", "_blank", "width=900,height=900");
+    if(!w){ alert("O navegador bloqueou a janela. Permita pop-ups para gerar a ficha."); return; }
+    w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Ficha de Integração — ${esc(emp.nome)}</title>
+      <style>
+        body{font-family:Arial,sans-serif;color:#20242a;margin:28px;font-size:12px}
+        h1{font-size:19px;margin:6px 0 4px} h2{font-size:13px;margin:18px 0 6px;border-bottom:1px solid #ccc;padding-bottom:4px}
+        table{width:100%;border-collapse:collapse} th,td{border:1px solid #bbb;padding:6px;text-align:left;vertical-align:top} th{background:#eee;width:28%}
+        .chk{font-family:Consolas,monospace;font-weight:700;margin-right:6px}
+        ul{margin:4px 0;padding-left:18px} li{margin:2px 0}
+        .decl{margin-top:16px;line-height:1.55;text-align:justify}
+        .ass{display:flex;gap:40px;margin-top:56px;text-align:center}.ass div{flex:1;border-top:1px solid #333;padding-top:6px}
+        @media print{body{margin:12mm}}
+      </style></head><body>
+      ${reportLogoImgTag(80)}
+      <h1>Ficha de Integração de SST do Funcionário</h1>
+      <div style="color:#555;">Capacitação inicial na admissão — NR-01, item 1.7.1</div>
+      <h2>Identificação</h2>
+      <table>
+        <tr><th>Funcionário</th><td>${esc(emp.nome||"—")}</td></tr>
+        <tr><th>Matrícula</th><td>${esc(emp.matricula||"—")}</td></tr>
+        <tr><th>Cargo / Função</th><td>${esc(emp.cargo||emp.funcao||"—")}</td></tr>
+        <tr><th>Setor</th><td>${esc(emp.setor||"—")}</td></tr>
+        <tr><th>Admissão</th><td>${emp.admissao?fmtDate(emp.admissao):"—"}</td></tr>
+      </table>
+      <h2>Integração</h2>
+      <table>
+        <tr><th>Data</th><td>${fmtDate(reg.data)} (${esc(reg.status)})</td></tr>
+        <tr><th>Responsável / Instrutor</th><td>${esc(reg.responsavel||"—")}</td></tr>
+        <tr><th>Carga horária</th><td>${integFmtCarga(reg) || "—"} · ${esc(reg.modalidade||"Presencial")}</td></tr>
+      </table>
+      <h2>Conteúdo abordado</h2>
+      <div>${integConteudosDoRegistro(reg).map(c=>`<div><span class="chk">[${c.ok?"X":" "}]</span>${esc(c.t)}${c.r?` <span style="color:#666">(${esc(c.r)})</span>`:""}</div>`).join("")}</div>
+      <h2>Riscos ocupacionais do cargo (PGR) e EPIs</h2>
+      ${riscos.length ? `<ul>${riscos.map(r=>`<li><b>${esc(r.perigo||"—")}</b> (${esc(r.tipo||"—")})${String(r.medidaControle||"").trim()?` — ${esc(r.medidaControle)}`:""}</li>`).join("")}</ul>` : `<div>Nenhum risco do PGR vinculado a este setor/cargo.</div>`}
+      ${epis.length ? `<div style="margin-top:6px;"><b>EPIs:</b> ${epis.map(i=>`${esc(i.nome)}${i.ca?` (CA ${esc(i.ca)})`:""}`).join(", ")}</div>` : ""}
+      ${reg.observacoes ? `<h2>Observações</h2><div>${esc(reg.observacoes)}</div>` : ""}
+      <div class="decl">Declaro que participei da integração de Segurança e Saúde no Trabalho, recebi as orientações sobre os riscos das minhas atividades, as medidas de prevenção e o uso correto dos EPIs, e fui informado sobre os procedimentos de emergência e sobre o meu direito de recusa em situação de risco grave e iminente.</div>
+      <div class="ass"><div>${esc(emp.nome||"Funcionário")}<br>Funcionário</div><div>${esc(reg.responsavel||"Responsável")}<br>Responsável pela integração</div></div>
+      <script>window.onload=()=>setTimeout(()=>window.print(),250);<\/script>
+      </body></html>`);
+    w.document.close();
+  }
+
   function renderTrainDash(root){
     const plans = Array.isArray(state.annualTrainingPlan) ? state.annualTrainingPlan : [];
     const currentYear = new Date().getFullYear();
@@ -5008,6 +5428,25 @@ nav button .nav-label{line-height:1.25}
     return (state.pgrRisks||[]).filter(r => normalizeText(r.perigo) === key);
   }
 
+  // Janela com as medidas de controle de um risco (aberta pelo "Sim").
+  function openPgrMedidaModal(riskId){
+    const r = (state.pgrRisks || []).find(x => x.id === riskId);
+    if(!r) return;
+    const epis = pgrEpisOfRisk(r);
+    const txt = String(r.medidaControle || "").trim();
+    openModal(`
+      <h3>🛡️ Medidas de Controle</h3>
+      <div class="sub" style="margin-bottom:12px;"><strong>${empEsc(r.setor||"—")}</strong>${r.atividade?` · ${empEsc(r.atividade)}`:""}<br>${empEsc(r.perigo||"—")} ${pgrTipoChip(r.tipo)}${fdsPgrChip(r)}</div>
+      ${epis.length ? `<label style="margin-bottom:6px;">🦺 EPIs selecionados no risco</label><div class="pgr-epi-chips" style="margin-bottom:12px;">${epis.map(i=>`<span class="pgr-epi" title="${i.ca?`CA ${empEsc(i.ca)}`:"EPI cadastrado"}">${pgrEpiIcon(i.nome)} ${empEsc(i.nome)}${i.ca?` · CA ${empEsc(i.ca)}`:""}</span>`).join("")}</div>` : ""}
+      ${txt ? `<label style="margin-bottom:6px;">🛠️ Outras medidas de controle / prevenção</label><div class="pgr-medida-modal-txt">${empEsc(txt)}</div>` : ""}
+      <div class="modal-actions"><button type="button" class="btn" onclick="window.closeModal()">Fechar</button></div>
+    `);
+  }
+  document.addEventListener("click", ev => {
+    const b = ev.target.closest && ev.target.closest("[data-pgr-medida]");
+    if(b){ ev.preventDefault(); openPgrMedidaModal(b.dataset.pgrMedida); }
+  });
+
   function renderPgrTableList(list, allowActions=false){
     if(list.length === 0) return `<div class="empty">Nenhum risco ou perigo cadastrado.</div>`;
     return `
@@ -5017,9 +5456,11 @@ nav button .nav-label{line-height:1.25}
           ${list.map(r=>{
             const rInfo = calcRiskScore(r.severidade, r.probabilidade);
             const epis = pgrEpisOfRisk(r);
-            const medida = epis.length || r.medidaControle
-              ? `${epis.length ? `<div class="pgr-epi-chips">${epis.map(i=>`<span class="pgr-epi" title="${i.ca?`CA ${empEsc(i.ca)}`:"EPI cadastrado"}">${pgrEpiIcon(i.nome)} ${empEsc(i.nome)}</span>`).join("")}</div>` : ""}${r.medidaControle ? `<div class="pgr-medida-txt" ${epis.length?"":'style="margin-top:0;color:inherit;font-size:inherit;"'}>${empEsc(r.medidaControle)}</div>` : ""}`
-              : "—";
+            // "Sim" quando o risco tem EPI selecionado ou outra medida de controle
+            // cadastrada (EPI é medida de controle); "Não" não mostra nada.
+            const medida = epis.length || String(r.medidaControle||"").trim()
+              ? `<button type="button" class="pgr-medida-sim" data-pgr-medida="${r.id}" title="Ver as medidas de controle">✔ Sim</button>`
+              : `<span class="pgr-medida-nao">Não</span>`;
             return `<tr>
               <td><strong>${empEsc(r.setor)}</strong>${r.gheId?`<br><span class="ca-tag">${empEsc((state.pgrGhes||[]).find(g=>g.id===r.gheId)?.codigo||'GHE')}</span>`:''}<br><span style="font-size:11px;color:var(--ink-dim);">${empEsc(r.atividade)}</span></td>
               <td>${empEsc(r.perigo)}${fdsPgrChip(r)}</td>
@@ -7230,6 +7671,351 @@ function renderPcmsoDash(root){
     wrap.innerHTML = `<div class="cipa-head-picto">${cipaPicto(picto, 26)}</div>`;
     head.insertBefore(wrap, bloco);
     wrap.appendChild(bloco);
+  }
+
+
+  // =====================================================================
+  // CALENDÁRIO DA CIPA (NR-05) — Cadastro Geral
+  // ---------------------------------------------------------------------
+  // • Primeiro mandato: informa-se só a data do edital; todo o processo
+  //   eleitoral e o mandato são calculados. Mandatos seguintes são calculados
+  //   a partir do término do anterior (5.4.6, 5.4.7, 5.5.1, 5.5.3).
+  // • Toda data pode ser ajustada; os ajustes ficam em state.cipaCalendario
+  //   .ajustes[mandato][etapa] e as etapas seguintes são recalculadas.
+  // • Dimensionamento conforme o Quadro I da NR-05 (Portaria MTP 422/2021).
+  // =====================================================================
+  const NR05_FAIXAS = [[0,19],[20,29],[30,50],[51,80],[81,100],[101,120],[121,140],[141,300],[301,500],[501,1000],[1001,2500],[2501,5000],[5001,10000]];
+  const NR05_FAIXA_LABEL = ["0–19","20–29","30–50","51–80","81–100","101–120","121–140","141–300","301–500","501–1.000","1.001–2.500","2.501–5.000","5.001–10.000","+ cada 2.500"];
+  // [efetivos, suplentes] por faixa; null = não constitui CIPA. Último item = acréscimo por grupo de 2.500 acima de 10.000.
+  const NR05_QUADRO_I = {
+    1:{ e:[null,null,null,null,1,1,1,1,2,4,5,6,8,1], s:[null,null,null,null,1,1,1,1,2,3,4,5,6,1] },
+    2:{ e:[null,null,null,1,1,2,2,3,4,5,6,8,10,1],  s:[null,null,null,1,1,1,1,2,3,4,5,6,8,1] },
+    3:{ e:[null,1,1,2,2,2,3,4,5,6,8,10,12,2],       s:[null,1,1,1,1,1,2,2,4,4,6,8,8,2] },
+    4:{ e:[null,1,2,3,3,4,4,4,5,6,9,11,13,2],       s:[null,1,1,2,2,2,2,3,4,5,7,8,10,2] }
+  };
+  const NR05_CARGA = { 1:8, 2:12, 3:16, 4:20 };           // 5.7.4
+  const NR05_PRESENCIAL = { 1:0, 2:4, 3:8, 4:8 };         // 5.7.4.2
+
+  function dimensionarCipaNR05(grau, empregados){
+    const g = NR05_QUADRO_I[grau]; const n = Math.max(0, Math.floor(Number(empregados)||0));
+    if(!g) return null;
+    let idx = NR05_FAIXAS.findIndex(([a,b]) => n >= a && n <= b);
+    let efetivos, suplentes;
+    if(idx === -1){
+      idx = 13;
+      const grupos = Math.ceil((n - 10000) / 2500);
+      efetivos = g.e[12] + grupos * g.e[13];
+      suplentes = g.s[12] + grupos * g.s[13];
+    } else { efetivos = g.e[idx]; suplentes = g.s[idx]; }
+    return { faixa: idx, constitui: efetivos != null, efetivos: efetivos||0, suplentes: suplentes||0,
+      carga: NR05_CARGA[grau], presencial: NR05_PRESENCIAL[grau] };
+  }
+
+  const ccDate = (() => {
+    const toD = iso => { const [y,m,d] = String(iso).split("-").map(Number); return new Date(Date.UTC(y,m-1,d)); };
+    const iso = dt => dt.toISOString().slice(0,10);
+    const add = (s,n) => { const d = toD(s); d.setUTCDate(d.getUTCDate()+n); return iso(d); };
+    const addMonths = (s,n) => { const [y,m,d] = s.split("-").map(Number); const last = new Date(Date.UTC(y, m-1+n+1, 0)).getUTCDate(); return iso(new Date(Date.UTC(y, m-1+n, Math.min(d,last)))); };
+    const addYears = (s,n) => addMonths(s, 12*n);
+    const feriadosCache = {};
+    function feriados(y){
+      if(feriadosCache[y]) return feriadosCache[y];
+      // Páscoa (algoritmo de Meeus) → Sexta-feira Santa
+      const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+      const mes=Math.floor((h+l-7*m+114)/31), dia=((h+l-7*m+114)%31)+1;
+      const pascoa = iso(new Date(Date.UTC(y,mes-1,dia)));
+      const fixos = ["01-01","04-21","05-01","09-07","10-12","11-02","11-15","11-20","12-25"].map(md => `${y}-${md}`);
+      return (feriadosCache[y] = new Set([...fixos, add(pascoa,-2)]));
+    }
+    const util = s => { const d = toD(s); const w = d.getUTCDay(); return w !== 0 && w !== 6 && !feriados(d.getUTCFullYear()).has(s); };
+    const proxUtil = s => { let x = s; while(!util(x)) x = add(x,1); return x; };
+    const antUtil = s => { let x = s; while(!util(x)) x = add(x,-1); return x; };
+    const semana = s => ["dom","seg","ter","qua","qui","sex","sáb"][toD(s).getUTCDay()];
+    const diff = (a,b) => Math.round((toD(b)-toD(a))/86400000);
+    return { add, addMonths, addYears, util, proxUtil, antUtil, semana, diff };
+  })();
+
+  function ensureCipaCalendarioConfig(){
+    if(!state.cipaCalendario || typeof state.cipaCalendario !== "object") state.cipaCalendario = {};
+    const c = state.cipaCalendario;
+    if(!c.tipoBase) c.tipoBase = "primeiro";
+    if(!c.grauRisco) c.grauRisco = 3;
+    if(!c.ajustes || typeof c.ajustes !== "object") c.ajustes = {};
+    if(!c.qtdMandatos) c.qtdMandatos = 2;
+    return c;
+  }
+  function cipaEmpregadosCadastro(){
+    return (state.employees || []).filter(e => !/deslig|inativ|demit|encerr/i.test(String(e.situacao || e.status || ""))).length;
+  }
+  function cipaSugestaoFimMandato(){
+    const posses = (state.cipaElections || []).map(e => e.dataPosse).filter(Boolean).sort();
+    const ult = posses[posses.length-1];
+    return ult ? ccDate.add(ccDate.addYears(ult,1),-1) : "";
+  }
+
+  // Calcula os mandatos (processo eleitoral + reuniões) aplicando os ajustes.
+  function calcularCalendarioCipa(cfg){
+    const out = [];
+    let fimAnterior = cfg.tipoBase === "vigente" ? cfg.fimMandatoAtual : null;
+    for(let idx = 0; idx < (Number(cfg.qtdMandatos)||1); idx++){
+      const primeiro = idx === 0 && cfg.tipoBase === "primeiro";
+      if(primeiro && !cfg.dataEdital) break;
+      if(!primeiro && !fimAnterior) break;
+      const aj = cfg.ajustes[idx] || {};
+      const etapas = [];
+      const put = (key, def, info) => { const v = aj[key] || def; etapas.push({ key, def, data:v, editado: !!aj[key] && aj[key] !== def, ...info }); return v; };
+      const T = fimAnterior;
+
+      const edital = put("edital", primeiro ? cfg.dataEdital : ccDate.antUtil(ccDate.add(T,-60)), {
+        lbl:"Publicação do edital de convocação da eleição", picto:"megaphone", chave:true,
+        ref: primeiro ? "5.5.3 a — base do primeiro mandato" : "5.5.1 — até 60 dias antes do término do mandato em curso" });
+      put("comissao", ccDate.antUtil(ccDate.add(edital,-1)), {
+        lbl: primeiro ? "Constituição da comissão eleitoral pela organização" : "Constituição da comissão eleitoral (Presidente e Vice)", picto:"users",
+        ref: primeiro ? "5.5.2.1 — onde não houver CIPA" : "5.5.2 — responsável por organizar o processo" });
+      put("sindicato", ccDate.antUtil(ccDate.add(edital,-1)), {
+        lbl:"Comunicação do início do processo ao sindicato", picto:"minutes",
+        ref:"5.5.1.1 — com antecedência, com confirmação de entrega" });
+      const inscIni = put("inscInicio", edital, { lbl:"Início das inscrições de candidatos", picto:"pen", chave:true, ref:"5.5.3 b/c — inscrição individual e livre" });
+      const inscFim = put("inscFim", ccDate.proxUtil(ccDate.add(inscIni,14)), { lbl:"Fim das inscrições", picto:"pen", ref:"5.5.3 b — período mínimo de 15 dias corridos" });
+      const divulg = put("divulgacao", ccDate.proxUtil(ccDate.add(inscFim,1)), { lbl:"Divulgação da relação de inscritos", picto:"users", ref:"5.5.3 e" });
+      let eleDef = ccDate.proxUtil(ccDate.add(divulg,5));
+      if(T && ccDate.diff(eleDef, T) < 30) eleDef = ccDate.antUtil(ccDate.add(T,-30));
+      const eleicao = put("eleicao", eleDef, { lbl:"Eleição (votação secreta)", picto:"ballot", chave:true,
+        ref: T ? "5.5.3 f/g — até 30 dias antes do término, em dia normal de trabalho" : "5.5.3 g — em dia normal de trabalho" });
+      const resultado = put("resultado", eleicao, { lbl:"Apuração e divulgação do resultado", picto:"check", ref:"5.5.3 i · 5.5.6 — assumem os mais votados" });
+      put("denuncias", ccDate.add(resultado,30), { lbl:"Prazo final para denúncias do processo eleitoral", picto:"clock", ref:"5.5.5 — até 30 dias após o resultado" });
+      const posse = put("posse", primeiro ? ccDate.proxUtil(ccDate.add(eleicao,7)) : ccDate.proxUtil(ccDate.add(T,1)), {
+        lbl:"Posse dos membros eleitos e designados", picto:"handshake", chave:true,
+        ref: primeiro ? "Primeiro mandato — data definida pela organização" : "5.4.7 — primeiro dia útil após o término do mandato anterior" });
+      put("treinamento", primeiro ? ccDate.antUtil(ccDate.add(posse,30)) : ccDate.antUtil(ccDate.add(posse,-1)), {
+        lbl: primeiro ? "Treinamento dos membros (prazo máximo)" : "Treinamento dos membros (antes da posse)", picto:"process",
+        ref: primeiro ? "5.7.1.1 — até 30 dias após a posse" : "5.7.1 — antes da posse" });
+      put("sipat", ccDate.proxUtil(ccDate.addMonths(posse,6)), { lbl:"SIPAT anual", picto:"target", ref:"5.3.1 i — programação definida pela CIPA" });
+      const fim = put("fimMandato", ccDate.add(ccDate.addYears(posse,1),-1), { lbl:"Término do mandato", picto:"calendar", chave:true, ref:"5.4.6 — mandato de um ano, permitida uma reeleição" });
+
+      // Validações de prazo (alertas, sem impedir o ajuste manual)
+      const e = Object.fromEntries(etapas.map(x => [x.key, x]));
+      const alerta = (k, msg) => { if(e[k]) e[k].alerta = msg; };
+      if(ccDate.diff(e.inscInicio.data, e.inscFim.data) + 1 < 15) alerta("inscFim", "Período de inscrições menor que 15 dias corridos.");
+      if(e.inscInicio.data < e.edital.data) alerta("inscInicio", "Início das inscrições antes do edital.");
+      if(e.eleicao.data <= e.inscFim.data) alerta("eleicao", "A eleição deve ocorrer depois do fim das inscrições.");
+      if(!ccDate.util(e.eleicao.data)) alerta("eleicao", "A eleição deve ser em dia normal de trabalho.");
+      if(T){
+        if(ccDate.diff(e.edital.data, T) < 60) alerta("edital", "Convocação com menos de 60 dias do término do mandato em curso.");
+        if(ccDate.diff(e.eleicao.data, T) < 30) alerta("eleicao", "Eleição com menos de 30 dias do término do mandato em curso.");
+        if(e.posse.data !== ccDate.proxUtil(ccDate.add(T,1))) alerta("posse", "A posse deve ser no primeiro dia útil após o término do mandato anterior.");
+        if(e.treinamento.data >= e.posse.data) alerta("treinamento", "O treinamento deve ser concluído antes da posse.");
+      } else {
+        if(ccDate.diff(e.posse.data, e.treinamento.data) > 30) alerta("treinamento", "Primeiro mandato: treinamento em até 30 dias após a posse.");
+      }
+      if(e.posse.data <= e.resultado.data) alerta("posse", "A posse deve ser depois da apuração.");
+
+      // 12 reuniões ordinárias mensais (5.6.1) dentro do mandato
+      const primeiraDef = ccDate.proxUtil(ccDate.add(posse,7));
+      const reunioes = [];
+      for(let r=0; r<12; r++){
+        const key = `reuniao${r+1}`;
+        const def = ccDate.proxUtil(ccDate.addMonths(primeiraDef, r));
+        const v = aj[key] || def;
+        reunioes.push({ key, def, data:v, editado: !!aj[key] && aj[key] !== def, fora: v < posse || v > fim });
+      }
+      const ano = Number(posse.slice(0,4));
+      out.push({ idx, primeiro, gestao:`${ano}/${ano+1}`, inicio:posse, fim, etapas, reunioes, fimAnterior:T });
+      fimAnterior = fim;
+    }
+    return out;
+  }
+
+  function renderGeralCipaCalendario(root){
+    const cfg = ensureCipaCalendarioConfig();
+    const podeEditar = checkPermission("Master");
+    const nCadastro = cipaEmpregadosCadastro();
+    const nEmp = cfg.numEmpregados != null && cfg.numEmpregados !== "" ? Number(cfg.numEmpregados) : nCadastro;
+    const dim = dimensionarCipaNR05(Number(cfg.grauRisco), nEmp);
+    const sugestaoFim = cipaSugestaoFimMandato();
+    const mandatos = calcularCalendarioCipa(cfg);
+    const dis = podeEditar ? "" : "disabled";
+    const fmtW = d => d ? `${fmtDate(d)} · ${ccDate.semana(d)}` : "—";
+
+    const quadro = `
+      <div class="cc-quadro"><table>
+        <thead><tr><th>GR</th><th>Empregados →</th>${NR05_FAIXA_LABEL.map(f=>`<th>${f}</th>`).join("")}</tr></thead>
+        <tbody>${[1,2,3,4].map(g => ["e","s"].map((t,ti) => `
+          <tr class="${g===Number(cfg.grauRisco)?'gr-on':''}">
+            ${ti===0?`<td rowspan="2">${g}</td>`:''}<td>${t==="e"?"Efetivos":"Suplentes"}</td>
+            ${NR05_QUADRO_I[g][t].map((v,fi)=>`<td class="${g===Number(cfg.grauRisco)&&dim&&fi===dim.faixa?'sel':''}">${v==null?'—':v}</td>`).join("")}
+          </tr>`).join("")).join("")}
+        </tbody>
+      </table></div>`;
+
+    const cardMandato = m => {
+      const el = (state.cipaElections || []).find(x => x.gestao === m.gestao);
+      const urnaLivre = !el || el.urnaStatus === "Fechada";
+      return `
+      <section class="cc-mandato" data-mandato="${m.idx}">
+        <div class="cc-mandato-head">
+          <div class="cipa-el-badge">${cipaPicto("calendar",24)}</div>
+          <div class="ttl"><b>Gestão ${m.gestao}</b> · ${m.idx+1}º mandato ${m.primeiro ? "(primeiro mandato)" : ""}
+            <div>Mandato de ${fmtDate(m.inicio)} a ${fmtDate(m.fim)}${m.fimAnterior ? ` · mandato anterior termina em ${fmtDate(m.fimAnterior)}` : ""}</div>
+          </div>
+          ${podeEditar ? `<div class="cc-mandato-actions">
+            <button type="button" class="btn" data-cc-gerar="${m.idx}" ${urnaLivre?'':'disabled title="A urna desta gestão já foi aberta"'}>${cipaPicto("process",16)} ${el ? "Atualizar Processo Eleitoral" : "Gerar Processo Eleitoral"}</button>
+            <button type="button" class="btn secondary" data-cc-reunioes="${m.idx}">${cipaPicto("calendar",16)} Lançar reuniões no calendário</button>
+            ${Object.keys(cfg.ajustes[m.idx]||{}).length ? `<button type="button" class="btn secondary" data-cc-reset-all="${m.idx}">↺ Recalcular tudo</button>` : ""}
+          </div>` : ""}
+        </div>
+        <ol class="cc-steps">
+          ${m.etapas.map(e => `
+            <li class="cc-step ${e.chave?'key':''}">
+              <div class="cc-step-ic">${cipaPicto(e.picto,19)}</div>
+              <div class="cc-step-txt"><b>${e.lbl}</b><div class="r">NR-05 ${e.ref}</div>${e.alerta?`<div class="w">⚠️ ${e.alerta}</div>`:""}</div>
+              <div class="cc-date">
+                <input type="date" value="${e.data}" data-cc-date="${m.idx}|${e.key}" ${dis} aria-label="${e.lbl}">
+                <div class="meta"><span>${ccDate.semana(e.data)}</span>${e.editado ? `<span><span class="cc-tag edit">ajustada</span> ${podeEditar?`<button type="button" class="cc-reset" data-cc-reset="${m.idx}|${e.key}">↺ automática (${fmtDate(e.def)})</button>`:''}</span>` : `<span class="cc-tag">automática</span>`}</div>
+              </div>
+            </li>`).join("")}
+        </ol>
+        <div class="cc-reunioes">
+          <h4>${cipaPicto("calendar",16)} Reuniões ordinárias mensais <span class="panel-note">NR-05 5.6.1 — calendário preestabelecido</span></h4>
+          <div class="cc-reunioes-grid">
+            ${m.reunioes.map((r,i) => `<div class="${r.editado?'edit':''}">
+              <label><span>${i+1}ª reunião</span><span>${ccDate.semana(r.data)}${r.editado&&podeEditar?` · <button type="button" class="cc-reset" data-cc-reset="${m.idx}|${r.key}">↺</button>`:''}</span></label>
+              <input type="date" value="${r.data}" data-cc-date="${m.idx}|${r.key}" ${dis}>
+              ${r.fora?`<div class="cc-hint" style="color:var(--red)">Fora do mandato</div>`:''}
+            </div>`).join("")}
+          </div>
+        </div>
+      </section>`;
+    };
+
+    root.innerHTML = `
+      <div class="page-head">
+        <div class="cipa-head-left">
+          <div class="cipa-head-picto">${cipaPicto("calendar",26)}</div>
+          <div>
+            <h2>Calendário da CIPA · NR-05</h2>
+            <div class="sub">Processo eleitoral, mandato, treinamento e reuniões calculados pela NR-05. Todas as datas podem ser ajustadas.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cc-grid2">
+        <div class="panel">
+          <div class="panel-head"><h3>${cipaPicto("process",18)} Base do calendário</h3></div>
+          <div class="cc-body">
+            <div class="cc-radio">
+              <label class="${cfg.tipoBase==='primeiro'?'on':''}"><input type="radio" name="cc-base" value="primeiro" ${cfg.tipoBase==='primeiro'?'checked':''} ${dis}><span><b>Primeiro mandato</b><small>Não existe CIPA. Informe só a data do edital.</small></span></label>
+              <label class="${cfg.tipoBase==='vigente'?'on':''}"><input type="radio" name="cc-base" value="vigente" ${cfg.tipoBase==='vigente'?'checked':''} ${dis}><span><b>CIPA já constituída</b><small>Calcula a partir do término do mandato em curso.</small></span></label>
+            </div>
+            ${cfg.tipoBase === "primeiro" ? `
+              <div class="field"><label>Data do edital de convocação</label><input type="date" id="cc-edital" value="${cfg.dataEdital||''}" ${dis}>
+                <div class="cc-hint">A partir desta data o sistema calcula inscrições (15 dias corridos), divulgação, eleição, posse, treinamento em até 30 dias após a posse, término do mandato (1 ano) e os mandatos seguintes.</div></div>
+            ` : `
+              <div class="field"><label>Término do mandato em curso</label><input type="date" id="cc-fim-atual" value="${cfg.fimMandatoAtual||''}" ${dis}>
+                ${sugestaoFim && sugestaoFim !== cfg.fimMandatoAtual ? `<div class="cc-hint">Pelo último processo eleitoral cadastrado, o mandato termina em <b>${fmtDate(sugestaoFim)}</b>. ${podeEditar?`<button type="button" class="cc-reset" id="cc-usar-sugestao">Usar esta data</button>`:''}</div>` : `<div class="cc-hint">Convocação até 60 dias antes, eleição até 30 dias antes e posse no primeiro dia útil após o término.</div>`}
+              </div>
+            `}
+            <div class="field"><label>Mandatos exibidos</label>
+              <select id="cc-qtd" ${dis}>${[1,2,3,4,5].map(n=>`<option value="${n}" ${Number(cfg.qtdMandatos)===n?'selected':''}>${n} mandato(s)</option>`).join("")}</select></div>
+            <div class="cc-hint">Feriados nacionais e fins de semana são evitados automaticamente. Feriados locais não entram no cálculo: ajuste a data se precisar.</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head"><h3>${cipaPicto("users",18)} Dimensionamento · Quadro I da NR-05</h3></div>
+          <div class="cc-body">
+            <div class="field-row">
+              <div class="field"><label>Grau de risco do estabelecimento (NR-04)</label>
+                <select id="cc-grau" ${dis}>${[1,2,3,4].map(g=>`<option value="${g}" ${Number(cfg.grauRisco)===g?'selected':''}>Grau de risco ${g}</option>`).join("")}</select></div>
+              <div class="field"><label>Nº de empregados no estabelecimento</label>
+                <input type="number" min="0" id="cc-emp" value="${nEmp}" ${dis}>
+                <div class="cc-hint">Cadastro atual: <b>${nCadastro}</b> funcionário(s). ${cfg.numEmpregados!=null&&cfg.numEmpregados!==""&&podeEditar?`<button type="button" class="cc-reset" id="cc-emp-auto">Usar a contagem do cadastro</button>`:''}</div></div>
+            </div>
+            ${dim && dim.constitui ? `
+              <div class="cc-dim-result">
+                <div class="cc-dim-box hl"><div class="n">${dim.efetivos}</div><div class="t">Titulares eleitos<br>(empregados)</div></div>
+                <div class="cc-dim-box hl"><div class="n">${dim.suplentes}</div><div class="t">Suplentes eleitos<br>(empregados)</div></div>
+                <div class="cc-dim-box"><div class="n">${(dim.efetivos+dim.suplentes)*2}</div><div class="t">Total da comissão<br>(paritária)</div></div>
+              </div>
+              <div class="cc-alert ok">A organização designa o mesmo número: <b>${dim.efetivos} titular(es)</b> e <b>${dim.suplentes} suplente(s)</b> (5.4.1 e 5.4.3). Candidatos: vagas de ${dim.efetivos} titular(es) + ${dim.suplentes} suplente(s); os demais votados ficam na ata em ordem decrescente (5.5.8). Treinamento: <b>${dim.carga} h</b>${dim.presencial?`, sendo no mínimo ${dim.presencial} h presenciais`:" (pode ser a distância)"} (5.7.4).</div>
+            ` : `
+              <div class="cc-alert">Com ${nEmp} empregado(s) e grau de risco ${cfg.grauRisco}, o estabelecimento <b>não se enquadra no Quadro I</b>. A organização nomeia um <b>representante da NR-05</b>, formalizado anualmente (5.4.13 e 5.4.14), com treinamento de ${NR05_CARGA[cfg.grauRisco]} h. Se for atendido por SESMT, este assume as atribuições da CIPA (5.4.13.1).</div>
+            `}
+            ${quadro}
+          </div>
+        </div>
+      </div>
+
+      ${mandatos.length ? mandatos.map(cardMandato).join("") : `<div class="panel"><div class="empty">${cfg.tipoBase==="primeiro" ? "Informe a data do edital para calcular o calendário." : "Informe o término do mandato em curso para calcular o calendário."}</div></div>`}
+    `;
+
+    if(!podeEditar) return;
+    const salvar = async () => { await saveState(); renderGeralCipaCalendario(root); };
+    root.querySelectorAll('input[name="cc-base"]').forEach(r => r.addEventListener("change", () => { cfg.tipoBase = r.value; cfg.ajustes = {}; if(r.value==="vigente" && !cfg.fimMandatoAtual && sugestaoFim) cfg.fimMandatoAtual = sugestaoFim; salvar(); }));
+    root.querySelector("#cc-edital")?.addEventListener("change", ev => { cfg.dataEdital = ev.target.value; cfg.ajustes = {}; salvar(); });
+    root.querySelector("#cc-fim-atual")?.addEventListener("change", ev => { cfg.fimMandatoAtual = ev.target.value; cfg.ajustes = {}; salvar(); });
+    root.querySelector("#cc-usar-sugestao")?.addEventListener("click", () => { cfg.fimMandatoAtual = sugestaoFim; cfg.ajustes = {}; salvar(); });
+    root.querySelector("#cc-qtd")?.addEventListener("change", ev => { cfg.qtdMandatos = Number(ev.target.value); salvar(); });
+    root.querySelector("#cc-grau")?.addEventListener("change", ev => { cfg.grauRisco = Number(ev.target.value); salvar(); });
+    root.querySelector("#cc-emp")?.addEventListener("change", ev => { cfg.numEmpregados = ev.target.value === "" ? null : Number(ev.target.value); salvar(); });
+    root.querySelector("#cc-emp-auto")?.addEventListener("click", () => { cfg.numEmpregados = null; salvar(); });
+    root.querySelectorAll("[data-cc-date]").forEach(inp => inp.addEventListener("change", () => {
+      const [idx, key] = inp.dataset.ccDate.split("|");
+      if(!inp.value) return;
+      cfg.ajustes[idx] = cfg.ajustes[idx] || {};
+      cfg.ajustes[idx][key] = inp.value;
+      // Ajustar uma data de um mandato recalcula os mandatos seguintes.
+      Object.keys(cfg.ajustes).forEach(k => { if(Number(k) > Number(idx) && ["posse","fimMandato"].includes(key)) delete cfg.ajustes[k]; });
+      salvar();
+    }));
+    root.querySelectorAll("[data-cc-reset]").forEach(b => b.addEventListener("click", () => {
+      const [idx, key] = b.dataset.ccReset.split("|");
+      if(cfg.ajustes[idx]) delete cfg.ajustes[idx][key];
+      salvar();
+    }));
+    root.querySelectorAll("[data-cc-reset-all]").forEach(b => b.addEventListener("click", () => {
+      if(!confirm("Descartar os ajustes manuais deste mandato e recalcular pelas regras da NR-05?")) return;
+      delete cfg.ajustes[b.dataset.ccResetAll]; salvar();
+    }));
+    root.querySelectorAll("[data-cc-gerar]").forEach(b => b.addEventListener("click", () => gerarProcessoEleitoralDoCalendario(mandatos[Number(b.dataset.ccGerar)], dim, root)));
+    root.querySelectorAll("[data-cc-reunioes]").forEach(b => b.addEventListener("click", async () => {
+      const m = mandatos[Number(b.dataset.ccReunioes)];
+      if(!Array.isArray(state.cipaMeetingCalendar)) state.cipaMeetingCalendar = [];
+      const existentes = state.cipaMeetingCalendar.filter(r => r.gestao === m.gestao && r.tipo === "Ordinária").length;
+      if(existentes && !confirm(`A gestão ${m.gestao} já tem ${existentes} reunião(ões) ordinária(s) no calendário. Substituir pelas 12 datas deste calendário?`)) return;
+      state.cipaMeetingCalendar = state.cipaMeetingCalendar.filter(r => !(r.gestao === m.gestao && r.tipo === "Ordinária"));
+      Array.from(new Set(m.reunioes.map(r => r.data))).sort().forEach((data,i) => state.cipaMeetingCalendar.push({
+        id: uid("cipacal"), gestao: m.gestao, data, tipo: "Ordinária", titulo: `${i+1}ª Reunião Ordinária`,
+        observacoes: i===0 ? "Primeira reunião da gestão (Calendário NR-05)" : ""
+      }));
+      const ok = await saveState();
+      if(ok) alert(`✅ 12 reuniões ordinárias da gestão ${m.gestao} lançadas no Calendário de Reuniões da CIPA.`);
+      renderGeralCipaCalendario(root);
+    }));
+  }
+
+  // Cria (ou atualiza, se a urna ainda estiver fechada) o Processo Eleitoral
+  // da gestão com as datas e o dimensionamento do calendário.
+  async function gerarProcessoEleitoralDoCalendario(m, dim, root){
+    if(!m) return;
+    const d = Object.fromEntries(m.etapas.map(e => [e.key, e.data]));
+    const vagasT = dim && dim.constitui ? dim.efetivos : 1;
+    const vagasS = dim && dim.constitui ? dim.suplentes : 0;
+    const datas = { dataEdital:d.edital, dataInscricaoInicio:d.inscInicio, dataInscricaoFim:d.inscFim, dataEleicao:d.eleicao, dataPosse:d.posse, dataFimMandato:d.fimMandato, dataTreinamento:d.treinamento };
+    let el = (state.cipaElections || []).find(x => x.gestao === m.gestao);
+    if(el){
+      if(el.urnaStatus && el.urnaStatus !== "Fechada"){ alert("A urna desta gestão já foi aberta; as datas não podem mais ser alteradas por aqui."); return; }
+      if(!confirm(`Atualizar as datas e as vagas (${vagasT} titular(es) · ${vagasS} suplente(s)) do Processo Eleitoral da gestão ${m.gestao}?`)) return;
+      Object.assign(el, datas, { vagasTitulares:vagasT, vagasSuplentes:vagasS });
+    } else {
+      if(!confirm(`Gerar o Processo Eleitoral da gestão ${m.gestao} com ${vagasT} titular(es) e ${vagasS} suplente(s)?`)) return;
+      el = { id:uid("cipael"), gestao:m.gestao, ...datas, status:"Planejada", vagasTitulares:vagasT, vagasSuplentes:vagasS,
+        observacoes:"Gerado pelo Calendário CIPA (NR-05).", totalInscritos:0, totalVotantes:0, candidatos:[], votantes:[], urnaStatus:"Fechada", votosBrancos:0 };
+      state.cipaElections.push(el);
+    }
+    const ok = await saveState();
+    if(ok) alert(`✅ Processo Eleitoral da gestão ${m.gestao} salvo. Ele já aparece em CIPA › Processo Eleitoral.`);
+    renderGeralCipaCalendario(root);
   }
 
   function renderCipaDash(root){
@@ -10407,20 +11193,29 @@ function renderPcmsoDash(root){
   }
 
   function openCipaElectionModal(){
+    // Sugere as datas e as vagas do Calendário CIPA (NR-05), quando configurado.
+    const cfgCal = ensureCipaCalendarioConfig();
+    const sugM = calcularCalendarioCipa(cfgCal).find(m => !(state.cipaElections||[]).some(e => e.gestao === m.gestao));
+    const sug = sugM ? Object.fromEntries(sugM.etapas.map(e => [e.key, e.data])) : null;
+    const nEmpCal = cfgCal.numEmpregados != null && cfgCal.numEmpregados !== "" ? Number(cfgCal.numEmpregados) : cipaEmpregadosCadastro();
+    const dimCal = dimensionarCipaNR05(Number(cfgCal.grauRisco), nEmpCal);
+    const hojeIso = new Date().toISOString().slice(0,10);
+    const v = (k, fallback) => sug ? sug[k] : fallback;
     openModal(`
       <h3>Novo Processo Eleitoral CIPA</h3>
+      ${sug ? `<div class="empty" style="text-align:left; padding:10px 14px; font-size:12px; margin-bottom:12px;">📆 Datas e vagas sugeridas pelo <strong>Calendário CIPA (NR-05)</strong> do Cadastro Geral. Você pode alterá-las.</div>` : ''}
       <form id="cipa-eleicao-form">
-        <div class="field"><label>Gestão (Ex: 2026/2027)</label><input required name="gestao" placeholder="Ex: 2026/2027"></div>
+        <div class="field"><label>Gestão (Ex: 2026/2027)</label><input required name="gestao" placeholder="Ex: 2026/2027" value="${sugM ? sugM.gestao : ''}"></div>
         <div class="field-row">
-          <div class="field"><label>Data do Edital</label><input type="date" required name="dataEdital" value="${new Date().toISOString().slice(0,10)}"></div>
-          <div class="field"><label>Data da Eleição</label><input type="date" required name="dataEleicao" value="${addDays(new Date().toISOString().slice(0,10), 30)}"></div>
+          <div class="field"><label>Data do Edital</label><input type="date" required name="dataEdital" value="${v('edital', hojeIso)}"></div>
+          <div class="field"><label>Data da Eleição</label><input type="date" required name="dataEleicao" value="${v('eleicao', addDays(hojeIso, 30))}"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Início das Inscrições</label><input type="date" required name="dataInscricaoInicio" value="${addDays(new Date().toISOString().slice(0,10), 5)}"></div>
-          <div class="field"><label>Fim das Inscrições</label><input type="date" required name="dataInscricaoFim" value="${addDays(new Date().toISOString().slice(0,10), 15)}"></div>
+          <div class="field"><label>Início das Inscrições</label><input type="date" required name="dataInscricaoInicio" value="${v('inscInicio', addDays(hojeIso, 5))}"></div>
+          <div class="field"><label>Fim das Inscrições</label><input type="date" required name="dataInscricaoFim" value="${v('inscFim', addDays(hojeIso, 15))}"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Data da Posse</label><input type="date" required name="dataPosse" value="${addDays(new Date().toISOString().slice(0,10), 40)}"></div>
+          <div class="field"><label>Data da Posse</label><input type="date" required name="dataPosse" value="${v('posse', addDays(hojeIso, 40))}"></div>
           <div class="field">
             <label>Status</label>
             <select name="status">
@@ -10432,8 +11227,8 @@ function renderPcmsoDash(root){
           </div>
         </div>
         <div class="field-row">
-          <div class="field"><label>Vagas de Titulares</label><input type="number" name="vagasTitulares" value="3" min="1"></div>
-          <div class="field"><label>Vagas de Suplentes</label><input type="number" name="vagasSuplentes" value="3" min="0"></div>
+          <div class="field"><label>Vagas de Titulares</label><input type="number" name="vagasTitulares" value="${dimCal && dimCal.constitui ? dimCal.efetivos : 3}" min="1"></div>
+          <div class="field"><label>Vagas de Suplentes</label><input type="number" name="vagasSuplentes" value="${dimCal && dimCal.constitui ? dimCal.suplentes : 3}" min="0"></div>
         </div>
         <div class="field"><label>Observações</label><textarea name="observacoes" rows="2" placeholder="Ex: Impugnações, particularidades do pleito..."></textarea></div>
         <div class="empty" style="text-align:left; padding:10px 14px; font-size:12px;">
@@ -10456,36 +11251,6 @@ function renderPcmsoDash(root){
           candidatos: [], votantes: [], urnaStatus: "Fechada", votosBrancos: 0
         };
         state.cipaElections.push(novaEleicao);
-
-        // Ao cadastrar um processo eleitoral como "Planejada", cria automaticamente
-        // uma ação no Plano de Ação para cada etapa (Edital, Inscrições, Eleição e Posse),
-        // atribuindo o Presidente da CIPA vigente como responsável, e leva o usuário
-        // direto para a aba Plano de Ação.
-        if(novaEleicao.status === "Planejada"){
-          const presidente = activeCipaMembers().find(m => m.funcaoComissao === "Presidente");
-          const respId = presidente ? presidente.employeeId : "";
-          const semPresidenteObs = presidente ? "" : "Nenhum Presidente da CIPA cadastrado — defina um responsável manualmente.";
-          const etapas = [
-            { descricao: `Publicar edital do processo eleitoral CIPA — Gestão ${novaEleicao.gestao}`, prazo: novaEleicao.dataEdital },
-            { descricao: `Conduzir o período de inscrições de candidatos — Gestão ${novaEleicao.gestao}`, prazo: novaEleicao.dataInscricaoFim },
-            { descricao: `Realizar a eleição/votação da CIPA — Gestão ${novaEleicao.gestao}`, prazo: novaEleicao.dataEleicao },
-            { descricao: `Empossar a nova comissão da CIPA — Gestão ${novaEleicao.gestao}`, prazo: novaEleicao.dataPosse }
-          ];
-          etapas.forEach(etapa => {
-            if(!etapa.prazo) return;
-            state.cipaActions.push({
-              id: uid("cipaacao"),
-              descricao: etapa.descricao,
-              origem: "Processo Eleitoral CIPA",
-              eleicaoId: novaEleicao.id,
-              responsavelId: respId,
-              prazo: etapa.prazo,
-              status: "Pendente",
-              observacoes: semPresidenteObs
-            });
-          });
-          currentTab = "cipa-acoes";
-        }
 
         await saveState(); window.closeModal(); render();
       });
@@ -11712,6 +12477,7 @@ function renderPcmsoDash(root){
       else if(currentTab === "role-matrix") renderRoleMatrixList(main);
       else if(currentTab === "train-list") renderTrainList(main);
       else if(currentTab === "annual-plan") renderAnnualTrainingPlan(main);
+      else if(currentTab === "train-integracao") renderIntegracaoFuncionarios(main);
     } else if(currentModule === "ec"){
       if(currentTab === "ec-dash") renderEcDash(main);
       else if(currentTab === "ec-inventory") renderEcInventory(main);
@@ -11776,6 +12542,7 @@ function renderPcmsoDash(root){
       else if(currentTab === "employee-dossier") renderEmployeeDossier(main);
       else if(currentTab === "geral-setores") renderGeneralSectors(main);
       else if(currentTab === "geral-cargos") renderGeneralJobs(main);
+      else if(currentTab === "geral-cipa-calendario"){ renderGeralCipaCalendario(main); main.classList.add("cipa-scope"); }
     }
 
     attachMainListeners(main);
