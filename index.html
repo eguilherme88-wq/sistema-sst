@@ -926,6 +926,11 @@
 .fdsp-sync{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-top:10px;font-size:12px;color:var(--ink-dim)}
 .fdsp-sync button{all:unset;cursor:pointer;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);font-weight:600;color:var(--ink)}
 .fdsp-sync-err{color:var(--amber)}
+.fdsp-proj{margin-right:auto;font-size:11px;opacity:.75}
+.fds-server-banner{display:grid;grid-template-columns:1fr auto;gap:4px 14px;align-items:center;margin:0 0 14px;padding:12px 14px;border:1px solid var(--amber);border-left:4px solid var(--amber);border-radius:8px;background:#e08e3214}
+.fds-server-banner strong{font-size:13.5px}.fds-server-banner small{grid-column:1;color:var(--ink-dim);font-size:12px;line-height:1.4}
+.fds-server-banner .btn{grid-column:2;grid-row:1/span 2}
+@media(max-width:700px){.fds-server-banner{grid-template-columns:1fr}.fds-server-banner .btn{grid-column:1;grid-row:auto}}
 .fds-diag{padding:14px 18px}
 .fds-diag-list{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:8px}
 .fds-diag-list li{display:flex;gap:10px;align-items:flex-start;font-size:13px}
@@ -12668,7 +12673,12 @@ function renderPcmsoDash(root){
     if(target.pgrSync){ const r=fdsSyncPgr(target); msg=`PGR atualizado: ${r.added} risco(s) incluído(s), ${r.updated} atualizado(s)${r.removed?`, ${r.removed} removido(s)`:""}.`; }
     const ok=await saveState();
     closeModal(); render();
-    if(ok===false){ alert("⚠️ A FDS NÃO foi gravada no banco de dados, por isso ela não aparece no portal nem em outros aparelhos.\n\nMotivo: "+String(window.__lastSaveError?.message||window.__lastSaveError?.code||"conexão indisponível")+"\n\nUse o botão 🩺 Diagnosticar na aba Portal Público."); }
+    const chk=await fdsServerCheck(true);
+    if(ok!==false&&!window.__lastSaveError&&chk.ok&&!chk.ids.has(target.id)){
+      alert("⚠️ A FDS foi salva nesta tela, mas NÃO apareceu no banco do servidor.\n\nIsso acontece quando outra aba, computador ou celular com uma versão antiga do sistema grava por cima dos dados. Feche/recarregue todas as abas do sistema e publique esta versão do index.html no site. Depois use o aviso amarelo “Regravar agora”.");
+      return true;
+    }
+    if(ok===false||window.__lastSaveError){ alert("⚠️ A FDS NÃO foi gravada no banco de dados, por isso ela não aparece no portal nem em outros aparelhos.\n\nMotivo: "+String(window.__lastSaveError?.message||window.__lastSaveError?.code||"conexão indisponível")+"\n\nUse o botão 🩺 Diagnosticar na aba Portal Público."); }
     else fdsToast(`✅ FDS salva e publicada. ${msg}`);
     return true;
   }
@@ -12965,6 +12975,40 @@ function renderPcmsoDash(root){
     if(!fdsHommel(f)) out.push({lvl:"warn",txt:"Classificar pelo diagrama de Hommel (NFPA 704)"});
     return out;
   }
+  let fdsServerCache={at:0,ok:false,ids:new Set(),count:0,error:"",updatedAt:null};
+  async function fdsServerCheck(force=false){
+    if(!force&&Date.now()-fdsServerCache.at<20000) return fdsServerCache;
+    try{
+      const snap=await (window.firestoreGetFreshDoc||window.firestoreGetDoc)();
+      const d=snap?.exists?.()?JSON.parse(snap.data().json||"{}"):{};
+      const list=Array.isArray(d.fdsList)?d.fdsList:[];
+      fdsServerCache={at:Date.now(),ok:true,ids:new Set(list.map(f=>f.id)),count:list.length,published:list.filter(f=>f.publicarPortal!==false&&f.status!=="Inativo").length,error:"",updatedAt:snap?.data?.()?.updatedAt?.toDate?.()||null};
+    }catch(e){ fdsServerCache={at:Date.now(),ok:false,ids:new Set(),count:0,error:String(e?.code||e?.message||e),updatedAt:null}; }
+    return fdsServerCache;
+  }
+  function fdsProjectId(){ try{ return window.firebaseApp?.options?.projectId||"—"; }catch(e){ return "—"; } }
+  // Aviso no topo das telas do módulo quando há FDS que não estão no servidor.
+  async function fdsSyncBanner(root){
+    const chk=await fdsServerCheck();
+    if(!root.isConnected) return;
+    root.querySelector(".fds-server-banner")?.remove();
+    const local=(state.fdsList||[]),missing=chk.ok?local.filter(f=>!chk.ids.has(f.id)):[];
+    let html="";
+    if(!chk.ok) html=`<strong>⚠️ Não foi possível conferir o banco no servidor</strong><small>${empEsc(chk.error)}</small>`;
+    else if(missing.length) html=`<strong>⚠️ ${missing.length} FDS desta tela não estão gravadas no banco (${empEsc(fdsProjectId())})</strong><small>Por isso não aparecem no portal nem em outros aparelhos: ${empEsc(missing.map(f=>f.nomeComercial).join(", "))}. Provável causa: outra aba ou aparelho com versão antiga do sistema gravou por cima. Feche/recarregue as outras abas e clique em regravar.</small><button class="btn" data-fds-resave>💾 Regravar agora</button>`;
+    else { root.dataset.fdsServerOk=`${chk.count}`; return; }
+    const div=document.createElement("div"); div.className="fds-server-banner"; div.innerHTML=html;
+    root.querySelector(".page-head")?.after(div);
+    div.querySelector("[data-fds-resave]")?.addEventListener("click",async e=>{
+      e.target.disabled=true; e.target.textContent="Gravando…";
+      missing.forEach(f=>{ f.updatedAt=new Date().toISOString(); });
+      const ok=await saveState(); const c=await fdsServerCheck(true);
+      const still=(state.fdsList||[]).filter(f=>!c.ids.has(f.id));
+      if(ok===false||window.__lastSaveError||still.length) alert("Não foi possível gravar no banco.\n\nMotivo: "+String(window.__lastSaveError?.message||window.__lastSaveError?.code||c.error||"os dados foram sobrescritos novamente por outra sessão aberta"));
+      else fdsToast("✅ FDS regravadas no banco. O portal já pode exibi-las.");
+      render();
+    });
+  }
   function renderFdsDash(root){
     fdsEnsureState();
     const ativos=state.fdsList.filter(f=>f.status!=="Inativo");
@@ -13005,6 +13049,7 @@ function renderPcmsoDash(root){
       </div>`;
     root.querySelector("#fds-new")?.addEventListener("click",()=>openFdsModal());
     root.querySelector("#fds-quick")?.addEventListener("click",()=>openFdsQuickModal());
+    fdsSyncBanner(root);
   }
   function renderFdsList(root){
     fdsEnsureState(); ensureGeneralMasterData();
@@ -13050,6 +13095,7 @@ function renderPcmsoDash(root){
     root.querySelector("#fds-q").addEventListener("input",e=>{d.fdsQ=e.target.value;clearTimeout(t);t=setTimeout(()=>again("fds-q"),220);});
     [["#fds-f-setor","fdsSetor"],["#fds-f-picto","fdsPicto"],["#fds-f-verif","fdsVerif"],["#fds-f-conf","fdsConf"],["#fds-f-hommel","fdsHommel"],["#fds-f-status","fdsStatus"]].forEach(([sel,key])=>root.querySelector(sel).addEventListener("change",e=>{d[key]=e.target.value;again();}));
     root.querySelector("#fds-clear").addEventListener("click",()=>{["fdsQ","fdsSetor","fdsPicto","fdsVerif","fdsConf","fdsHommel"].forEach(k=>delete d[k]);d.fdsStatus="Ativo";again();});
+    fdsSyncBanner(root);
   }
   function renderFdsSectors(root){
     fdsEnsureState(); ensureGeneralMasterData();
@@ -13143,6 +13189,7 @@ function renderPcmsoDash(root){
     root.querySelectorAll("[data-fds-copy]").forEach(b=>b.addEventListener("click",async()=>{try{await navigator.clipboard.writeText(b.dataset.fdsCopy);fdsToast("📋 Link copiado.");}catch(e){prompt("Copie o link:",b.dataset.fdsCopy);}}));
     root.querySelectorAll("[data-fds-poster]").forEach(b=>b.addEventListener("click",()=>fdsPrintPoster(b.dataset.fdsPoster)));
     root.querySelectorAll("[data-fds-print-sector]").forEach(b=>b.addEventListener("click",()=>fdsPrintSector(b.dataset.fdsPrintSector)));
+    fdsSyncBanner(root);
   }
 
   // ----------------------- Portal público (#fds-portal) -----------------------
@@ -13160,7 +13207,7 @@ function renderPcmsoDash(root){
         add(!missing.length,`FDS gravadas no servidor: ${sl.length} · nesta tela: ${(state.fdsList||[]).length}`,missing.length?`Não estão no servidor: ${missing.map(f=>f.nomeComercial).join(", ")}. Use “Regravar no banco”. Se voltarem a sumir, outra aba, computador ou celular com uma versão antiga do sistema está sobrescrevendo os dados: feche/recarregue todas as abas abertas e publique esta versão do index.html no site.`:"");
         add(pubSrv.length>0,`Produtos visíveis no portal (lidos do servidor): ${pubSrv.length}`,pubSrv.length?"":"Abra a FDS, marque “Publicar no portal” e deixe a situação como Ativo.");
         add(kb<900,`Tamanho do banco principal: ${kb.toFixed(0)} KB de 1.024 KB permitidos`,kb>=900?"Próximo do limite do Firestore: reduza imagens embutidas (logos, fotos, assinaturas).":"");
-        const upd=snap.data().updatedAt?.toDate?.(); if(upd) add(true,`Última gravação no servidor: ${upd.toLocaleString("pt-BR")}`);
+        const upd=snap.data().updatedAt?.toDate?.(); add(true,`Banco (projeto Firebase): ${fdsProjectId()}`,`Última gravação no servidor: ${upd?upd.toLocaleString("pt-BR"):"—"}. O rodapé do portal mostra o projeto e quantas FDS ele leu; os dois precisam coincidir.`);
       }
     }catch(e){ add(false,"Não foi possível ler o banco no servidor",String(e?.code||e?.message||e)); }
     try{
@@ -13217,7 +13264,7 @@ function renderPcmsoDash(root){
     const paint=()=>{
       const q=empPlain(fdsPortalQuery);
       const rows=list.filter(f=>(!setor||(f.setores||[]).includes(setor))&&(!picto||(f.pictogramas||[]).includes(picto))&&(!q||empPlain([f.nomeComercial,f.fabricante,f.codigoInterno,f.numeroOnu,...(f.componentes||[]).flatMap(c=>[c.nome,c.cas])].join(" ")).includes(q)));
-      app.querySelector("#fdsp-results").innerHTML=`<div class="fdsp-count">${rows.length} produto${rows.length===1?"":"s"}${setor?` em ${empEsc(setor)}`:""}</div>${rows.length?`<ul class="fdsp-list">${rows.map(f=>`<li><button type="button" data-fdsp-open="${f.id}"><span class="fdsp-card-pictos">${(f.pictogramas||[]).filter(c=>FDS_GHS_SYMBOL[c]).map(c=>fdsGhsSvg(c,34)).join("")||'<span class="fdsp-nopicto">sem pictograma</span>'}${fdsHommelSvg(f,34)}</span><span class="fdsp-card-txt"><strong>${empEsc(f.nomeComercial)}</strong><small>${empEsc(f.fabricante||"")}${(f.setores||[]).length?` · ${empEsc(f.setores.join(", "))}`:""}</small></span>${fdsSignalBadge(f)}<span class="fdsp-chev">›</span></button></li>`).join("")}</ul>`:`<div class="fdsp-empty">${list.length?"Nenhum produto encontrado com esses filtros.":fdsPortalFetching&&!fdsPortalFetchedAt?"Carregando as FDS…":state.fdsList.length?`Há ${state.fdsList.length} produto(s) cadastrado(s), mas nenhum está publicado. No sistema, abra a FDS e marque “Publicar no portal” (o produto também precisa estar Ativo).`:"Nenhuma FDS publicada ainda."}</div>`}<div class="fdsp-sync">${fdsPortalError?`<span class="fdsp-sync-err">⚠️ Sem conexão com o banco (${empEsc(fdsPortalError)}). Mostrando a última leitura.</span>`:fdsPortalFetchedAt?`Atualizado às ${new Date(fdsPortalFetchedAt).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}`:""} <button type="button" id="fdsp-refresh">🔄 Atualizar</button></div>`;
+      app.querySelector("#fdsp-results").innerHTML=`<div class="fdsp-count">${rows.length} produto${rows.length===1?"":"s"}${setor?` em ${empEsc(setor)}`:""}</div>${rows.length?`<ul class="fdsp-list">${rows.map(f=>`<li><button type="button" data-fdsp-open="${f.id}"><span class="fdsp-card-pictos">${(f.pictogramas||[]).filter(c=>FDS_GHS_SYMBOL[c]).map(c=>fdsGhsSvg(c,34)).join("")||'<span class="fdsp-nopicto">sem pictograma</span>'}${fdsHommelSvg(f,34)}</span><span class="fdsp-card-txt"><strong>${empEsc(f.nomeComercial)}</strong><small>${empEsc(f.fabricante||"")}${(f.setores||[]).length?` · ${empEsc(f.setores.join(", "))}`:""}</small></span>${fdsSignalBadge(f)}<span class="fdsp-chev">›</span></button></li>`).join("")}</ul>`:`<div class="fdsp-empty">${list.length?"Nenhum produto encontrado com esses filtros.":fdsPortalFetching&&!fdsPortalFetchedAt?"Carregando as FDS…":state.fdsList.length?`Há ${state.fdsList.length} produto(s) cadastrado(s), mas nenhum está publicado. No sistema, abra a FDS e marque “Publicar no portal” (o produto também precisa estar Ativo).`:"Nenhuma FDS publicada ainda."}</div>`}<div class="fdsp-sync"><span class="fdsp-proj" title="Informação técnica para conferência">Banco ${empEsc(fdsProjectId())} · ${state.fdsList.length} ficha(s) lida(s)</span>${fdsPortalError?`<span class="fdsp-sync-err">⚠️ Sem conexão com o banco (${empEsc(fdsPortalError)}). Mostrando a última leitura.</span>`:fdsPortalFetchedAt?`Atualizado às ${new Date(fdsPortalFetchedAt).toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}`:""} <button type="button" id="fdsp-refresh">🔄 Atualizar</button></div>`;
       app.querySelector("#fdsp-refresh")?.addEventListener("click",()=>{ app.querySelector("#fdsp-refresh").textContent="Atualizando…"; fdsPortalRefresh(); });
     };
     paint();
