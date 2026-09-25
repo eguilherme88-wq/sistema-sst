@@ -999,6 +999,52 @@
 .fds-q-more div{margin-top:6px;line-height:1.45}
 @media(max-width:760px){.fds-hommel-block{grid-template-columns:1fr}.fds-hommel-grid{grid-template-columns:1fr 1fr}.fds-q-row3{grid-template-columns:1fr}.fds-q-pictos{grid-template-columns:repeat(5,minmax(0,1fr))}.fds-import{grid-template-columns:1fr}.fds-detail-head{grid-template-columns:1fr!important}.fds-detail-hommel{max-width:none;flex-direction:row;flex-wrap:wrap}}
 </style>
+<style>
+/* ===== CABEÇALHO EM DUAS LINHAS: logo + usuário / módulos ===== */
+header.top-header.sst-header{display:block;padding:0;position:sticky;top:0;z-index:30;box-shadow:0 1px 0 var(--line)}
+.sst-header-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 24px 8px}
+.sst-header .brand{justify-content:flex-start}
+.sst-header .brand-logo{height:54px;max-height:54px;max-width:220px}
+.sst-header .header-user-section{display:flex;align-items:center;gap:10px;margin-left:auto}
+.sst-header .user-badge{display:flex;align-items:center;gap:10px;padding:5px 12px 5px 5px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);min-height:0}
+.sst-header .user-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--yellow);color:var(--yellow-ink);font-weight:800;font-size:12px;letter-spacing:.02em;flex:0 0 32px}
+.sst-header .user-badge strong{display:block;font-size:12.5px;line-height:1.2;white-space:nowrap}
+.sst-header .user-role{display:block;font-size:10.5px;color:var(--ink-dim);line-height:1.2}
+.sst-about-btn{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:5px;padding:7px 11px;border-radius:999px;font-size:12px;font-weight:600;color:var(--ink-dim);border:1px solid transparent}
+.sst-about-btn:hover,.sst-about-btn:focus-visible{color:var(--ink);border-color:var(--line);background:var(--panel-2)}
+.sst-header .sst-logout{border-radius:999px;padding:8px 14px}
+.sst-header .sst-logout:hover{color:var(--red);border-color:var(--red);background:#d6553d12}
+.sst-header .header-modules{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:4px;overflow-x:auto;overflow-y:hidden;padding:0 24px;border-top:1px solid var(--line);background:var(--panel);scrollbar-width:thin;flex:none}
+.sst-header .header-modules .header-btn{background:transparent;border:0;border-radius:0;border-bottom:3px solid transparent;padding:10px 11px 8px;font-size:12.5px;color:var(--ink-dim);min-height:0}
+.sst-header .header-modules .header-btn:hover{color:var(--ink);background:var(--panel-2)}
+.sst-header .header-modules .header-btn.active{background:transparent;color:var(--ink);border-bottom-color:var(--yellow)}
+.sst-header .header-modules .header-btn.disabled{opacity:.35}
+.sst-header .header-btn:focus-visible,.sst-about-btn:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+.sst-footer{display:flex;justify-content:center;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 20px calc(12px + env(safe-area-inset-bottom,0px));border-top:1px solid var(--line);background:var(--panel);font-size:11.5px;color:var(--ink-dim)}
+.sst-footer button{all:unset;cursor:pointer;text-decoration:underline;color:var(--ink-dim)}
+.sst-footer button:hover{color:var(--ink)}
+.login-copy{margin-top:16px;text-align:center;font-size:11px;color:var(--ink-dim);line-height:1.5}
+.modal.sst-about-modal{max-width:640px}
+.sst-about-head{display:flex;align-items:center;gap:16px;padding-bottom:14px;margin-bottom:12px;border-bottom:1px solid var(--line)}
+.sst-about-head img{height:56px;max-width:200px;object-fit:contain}
+.sst-about-head h3{margin:0 0 2px!important}
+.sst-about h4{margin:16px 0 6px;font-size:13.5px}
+.sst-about p{font-size:13px;line-height:1.55;margin:0 0 8px}
+.sst-about-mods{columns:2;column-gap:18px;margin:0;padding-left:18px;font-size:12.5px;line-height:1.7}
+@media(max-width:900px){
+  .sst-header-top{padding:8px 14px 6px}
+  .sst-header .header-modules{padding:0 8px;scrollbar-width:none;flex-wrap:nowrap;justify-content:flex-start}
+  .sst-header .header-modules::-webkit-scrollbar{display:none}
+  .sst-header .header-modules .header-btn{min-height:44px}
+}
+@media(max-width:600px){
+  .sst-header .brand-logo{height:40px;max-width:140px}
+  .sst-about-btn span,.sst-header .user-badge div{display:none}
+  .sst-header .user-badge{padding:4px}
+  .sst-header .sst-logout{padding:8px 11px}
+  .sst-about-mods{columns:1}
+}
+</style>
 <script type="module">
   // Configuração do Firebase (projeto: modulo-sst)
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.2/firebase-app.js";
@@ -2140,6 +2186,7 @@ body.cipa-terminal-mode .urna-confirm{
             <div id="login-error" style="color:var(--red); font-size:12px; margin-bottom:12px; display:none;"></div>
             <button type="submit" class="btn" style="width:100%; justify-content:center;">Entrar</button>
           </form>
+          <div class="login-copy">© ${new Date().getFullYear()} Partner · Sistema Modular de SST<br>Todos os direitos reservados.</div>
         </div>
       </div>
     `;
@@ -10822,6 +10869,27 @@ function renderPcmsoDash(root){
   function openNr15DetailsV2(id){const a=(state.nr15Assessments||[]).find(x=>x.id===id);if(!a)return;const g=nr15Ghe(a),h=nr15PgrHazard(a),an=nr15Agent(a.agentCode),p=nr15Professional(a),people=g?pgrGheEmployees(g):[];openModal(`<h2>📄 ${empEsc(a.reportNumber||'Registro de avaliação NR-15')}</h2><div class="panel" style="padding:16px"><h3>${empEsc(g?.codigo||'—')} · ${empEsc(g?.nome||'GHE não localizado')}</h3><p><strong>Setor:</strong> ${empEsc(g?.setor||'—')} &nbsp; <strong>Trabalhadores vinculados:</strong> ${people.length}</p><p><strong>Agente do PGR:</strong> ${empEsc(h?.nome||'—')} (${empEsc(h?.tipo||'—')})</p><p><strong>Enquadramento:</strong> Anexo ${empEsc(an.code)} · ${empEsc(an.name)}</p><p><strong>Avaliação:</strong> ${empEsc(a.evaluationType||an.method)} · ${empEsc(a.measurementValue||'sem valor informado')} ${empEsc(a.unit||'')} ${a.toleranceLimit?`· LT ${empEsc(a.toleranceLimit)} ${empEsc(a.unit||'')}`:''}</p><p><strong>Resultado:</strong> ${empEsc(a.result||'—')} · <strong>Grau:</strong> ${empEsc(a.degree||'—')}</p><p><strong>Data:</strong> ${fmtDate(a.evaluationDate)} · <strong>Revisão:</strong> ${fmtDate(a.nextReview)} · <strong>Situação:</strong> ${empEsc(a.status||'—')}</p><p><strong>Responsável técnico:</strong> ${empEsc(p?.nome||a.professional||'—')} · ${empEsc(p?`${p.conselho} ${p.registro}`:a.professionalRegistration||'—')}</p><hr><p><strong>Medidas coletivas/administrativas:</strong><br>${empEsc(a.collectiveControls||'—')}</p><p><strong>EPIs/controles individuais:</strong><br>${empEsc(a.epiControls||'—')}</p><p><strong>Observações e conclusão:</strong><br>${empEsc(a.observations||'—')}</p></div><div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Fechar</button><button class="btn" onclick="window.print()">🖨️ Imprimir</button></div>`)}
   openNr15Details=openNr15DetailsV2;
 
+  const SYSTEM_VERSION = "2026.09";
+  function openAboutSystem(){
+    const ano=new Date().getFullYear();
+    const mods=ALL_MODULES.map(m=>`<li>${empEsc(m.name)}</li>`).join("");
+    openModal(`
+      <div class="sst-about">
+        <div class="sst-about-head">
+          <img src="${FIXED_SYSTEM_LOGO}" alt="Partner · sistema modular de SST">
+          <div><h3>Sistema Modular de SST</h3><div class="muted">Versão ${SYSTEM_VERSION}</div></div>
+        </div>
+        <p>Plataforma para gestão de Segurança e Saúde no Trabalho que reúne, em um só lugar, os programas e controles exigidos pelas Normas Regulamentadoras, com dados centralizados, rastreabilidade das ações e acesso por perfil de usuário.</p>
+        <h4>Módulos</h4>
+        <ul class="sst-about-mods">${mods}</ul>
+        <h4>Direitos reservados</h4>
+        <p>© ${ano} Partner. Todos os direitos reservados. Este software, seu código-fonte, layout, marcas, logotipos e conteúdos são protegidos pela Lei nº 9.609/1998 (Lei do Software) e pela Lei nº 9.610/1998 (Direitos Autorais). É proibida a reprodução, cópia, distribuição, engenharia reversa ou modificação, total ou parcial, sem autorização prévia e por escrito do titular.</p>
+        <h4>Dados e privacidade</h4>
+        <p>Os dados pessoais registrados no sistema são tratados exclusivamente para o cumprimento de obrigações legais de SST, em conformidade com a Lei nº 13.709/2018 (LGPD). O acesso é restrito a usuários autorizados, e cada usuário é responsável pelo sigilo da própria senha.</p>
+        <p class="muted" style="font-size:11.5px">As informações e os modelos do sistema apoiam a gestão, mas não substituem a análise do profissional legalmente habilitado nem a leitura das normas vigentes.</p>
+        <div class="modal-actions"><button class="btn" type="button" onclick="closeModal()">Fechar</button></div>
+      </div>`,ov=>ov.querySelector(".modal").classList.add("sst-about-modal"));
+  }
   function renderShell(){
     if(!currentUser) {
       stopCipaPoll();
@@ -10863,12 +10931,25 @@ function renderPcmsoDash(root){
     }
 
     app.innerHTML = `
-      <header class="top-header">
-        <div class="brand">
-          <img class="brand-logo" src="${FIXED_SYSTEM_LOGO}" alt="Partner · sistema modular de SST">
+      <header class="top-header sst-header">
+        <div class="sst-header-top">
+          <div class="brand">
+            <img class="brand-logo" src="${FIXED_SYSTEM_LOGO}" alt="Partner · sistema modular de SST">
+          </div>
+          <div class="header-user-section">
+            <button class="sst-about-btn" id="btn-about" title="Sobre o sistema e direitos reservados">ℹ️ <span>Sobre</span></button>
+            <div class="user-badge">
+              <span class="user-avatar" aria-hidden="true">${empEsc(String(currentUser.name||"?").trim().split(/\s+/).slice(0,2).map(p=>p[0]).join("").toUpperCase())}</span>
+              <div>
+                <strong>${empEsc(currentUser.name)}</strong>
+                <span class="user-role">${empEsc(roleLabel(currentUser.role))}</span>
+              </div>
+            </div>
+            <button class="header-btn sst-logout" id="btn-logout" title="Sair do Sistema">🚪 Sair</button>
+          </div>
         </div>
 
-        <div class="header-modules">
+        <div class="header-modules" role="navigation" aria-label="Módulos do sistema">
           ${ALL_MODULES.map(m => {
             const isAllowed = availableMods.includes(m.id);
             return `<button class="header-btn ${currentModule===m.id?'active':''} ${!isAllowed?'disabled':''}" data-mod="${m.id}">${m.name}</button>`;
@@ -10877,17 +10958,6 @@ function renderPcmsoDash(root){
           ${currentUser.role === 'Administrador' || currentUser.role === 'Master' ? `
             <button class="header-btn ${currentModule==='admin-perms'?'active':''}" data-mod="admin-perms">⚙️ Administração</button>
           ` : ''}
-        </div>
-
-        <div class="header-user-section">
-          <div class="user-badge">
-            <span>👤</span>
-            <div>
-              <strong>${currentUser.name}</strong><br>
-              <span style="font-size:10px; color:var(--ink-dim);">${currentUser.role}</span>
-            </div>
-          </div>
-          <button class="header-btn" id="btn-logout" title="Sair do Sistema">Sair</button>
         </div>
       </header>
 
@@ -10900,9 +10970,16 @@ function renderPcmsoDash(root){
         </div>
         <main id="main-content"></main>
       </div>
+      <footer class="sst-footer">
+        <span>© ${new Date().getFullYear()} Partner · Sistema Modular de SST · Todos os direitos reservados.</span>
+        <button type="button" id="btn-about-footer">Sobre o sistema</button>
+      </footer>
     `;
 
     document.getElementById("btn-logout").addEventListener("click", handleLogout);
+    document.getElementById("btn-about").addEventListener("click", openAboutSystem);
+    document.getElementById("btn-about-footer").addEventListener("click", openAboutSystem);
+    app.querySelector(".header-modules .header-btn.active")?.scrollIntoView({block:"nearest",inline:"nearest"});
     document.getElementById("btn-theme-toggle").addEventListener("click", toggleTheme);
 
     app.querySelectorAll("[data-mod]").forEach(btn => {
