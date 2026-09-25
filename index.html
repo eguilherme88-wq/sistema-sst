@@ -1112,6 +1112,26 @@ header.top-header.sst-header{display:block;padding:0;position:sticky;top:0;z-ind
     tx.set(window.firestoreStateRef, { json: JSON.stringify(fresh), updatedAt: serverTimestamp() });
     return fresh.cipaElections;
   });
+  // Grava o link individual de votação (token) direto no banco, em transação,
+  // antes de a mensagem ser enviada ao eleitor.
+  window.firestoreCipaSaveLink = async (electionId, employeeId, token, envio) => runTransaction(db, async tx => {
+    const snap = await tx.get(window.firestoreStateRef);
+    if(!snap.exists() || typeof snap.data()?.json !== "string") throw new Error("Banco de dados principal indisponível.");
+    const fresh = JSON.parse(snap.data().json);
+    const el = (fresh.cipaElections || []).find(e => e.id === electionId);
+    if(!el) throw new Error("Eleição não encontrada no banco de dados.");
+    if(el.urnaStatus !== "Aberta") throw new Error("A urna não está aberta.");
+    if(!el.linksVotacao || typeof el.linksVotacao !== "object" || Array.isArray(el.linksVotacao)) el.linksVotacao = {};
+    const link = (el.linksVotacao[employeeId] && typeof el.linksVotacao[employeeId] === "object") ? el.linksVotacao[employeeId] : (el.linksVotacao[employeeId] = {});
+    if(!Array.isArray(link.tokens)) link.tokens = [];
+    if(!Array.isArray(link.envios)) link.envios = [];
+    if(!link.tokens.includes(token)) link.tokens.push(token);
+    if(envio) link.envios.push(envio);
+    const json = JSON.stringify(fresh);
+    if(new Blob([json]).size > 1040000) throw new Error("O banco principal passou do limite de 1 MB do Firestore. Remova fotos/arquivos grandes.");
+    tx.set(window.firestoreStateRef, { json, updatedAt: serverTimestamp() });
+    return fresh.cipaElections;
+  });
   // ---- FDS: PDFs guardados fora do documento principal, divididos em partes
   // (cada documento do Firestore aceita até 1 MB). Coleção: sst_fds_files.
   const FDS_FILES = "sst_fds_files";
@@ -7558,18 +7578,54 @@ function renderPcmsoDash(root){
     if(canal === "whatsapp" && !emp.telefone){ alert(`Cadastre o telefone de ${emp.nome} em Geral/Pessoas antes de enviar por WhatsApp.`); return; }
     if(canal === "email" && !emp.email){ alert(`Cadastre o e-mail de ${emp.nome} em Geral/Pessoas antes de enviar por e-mail.`); return; }
 
-    const link = ensureCipaVoteLink(el, eleitorId);
-    link.envios.push({ canal, em: new Date().toISOString(), por: currentUser?.name || "" });
-    const url = buildVotoCipaLink(link.tokens[0], canal);
+    // Reaproveita o token já existente do eleitor (o mesmo link continua valendo).
+    const token = (el.linksVotacao[eleitorId]?.tokens || [])[0] || gerarTokenVotoCipa();
+    const envio = { canal, em: new Date().toISOString(), por: currentUser?.name || "" };
+
+    // A janela do WhatsApp é aberta já no clique (evita bloqueio de pop-up),
+    // mas só recebe o link DEPOIS que o token estiver gravado no banco.
+    const janela = canal === "whatsapp" ? window.open("", "_blank") : null;
+    try{ janela?.document.write('<p style="font-family:Arial,sans-serif;padding:24px;color:#333">⏳ Registrando o link de votação no sistema...</p>'); }catch(e){}
+
+    const res = await salvarLinkVotacaoCipa(el.id, eleitorId, token, envio);
+    if(!res.ok){
+      try{ janela?.close(); }catch(e){}
+      alert("❌ O link NÃO foi enviado porque não pôde ser registrado no banco de dados.\n\n" + res.erro + "\n\nVerifique a conexão e tente novamente.");
+      renderContent();
+      return;
+    }
+
+    const url = buildVotoCipaLink(token, canal);
     const mensagem = `Olá, ${emp.nome}! A urna da eleição da CIPA (gestão ${el.gestao}) está aberta.\n\nEste é o seu link pessoal e intransferível para votar com sigilo:\n${url}\n\nAo confirmar o voto você receberá um CÓDIGO DE AUTENTICAÇÃO, que também ficará registrado no relatório da comissão eleitoral. O link deixa de funcionar depois do voto.`;
-
-    // Abre o canal antes de gravar, aproveitando o clique (evita bloqueio de pop-up).
-    if(canal === "whatsapp") window.open(cipaWhatsappUrl(emp.telefone, mensagem), "_blank");
-    else cipaAbrirMailto(emp.email, "Votação Eletrônica da CIPA — Gestão " + el.gestao, mensagem);
-
-    const ok = await saveState();
-    if(!ok) alert("Atenção: não foi possível gravar o link no banco de dados. O link enviado só funcionará depois que o sistema salvar. Verifique a conexão e reenvie.");
+    if(canal === "whatsapp"){
+      const wa = cipaWhatsappUrl(emp.telefone, mensagem);
+      if(janela && !janela.closed) janela.location.href = wa;
+      else window.open(wa, "_blank");
+    } else {
+      cipaAbrirMailto(emp.email, "Votação Eletrônica da CIPA — Gestão " + el.gestao, mensagem);
+    }
     renderContent();
+  }
+
+  // Grava o token no banco (transação) e só devolve ok quando ele estiver salvo.
+  async function salvarLinkVotacaoCipa(electionId, employeeId, token, envio){
+    if(window.firestoreCipaSaveLink){
+      try{
+        const elections = await window.firestoreCipaSaveLink(electionId, employeeId, token, envio);
+        if(Array.isArray(elections)){ state.cipaElections = elections; state.cipaElections.forEach(ensureElectionVotingFields); }
+        return { ok:true };
+      }catch(err){
+        console.error("Falha ao registrar link de votação CIPA:", err);
+        return { ok:false, erro: err?.message || String(err) };
+      }
+    }
+    const el = state.cipaElections.find(e => e.id === electionId);
+    if(!el) return { ok:false, erro:"Eleição não encontrada." };
+    const link = ensureCipaVoteLink(el, employeeId);
+    if(!link.tokens.includes(token)) link.tokens.push(token);
+    link.envios.push(envio);
+    const ok = await saveState();
+    return ok ? { ok:true } : { ok:false, erro: window.__lastSaveError?.message || "Falha ao salvar." };
   }
 
   function cipaComprovanteTexto(el, nome, codigo, dataHora){
@@ -7578,7 +7634,20 @@ function renderPcmsoDash(root){
 
   // Tela pública de votação remota, aberta pelo link individual enviado por
   // WhatsApp/E-mail (?votarCipa=1&t=TOKEN&c=canal). Não exige login.
-  function renderRemoteVoteScreen(){
+  async function recarregarDadosVotacaoDoServidor(){
+    try{
+      const get = window.firestoreGetFreshDoc || window.firestoreGetDoc;
+      if(!get) return false;
+      const snap = await get();
+      if(!snap || !snap.exists || !snap.exists()) return false;
+      const fresh = JSON.parse(snap.data().json);
+      if(Array.isArray(fresh.cipaElections)){ state.cipaElections = fresh.cipaElections; state.cipaElections.forEach(ensureElectionVotingFields); }
+      if(Array.isArray(fresh.employees)) state.employees = fresh.employees;
+      return true;
+    }catch(e){ console.warn("Falha ao consultar o servidor:", e); return false; }
+  }
+
+  async function renderRemoteVoteScreen(tentativa = 0){
     stopCipaPoll();
     const app = document.getElementById("app");
     const params = new URLSearchParams(window.location.search);
@@ -7604,6 +7673,13 @@ function renderPcmsoDash(root){
       return false;
     });
     const emp = found && state.employees.find(e => e.id === found.employeeId);
+    if((!found || !emp) && tentativa < 4){
+      // O link pode ter acabado de ser gerado: consulta o servidor de novo.
+      aviso("🗳️ Votação Eletrônica da CIPA", `<div class="empty" style="padding:30px 10px;">⏳ Verificando seu link de votação...</div>`);
+      if(tentativa > 0) await new Promise(r => setTimeout(r, 2000));
+      await recarregarDadosVotacaoDoServidor();
+      return renderRemoteVoteScreen(tentativa + 1);
+    }
     if(!found || !emp){
       aviso("🗳️ Votação Eletrônica da CIPA", `<div class="empty" style="padding:30px 10px;">⚠️ Link inválido ou eleição não encontrada. Solicite um novo link à comissão eleitoral.</div>`);
       return;
