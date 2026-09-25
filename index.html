@@ -1099,6 +1099,19 @@ header.top-header.sst-header{display:block;padding:0;position:sticky;top:0;z-ind
     tx.set(window.firestoreStateRef,{json:JSON.stringify(fresh),updatedAt:serverTimestamp()});
     return fresh.pets;
   });
+  // ---- CIPA: cada voto é gravado em transação sobre o estado mais recente do
+  // banco. Assim dois eleitores votando ao mesmo tempo (celular, e-mail,
+  // terminal) nunca sobrescrevem o voto um do outro, e o mesmo eleitor não
+  // consegue votar duas vezes. A regra de validação fica em window.cipaAplicarVoto.
+  window.firestoreCipaVote = async (voto) => runTransaction(db, async tx => {
+    const snap = await tx.get(window.firestoreStateRef);
+    if(!snap.exists() || typeof snap.data()?.json !== "string") throw new Error("Banco de dados principal indisponível.");
+    if(typeof window.cipaAplicarVoto !== "function") throw new Error("Módulo de votação indisponível. Recarregue a página.");
+    const fresh = JSON.parse(snap.data().json);
+    window.cipaAplicarVoto(fresh, voto);
+    tx.set(window.firestoreStateRef, { json: JSON.stringify(fresh), updatedAt: serverTimestamp() });
+    return fresh.cipaElections;
+  });
   // ---- FDS: PDFs guardados fora do documento principal, divididos em partes
   // (cada documento do Firestore aceita até 1 MB). Coleção: sst_fds_files.
   const FDS_FILES = "sst_fds_files";
@@ -1179,8 +1192,16 @@ header.top-header.sst-header{display:block;padding:0;position:sticky;top:0;z-ind
       const snap = await tx.get(window.firestoreStateRef);
       let out = jsonString;
       if(snap.exists() && typeof snap.data()?.json === "string"){
-        try{ out = JSON.stringify(window.fdsMergeStates(JSON.parse(snap.data().json), JSON.parse(jsonString))); }
-        catch(mergeError){ console.warn("Mescla das FDS não aplicada:", mergeError); }
+        let freshObj = null, merged = null;
+        try{ freshObj = JSON.parse(snap.data().json); merged = window.fdsMergeStates(freshObj, JSON.parse(jsonString)); }
+        catch(mergeError){ console.warn("Mescla das FDS não aplicada:", mergeError); merged = null; }
+        // Votos da CIPA registrados em outro dispositivo não podem ser apagados
+        // por uma sessão aberta com dados antigos.
+        try{
+          if(!merged) merged = JSON.parse(jsonString);
+          if(freshObj && typeof window.cipaMergeVotes === "function") merged = window.cipaMergeVotes(freshObj, merged);
+        }catch(cipaMergeError){ console.warn("Mescla dos votos da CIPA não aplicada:", cipaMergeError); }
+        if(merged) out = JSON.stringify(merged);
       }
       const bytes = new Blob([out]).size;
       if(bytes > 1040000){
@@ -2672,6 +2693,24 @@ body.cipa-terminal-mode .urna-confirm{
     if(el.vagasSuplentes == null) el.vagasSuplentes = 3;
     if(el.votosBrancos == null) el.votosBrancos = 0;
     if(el.votoPendente === undefined) el.votoPendente = null;
+    if(!el.linksVotacao || typeof el.linksVotacao !== "object" || Array.isArray(el.linksVotacao)) el.linksVotacao = {};
+    // Compatibilidade: a versão anterior do link remoto (?cipaVote=) guardava os
+    // votos em "votos"/"votantesQueVotaram", fora da apuração. Incorpora-os.
+    if(el.votos && typeof el.votos === "object" && !Array.isArray(el.votos)){
+      Object.entries(el.votos).forEach(([ref,n]) => {
+        const c = el.candidatos.find(x => x.employeeId === ref || x.id === ref);
+        if(c) c.votos = (Number(c.votos)||0) + (Number(n)||0);
+      });
+      delete el.votos;
+    }
+    if(Array.isArray(el.votantesQueVotaram)){
+      el.votantesQueVotaram.forEach(id => {
+        if(el.votantes.some(v => v.employeeId === id)) return;
+        const auth = (typeof state !== "undefined" && Array.isArray(state.cipaVoteAuth) ? state.cipaVoteAuth : []).find(r => r.electionId === el.id && r.employeeId === id);
+        el.votantes.push({ employeeId:id, dataHora: auth?.createdAt || "", codigo: auth?.code || "", canal:"legado" });
+      });
+      delete el.votantesQueVotaram;
+    }
     return el;
   }
 
@@ -2705,8 +2744,10 @@ body.cipa-terminal-mode .urna-confirm{
             const data = snap.data();
             if(data && data.json){
               const fresh = JSON.parse(data.json);
-              if(fresh.cipaElections) state.cipaElections = fresh.cipaElections;
-              (state.cipaElections || []).forEach(ensureElectionVotingFields);
+              if(!fresh.cipaElections) return;
+              fresh.cipaElections.forEach(ensureElectionVotingFields);
+              if(JSON.stringify(fresh.cipaElections) === JSON.stringify(state.cipaElections)) return;
+              state.cipaElections = fresh.cipaElections;
               onChange();
             }
           }
@@ -2715,8 +2756,10 @@ body.cipa-terminal-mode .urna-confirm{
         const res = await window.storage.get(STORAGE_KEY, true);
         if(res && res.value){
           const fresh = JSON.parse(res.value);
-          if(fresh.cipaElections) state.cipaElections = fresh.cipaElections;
-          (state.cipaElections || []).forEach(ensureElectionVotingFields);
+          if(!fresh.cipaElections) return;
+          fresh.cipaElections.forEach(ensureElectionVotingFields);
+          if(JSON.stringify(fresh.cipaElections) === JSON.stringify(state.cipaElections)) return;
+          state.cipaElections = fresh.cipaElections;
           onChange();
         }
       }catch(e){}
@@ -2745,6 +2788,7 @@ body.cipa-terminal-mode .urna-confirm{
             if(Array.isArray(m.pgrRisks)) state.pgrRisks = m.pgrRisks;
             if(Array.isArray(m.pgrHazards)) state.pgrHazards = m.pgrHazards;
             if(m.fdsPortalPublicUrl) state.fdsPortalPublicUrl = m.fdsPortalPublicUrl;
+            if(Array.isArray(m.cipaElections)){ state.cipaElections = m.cipaElections; state.cipaElections.forEach(ensureElectionVotingFields); }
           }catch(e){}
         }
       }
@@ -7212,7 +7256,7 @@ function renderPcmsoDash(root){
             ${checkPermission("Master") && urnaFechada && dentroInscricao ? `<button class="btn" id="btn-new-cipa-candidato">+ Cadastrar Candidato</button>` : ''}
             ${checkPermission("Master") && urnaFechada ? `<button class="btn secondary" id="btn-cipa-abrir-urna">🔓 Abrir Urna</button>` : ''}
             ${checkPermission("Master") && urnaAberta ? `<button class="btn secondary" id="btn-cipa-encerrar-urna">🔒 Encerrar Urna</button>` : ''}
-            ${checkPermission("Master") && urnaAberta && !el.votoPendente && employeesWithoutUser().some(e=>!jaVotaramIds.has(e.id)) ? `<button class="btn" id="btn-cipa-liberar-terminal">🖥️ Liberar Urna no Terminal</button>` : ''}
+            ${checkPermission("Master") && urnaAberta && !el.votoPendente && elegiveis.length>0 ? `<button class="btn" id="btn-cipa-liberar-terminal">🖥️ Liberar Urna no Terminal</button>` : ''}
             ${checkPermission("Master") ? `<button class="btn secondary" id="btn-cipa-relatorio">📋 Relatório de Votantes</button>` : ''}
             ${urnaEncerrada ? `<button class="btn secondary" id="btn-cipa-boletim">📄 Boletim de Urna (PDF)</button>` : ''}
           </div>
@@ -7229,8 +7273,8 @@ function renderPcmsoDash(root){
         ${urnaAberta ? `
           <div class="empty" style="padding:22px 20px;">
             🗳️ Votação em andamento. Por sigilo do voto, o resultado individual dos candidatos só fica visível após o encerramento da urna.
-            <br>Faltam <strong>${elegiveis.length}</strong> de ${totalEleitores} eleitor(es) votar.
-            <br><span style="font-size:11px;">Funcionários com usuário próprio votam automaticamente ao acessar o sistema. Funcionários sem usuário votam pelo Terminal de Votação CIPA, após a urna ser liberada por um Administrador/Master.</span>
+            <br>Já votaram <strong>${votantes.length}</strong> · faltam <strong>${elegiveis.length}</strong> de ${totalEleitores} eleitor(es).
+            <br><span style="font-size:11px;">Cada eleitor vota por um destes canais: <strong>link individual por WhatsApp</strong>, <strong>link individual por e-mail</strong> ou <strong>urna liberada no Terminal de Votação CIPA</strong> (login <code>voto_cipa</code>). Todo voto emite um <strong>código de autenticação</strong>, mostrado ao eleitor e registrado no Relatório de Votantes.</span>
           </div>
           ${el.votoPendente ? `
             <div class="urna-pending-box">
@@ -7240,24 +7284,32 @@ function renderPcmsoDash(root){
           ` : ''}
           ${checkPermission("Master") && elegiveis.length>0 ? `
             <div style="padding:14px 18px; border-top:1px solid var(--line);">
-              <h4 style="margin:0 0 8px; font-size:13px;">📲 Enviar Link de Votação Remota</h4>
+              <h4 style="margin:0 0 8px; font-size:13px;">🗳️ Eleitores pendentes · escolha o canal de votação</h4>
               <div style="font-size:11px; color:var(--ink-dim); margin-bottom:10px;">
-                Envie o link do terminal de votação para o eleitor votar pelo próprio celular ou computador, via WhatsApp ou e-mail. Ao votar, ele recebe automaticamente a confirmação pelo mesmo canal.
+                O link é individual e só vale para o eleitor a quem foi enviado; depois do voto ele deixa de funcionar. Pelo Terminal, a cédula é liberada para um eleitor por vez.
               </div>
+              <div style="overflow-x:auto;">
               <table>
-                <thead><tr><th>Eleitor</th><th>Contato</th><th>Enviar Link</th></tr></thead>
+                <thead><tr><th>Eleitor</th><th>Contato</th><th>Links enviados</th><th>Votar por</th></tr></thead>
                 <tbody>
-                  ${elegiveis.map(e=>`
+                  ${elegiveis.slice().sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR')).map(e=>{
+                    const envios = cipaEnviosResumo(el, e.id);
+                    const noTerminal = el.votoPendente && el.votoPendente.employeeId===e.id;
+                    return `
                     <tr>
-                      <td>${e.nome}</td>
-                      <td style="font-size:11px;">${e.telefone?`📱 ${e.telefone}<br>`:''}${e.email?`✉️ ${e.email}`:''}${!e.telefone && !e.email ? '<span style="color:var(--red);">Sem telefone/e-mail cadastrado</span>':''}</td>
-                      <td class="row-actions">
-                        <button class="action-link" data-send-voto-link="${e.id}" data-canal="whatsapp" ${!e.telefone?'disabled':''}>📲 WhatsApp</button>
-                        <button class="action-link" data-send-voto-link="${e.id}" data-canal="email" ${!e.email?'disabled':''}>✉️ E-mail</button>
+                      <td>${empEsc(e.nome)}${e.matricula?`<br><span style="font-size:11px;color:var(--ink-dim);">Matr. ${empEsc(e.matricula)}</span>`:''}</td>
+                      <td style="font-size:11px;">${e.telefone?`📱 ${empEsc(e.telefone)}<br>`:''}${e.email?`✉️ ${empEsc(e.email)}`:''}${!e.telefone && !e.email ? '<span style="color:var(--red);">Sem telefone/e-mail cadastrado</span>':''}</td>
+                      <td style="font-size:11px;">${envios || '<span style="color:var(--ink-dim);">—</span>'}</td>
+                      <td class="row-actions" style="white-space:nowrap;">
+                        <button class="action-link" data-send-voto-link="${e.id}" data-canal="whatsapp" ${!e.telefone?'disabled title="Cadastre o telefone em Geral/Pessoas"':''}>📲 WhatsApp</button>
+                        <button class="action-link" data-send-voto-link="${e.id}" data-canal="email" ${!e.email?'disabled title="Cadastre o e-mail em Geral/Pessoas"':''}>✉️ E-mail</button>
+                        ${noTerminal ? `<span style="font-size:11px;color:var(--amber);font-weight:700;">🖥️ No terminal</span>` : `<button class="action-link" data-liberar-terminal-emp="${e.id}" ${el.votoPendente?'disabled title="Aguarde o voto em andamento no terminal"':''}>🖥️ Terminal</button>`}
                       </td>
-                    </tr>`).join("")}
+                    </tr>`;
+                  }).join("")}
                 </tbody>
               </table>
+              </div>
             </div>
           ` : ''}
         ` : `
@@ -7299,108 +7351,275 @@ function renderPcmsoDash(root){
       </div>
     `;
 
-    if(urnaAberta && el.votoPendente && checkPermission("Master")){
-      startCipaPoll(() => { if(currentTab === "cipa-votacao") renderContent(); });
+    if(urnaAberta && checkPermission("Master")){
+      // Atualiza a tela sozinha quando alguém vota por link ou pelo terminal.
+      startCipaPoll(() => { if(currentTab === "cipa-votacao" && !document.querySelector(".modal-overlay")) renderContent(); });
     } else {
       stopCipaPoll();
     }
   }
 
-  // Registra um voto (candidato ou branco) de forma sigilosa na eleição informada.
-  // Retorna o código de comprovante gerado, ou null se o funcionário já tiver votado.
-  function registerCipaVote(electionId, employeeId, candidate){
-    const el = state.cipaElections.find(e => e.id === electionId);
-    if(!el) return null;
+  // =====================================================================
+  // VOTAÇÃO ELETRÔNICA CIPA · canais oficiais: WhatsApp, E-mail e Terminal
+  // ---------------------------------------------------------------------
+  // • Cada eleitor recebe um link individual (token aleatório) por WhatsApp ou
+  //   e-mail, ou tem a urna liberada para ele no Terminal de Votação CIPA.
+  // • Todo voto emite um código de autenticação aleatório (CIPA-XXXX-XXXX-XXXX),
+  //   exibido ao eleitor e gravado em el.votantes — a mesma lista que alimenta
+  //   o Relatório de Votantes. O código NÃO guarda o candidato escolhido.
+  // • O voto é gravado em transação no Firestore (window.firestoreCipaVote).
+  // =====================================================================
+  const CIPA_CANAIS = { whatsapp:"WhatsApp", email:"E-mail", terminal:"Terminal de Votação", legado:"Versão anterior" };
+  function cipaCanalLabel(c){ return CIPA_CANAIS[c] || "—"; }
+
+  function cipaRandomBytes(n){
+    const bytes = new Uint8Array(n);
+    if(window.crypto?.getRandomValues) window.crypto.getRandomValues(bytes);
+    else for(let i=0;i<n;i++) bytes[i] = Math.floor(Math.random()*256);
+    return bytes;
+  }
+  // 32 símbolos sem caracteres ambíguos (0/O, 1/I): fácil de ditar e conferir.
+  function gerarCodigoAutenticacaoVoto(){
+    const alfabeto = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    const s = Array.from(cipaRandomBytes(12), b => alfabeto[b % 32]).join("");
+    return `CIPA-${s.slice(0,4)}-${s.slice(4,8)}-${s.slice(8,12)}`;
+  }
+  function gerarTokenVotoCipa(){
+    return Array.from(cipaRandomBytes(18), b => b.toString(16).padStart(2,"0")).join("");
+  }
+
+  // Regra única de registro do voto. Usada dentro da transação do Firestore
+  // (sobre o estado mais recente do banco) e também no modo local.
+  function cipaAplicarVoto(st, voto){
+    const el = (st.cipaElections || []).find(e => e.id === voto.electionId);
+    if(!el) throw new Error("Eleição não encontrada.");
     ensureElectionVotingFields(el);
-    if(el.votantes.some(v => v.employeeId === employeeId)) return null;
+    if(el.urnaStatus !== "Aberta") throw new Error("A urna eletrônica não está aberta no momento.");
+    if(el.votantes.some(v => v.employeeId === voto.employeeId)) throw new Error("Este eleitor já registrou o voto nesta eleição.");
+    if(voto.canal === "terminal"){
+      if(!el.votoPendente || el.votoPendente.employeeId !== voto.employeeId) throw new Error("A liberação da urna para este eleitor foi cancelada. Peça uma nova liberação à comissão eleitoral.");
+    } else if(voto.canal === "whatsapp" || voto.canal === "email"){
+      const link = el.linksVotacao[voto.employeeId];
+      if(!link || !Array.isArray(link.tokens) || !voto.token || !link.tokens.includes(voto.token)) throw new Error("Link de votação inválido. Solicite um novo link à comissão eleitoral.");
+      link.usadoEm = voto.dataHora;
+    } else {
+      throw new Error("Canal de votação não permitido.");
+    }
+    if(voto.candidateId){
+      const cand = el.candidatos.find(c => c.id === voto.candidateId);
+      if(!cand) throw new Error("Candidato não encontrado nesta eleição.");
+      cand.votos = (Number(cand.votos) || 0) + 1;
+    } else {
+      el.votosBrancos = (Number(el.votosBrancos) || 0) + 1;
+    }
+    el.votantes.push({ employeeId: voto.employeeId, dataHora: voto.dataHora, codigo: voto.codigo, canal: voto.canal });
+    if(el.votoPendente && el.votoPendente.employeeId === voto.employeeId){
+      el.votoPendente = null;
+      el.votoPendenteAtualizadoEm = voto.dataHora;
+    }
+    return el;
+  }
+  window.cipaAplicarVoto = cipaAplicarVoto;
 
-    if(candidate){ candidate.votos = (candidate.votos || 0) + 1; }
-    else { el.votosBrancos = (el.votosBrancos || 0) + 1; }
+  // Mescla chamada em todo salvamento: uma sessão com dados antigos não apaga
+  // votos, links ou liberações gravados por outro dispositivo.
+  function cipaMergeVotes(fresh, mine){
+    const freshById = new Map((fresh?.cipaElections || []).map(e => [e.id, e]));
+    const rank = { Fechada:0, Aberta:1, Encerrada:2 };
+    (mine?.cipaElections || []).forEach(m => {
+      const f = freshById.get(m.id);
+      if(!f) return;
+      const fv = Array.isArray(f.votantes) ? f.votantes : [];
+      const mv = Array.isArray(m.votantes) ? m.votantes : [];
+      const mineIds = new Set(mv.map(v => v.employeeId));
+      if(fv.some(v => !mineIds.has(v.employeeId))){
+        const votosBanco = new Map((f.candidatos || []).map(c => [c.id, Number(c.votos) || 0]));
+        (m.candidatos || []).forEach(c => { if(votosBanco.has(c.id)) c.votos = votosBanco.get(c.id); });
+        m.votosBrancos = Number(f.votosBrancos) || 0;
+        const freshIds = new Set(fv.map(v => v.employeeId));
+        m.votantes = [...fv, ...mv.filter(v => !freshIds.has(v.employeeId))];
+      }
+      if((rank[f.urnaStatus] || 0) > (rank[m.urnaStatus] || 0)){
+        m.urnaStatus = f.urnaStatus;
+        if(f.status) m.status = f.status;
+      }
+      // Links individuais: união de tokens e de envios.
+      const fl = (f.linksVotacao && typeof f.linksVotacao === "object") ? f.linksVotacao : {};
+      if(!m.linksVotacao || typeof m.linksVotacao !== "object") m.linksVotacao = {};
+      Object.entries(fl).forEach(([empId, link]) => {
+        if(!link || typeof link !== "object") return;
+        const ml = m.linksVotacao[empId];
+        if(!ml){ m.linksVotacao[empId] = link; return; }
+        ml.tokens = Array.from(new Set([...(ml.tokens || []), ...(link.tokens || [])]));
+        const chave = x => `${x.canal}|${x.em}`;
+        const envios = new Map([...(link.envios || []), ...(ml.envios || [])].map(x => [chave(x), x]));
+        ml.envios = [...envios.values()].sort((a,b) => String(a.em).localeCompare(String(b.em)));
+        if(!ml.usadoEm && link.usadoEm) ml.usadoEm = link.usadoEm;
+      });
+      // Liberação do terminal: vale a alteração mais recente.
+      if(String(f.votoPendenteAtualizadoEm || "") > String(m.votoPendenteAtualizadoEm || "")){
+        m.votoPendente = f.votoPendente || null;
+        m.votoPendenteAtualizadoEm = f.votoPendenteAtualizadoEm;
+      }
+      if(m.votoPendente && (m.votantes || []).some(v => v.employeeId === m.votoPendente.employeeId)) m.votoPendente = null;
+    });
+    return mine;
+  }
+  window.cipaMergeVotes = cipaMergeVotes;
 
-    const dataHora = new Date().toISOString();
-    const codigo = cipaVerificationCode(`${el.id}|${employeeId}|${dataHora}`);
-    el.votantes.push({ employeeId, dataHora, codigo });
-    return codigo;
+  // Registra o voto e devolve {ok, codigo, dataHora} ou {ok:false, erro}.
+  async function registrarVotoCipa({ electionId, employeeId, candidateId, canal, token }){
+    const voto = {
+      electionId, employeeId, candidateId: candidateId || null, canal, token: token || null,
+      codigo: gerarCodigoAutenticacaoVoto(), dataHora: new Date().toISOString()
+    };
+    if(window.firestoreCipaVote){
+      try{
+        const elections = await window.firestoreCipaVote(voto);
+        if(Array.isArray(elections)){ state.cipaElections = elections; state.cipaElections.forEach(ensureElectionVotingFields); }
+        return { ok:true, codigo:voto.codigo, dataHora:voto.dataHora };
+      }catch(err){
+        console.error("Falha ao registrar voto CIPA:", err);
+        return { ok:false, erro: err?.message || "Não foi possível registrar o voto. Verifique a conexão e tente novamente." };
+      }
+    }
+    // Modo local (sem Firestore disponível).
+    const backup = JSON.stringify(state.cipaElections);
+    try{
+      cipaAplicarVoto(state, voto);
+      const ok = await saveState();
+      if(!ok) throw new Error("Não foi possível gravar o voto. Verifique a conexão e tente novamente.");
+      return { ok:true, codigo:voto.codigo, dataHora:voto.dataHora };
+    }catch(err){
+      state.cipaElections = JSON.parse(backup);
+      return { ok:false, erro: err?.message || "Não foi possível registrar o voto." };
+    }
   }
 
-  // Monta o link do terminal de votação remota para um eleitor específico,
-  // usando a própria URL em que o sistema está publicado.
-  function buildVotoCipaLink(eleicaoId, eleitorId, canal){
+  // Lê do banco a situação mais recente das eleições (sem gravar nada).
+  async function atualizarEleicoesCipaDoBanco(){
+    try{
+      const get = window.firestoreGetFreshDoc || window.firestoreGetDoc;
+      if(!get) return false;
+      const snap = await get();
+      if(!snap || !snap.exists || !snap.exists()) return false;
+      const fresh = JSON.parse(snap.data().json);
+      if(Array.isArray(fresh.cipaElections)){
+        state.cipaElections = fresh.cipaElections;
+        state.cipaElections.forEach(ensureElectionVotingFields);
+        return true;
+      }
+    }catch(e){ console.warn("Não foi possível atualizar as eleições da CIPA:", e); }
+    return false;
+  }
+
+  function ensureCipaVoteLink(el, employeeId){
+    ensureElectionVotingFields(el);
+    let link = el.linksVotacao[employeeId];
+    if(!link || typeof link !== "object") link = el.linksVotacao[employeeId] = { tokens:[], envios:[] };
+    if(!Array.isArray(link.tokens)) link.tokens = [];
+    if(!Array.isArray(link.envios)) link.envios = [];
+    if(!link.tokens.length) link.tokens.push(gerarTokenVotoCipa());
+    return link;
+  }
+
+  // Resumo dos links já enviados a um eleitor (último envio por canal).
+  function cipaEnviosResumo(el, employeeId){
+    const envios = el?.linksVotacao?.[employeeId]?.envios || [];
+    const ultimo = {};
+    envios.forEach(x => { if(!ultimo[x.canal] || String(x.em) > String(ultimo[x.canal].em)) ultimo[x.canal] = x; });
+    return Object.values(ultimo).map(x => `${x.canal==="whatsapp"?"📲":"✉️"} ${cipaCanalLabel(x.canal)} · ${fmtDateTime(x.em)}`).join("<br>");
+  }
+
+  function buildVotoCipaLink(token, canal){
     const baseUrl = window.location.href.split("#")[0].split("?")[0];
-    return `${baseUrl}?votarCipa=1&eleicaoId=${encodeURIComponent(eleicaoId)}&eleitorId=${encodeURIComponent(eleitorId)}&canal=${encodeURIComponent(canal)}`;
+    return `${baseUrl}?votarCipa=1&t=${encodeURIComponent(token)}&c=${encodeURIComponent(canal)}`;
+  }
+  function cipaWhatsappUrl(telefone, mensagem){
+    const digits = String(telefone || "").replace(/\D/g,"");
+    const waPhone = digits.startsWith("55") ? digits : "55" + digits;
+    return `https://wa.me/${waPhone}?text=${encodeURIComponent(mensagem)}`;
+  }
+  function cipaAbrirMailto(email, assunto, corpo){
+    const a = document.createElement("a");
+    a.href = `mailto:${email}?subject=${encodeURIComponent(assunto)}&body=${encodeURIComponent(corpo)}`;
+    a.style.display = "none";
+    document.body.appendChild(a); a.click(); a.remove();
   }
 
-  // Abre o WhatsApp Web/App ou o cliente de e-mail já com a mensagem e o link
-  // de votação preenchidos, para o Administrador/Master apenas conferir e enviar.
-  function enviarLinkVotacaoCipa(eleicaoId, eleitorId, canal){
+  // Envia (ou reenvia) o link individual de votação por WhatsApp ou e-mail.
+  async function enviarLinkVotacaoCipa(eleicaoId, eleitorId, canal){
     const el = state.cipaElections.find(e=>e.id===eleicaoId);
     const emp = state.employees.find(e=>e.id===eleitorId);
     if(!el || !emp) return;
+    ensureElectionVotingFields(el);
+    if(el.urnaStatus !== "Aberta"){ alert("A urna precisa estar aberta para enviar links de votação."); return; }
+    if(el.votantes.some(v=>v.employeeId===eleitorId)){ alert(`${emp.nome} já votou nesta eleição.`); return; }
     if(canal === "whatsapp" && !emp.telefone){ alert(`Cadastre o telefone de ${emp.nome} em Geral/Pessoas antes de enviar por WhatsApp.`); return; }
     if(canal === "email" && !emp.email){ alert(`Cadastre o e-mail de ${emp.nome} em Geral/Pessoas antes de enviar por e-mail.`); return; }
 
-    const link = buildVotoCipaLink(eleicaoId, eleitorId, canal);
-    const mensagem = `Olá, ${emp.nome}! A urna da eleição da CIPA (gestão ${el.gestao}) está aberta. Acesse o link abaixo para registrar seu voto com total sigilo:\n\n${link}\n\nApós votar, você receberá a confirmação do seu voto por este mesmo canal.`;
+    const link = ensureCipaVoteLink(el, eleitorId);
+    link.envios.push({ canal, em: new Date().toISOString(), por: currentUser?.name || "" });
+    const url = buildVotoCipaLink(link.tokens[0], canal);
+    const mensagem = `Olá, ${emp.nome}! A urna da eleição da CIPA (gestão ${el.gestao}) está aberta.\n\nEste é o seu link pessoal e intransferível para votar com sigilo:\n${url}\n\nAo confirmar o voto você receberá um CÓDIGO DE AUTENTICAÇÃO, que também ficará registrado no relatório da comissão eleitoral. O link deixa de funcionar depois do voto.`;
 
-    if(canal === "whatsapp"){
-      const digits = emp.telefone.replace(/\D/g,"");
-      const waPhone = digits.startsWith("55") ? digits : "55"+digits;
-      window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(mensagem)}`, "_blank");
-    } else {
-      window.open(`mailto:${emp.email}?subject=${encodeURIComponent("Votação Eletrônica da CIPA — Gestão "+el.gestao)}&body=${encodeURIComponent(mensagem)}`, "_blank");
-    }
+    // Abre o canal antes de gravar, aproveitando o clique (evita bloqueio de pop-up).
+    if(canal === "whatsapp") window.open(cipaWhatsappUrl(emp.telefone, mensagem), "_blank");
+    else cipaAbrirMailto(emp.email, "Votação Eletrônica da CIPA — Gestão " + el.gestao, mensagem);
+
+    const ok = await saveState();
+    if(!ok) alert("Atenção: não foi possível gravar o link no banco de dados. O link enviado só funcionará depois que o sistema salvar. Verifique a conexão e reenvie.");
+    renderContent();
   }
 
-  // Após o voto remoto ser registrado, tenta abrir automaticamente o mesmo canal
-  // (WhatsApp ou e-mail) usado para enviar o link, já com a confirmação do voto
-  // preenchida, para que o eleitor receba/envie o comprovante para si mesmo.
-  function enviarConfirmacaoVotoCipa(emp, el, codigo, canal){
-    const mensagem = `Olá, ${emp.nome}! Confirmamos o recebimento do seu voto na eleição da CIPA (gestão ${el.gestao}), registrado com sigilo. Código de confirmação: ${codigo}. Obrigado por participar!`;
-    try{
-      if(canal === "whatsapp" && emp.telefone){
-        const digits = emp.telefone.replace(/\D/g,"");
-        const waPhone = digits.startsWith("55") ? digits : "55"+digits;
-        window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(mensagem)}`, "_blank");
-      } else if(canal === "email" && emp.email){
-        window.open(`mailto:${emp.email}?subject=${encodeURIComponent("Confirmação do seu voto — CIPA "+el.gestao)}&body=${encodeURIComponent(mensagem)}`, "_blank");
-      }
-    }catch(err){}
+  function cipaComprovanteTexto(el, nome, codigo, dataHora){
+    return `Comprovante de votação — CIPA gestão ${el?.gestao || "—"}\nEleitor: ${nome}\nData/hora: ${fmtDateTime(dataHora)}\nCódigo de autenticação: ${codigo}\n\nEste código comprova o registro do seu voto e consta no Relatório de Votantes. Ele não revela o candidato escolhido.`;
   }
 
-  // Tela pública de votação remota, acessada pelo link enviado por WhatsApp/E-mail
-  // (parâmetros ?votarCipa=1&eleicaoId=...&eleitorId=...&canal=...). Não exige login.
-
-  function renderCipaAuthenticatedTerminal(electionId, voterId){
-    // Login voto_cipa usa exatamente a mesma tela responsiva utilizada pelos links de WhatsApp/e-mail.
-    renderRemoteVoteScreen(electionId, voterId, "login");
-  }
-
-  function renderRemoteVoteScreen(eleicaoId, eleitorId, canal){
+  // Tela pública de votação remota, aberta pelo link individual enviado por
+  // WhatsApp/E-mail (?votarCipa=1&t=TOKEN&c=canal). Não exige login.
+  function renderRemoteVoteScreen(){
     stopCipaPoll();
     const app = document.getElementById("app");
-    const el = state.cipaElections.find(e=>e.id===eleicaoId);
-    const emp = state.employees.find(e=>e.id===eleitorId);
-
-    if(!el || !emp){
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get("t");
+    const canal = params.get("c") === "email" ? "email" : "whatsapp";
+    const aviso = (titulo, corpo) => {
       app.innerHTML = `
-        <div class="login-overlay"><div class="login-card" style="max-width:420px; text-align:center;">
-          <h2>🗳️ Votação Eletrônica da CIPA</h2>
-          <div class="empty" style="padding:30px 10px;">⚠️ Link inválido ou eleição não encontrada.</div>
+        <div class="login-overlay"><div class="login-card" style="max-width:440px; text-align:center;">
+          <h2>${titulo}</h2>
+          ${corpo}
         </div></div>`;
+    };
+
+    if(!token){
+      aviso("🗳️ Votação Eletrônica da CIPA", `<div class="empty" style="padding:30px 10px;">⚠️ Este link de votação é de uma versão anterior do sistema e não é mais aceito por segurança.<br><br>Peça à comissão eleitoral um novo link por WhatsApp ou e-mail.</div>`);
       return;
     }
-    ensureElectionVotingFields(el);
-    const jaVotou = el.votantes.some(v => v.employeeId === eleitorId);
-
-    if(el.urnaStatus !== "Aberta" || jaVotou){
-      app.innerHTML = `
-        <div class="login-overlay"><div class="login-card" style="max-width:420px; text-align:center;">
-          <h2>🗳️ Votação Eletrônica da CIPA</h2>
-          <p>Olá, <strong>${emp.nome}</strong>.</p>
-          <div class="empty" style="padding:30px 10px;">
-            ${jaVotou ? '✅ Seu voto já foi registrado anteriormente nesta gestão. Obrigado por participar!' : '🔒 A urna eletrônica não está aberta no momento. Aguarde uma nova liberação do Administrador/Master e tente novamente pelo mesmo link.'}
-          </div>
-        </div></div>`;
+    let found = null;
+    (state.cipaElections || []).some(el => {
+      ensureElectionVotingFields(el);
+      const empId = Object.keys(el.linksVotacao).find(id => (el.linksVotacao[id]?.tokens || []).includes(token));
+      if(empId){ found = { el, employeeId: empId }; return true; }
+      return false;
+    });
+    const emp = found && state.employees.find(e => e.id === found.employeeId);
+    if(!found || !emp){
+      aviso("🗳️ Votação Eletrônica da CIPA", `<div class="empty" style="padding:30px 10px;">⚠️ Link inválido ou eleição não encontrada. Solicite um novo link à comissão eleitoral.</div>`);
+      return;
+    }
+    const el = found.el;
+    const registro = el.votantes.find(v => v.employeeId === emp.id);
+    if(registro){
+      aviso("✅ Voto já registrado", `
+        <p>Olá, <strong>${empEsc(emp.nome)}</strong>. Seu voto na eleição da gestão <strong>${empEsc(el.gestao)}</strong> já foi registrado em ${fmtDateTime(registro.dataHora)}.</p>
+        ${registro.codigo ? `<div style="font-size:11px; color:var(--ink-dim); margin-top:6px;">Código de autenticação</div>
+        <div style="font-family:var(--font-mono); font-size:20px; letter-spacing:2px; margin:6px 0 16px; color:var(--ink); word-break:break-all;">${empEsc(registro.codigo)}</div>` : ''}
+        <div style="font-size:11px;color:var(--ink-dim);">Você já pode fechar esta janela.</div>`);
+      return;
+    }
+    if(el.urnaStatus !== "Aberta"){
+      aviso("🗳️ Votação Eletrônica da CIPA", `<p>Olá, <strong>${empEsc(emp.nome)}</strong>.</p><div class="empty" style="padding:30px 10px;">🔒 ${el.urnaStatus === "Encerrada" ? "A votação desta eleição já foi encerrada." : "A urna eletrônica ainda não está aberta. Tente novamente pelo mesmo link quando a comissão abrir a votação."}</div>`);
       return;
     }
 
@@ -7408,7 +7627,7 @@ function renderPcmsoDash(root){
       <div class="login-overlay">
         <div class="login-card cipa-vote-card" style="width:min(960px,calc(100vw - 32px));max-width:960px;margin:20px auto;box-sizing:border-box;">
           <h2>🗳️ Votação Eletrônica da CIPA</h2>
-          <p>Olá, <strong>${emp.nome}</strong>. Você está votando remotamente na eleição da gestão <strong>${el.gestao}</strong>. Seu voto é sigiloso.</p>
+          <p>Olá, <strong>${empEsc(emp.nome)}</strong>. Você está votando pelo link enviado por <strong>${cipaCanalLabel(canal)}</strong> na eleição da gestão <strong>${empEsc(el.gestao)}</strong>. Seu voto é sigiloso.</p>
           <div id="urna-container"></div>
         </div>
       </div>
@@ -7417,22 +7636,9 @@ function renderPcmsoDash(root){
     container.innerHTML = buildUrnaBallotHtml(el);
     wireUrnaBallot(container, el, {
       onConfirm: async (candidate) => {
-        const codigo = registerCipaVote(el.id, eleitorId, candidate);
-        // Dispara a tentativa de confirmação automática antes do await, para
-        // aproveitar o gesto de clique do usuário e reduzir o bloqueio de pop-up.
-        enviarConfirmacaoVotoCipa(emp, el, codigo, canal);
-        await saveState();
-        app.innerHTML = `
-          <div class="login-overlay"><div class="login-card" style="max-width:420px; text-align:center;">
-            <h2>✅ Voto Confirmado</h2>
-            <p>Obrigado, <strong>${emp.nome}</strong>! Seu voto foi registrado com sucesso e de forma sigilosa.</p>
-            <div style="font-size:11px; color:var(--ink-dim); margin-top:6px;">Código de comprovante de votação</div>
-            <div style="font-family:var(--font-mono); font-size:20px; letter-spacing:3px; margin:6px 0 20px; color:var(--ink);">${codigo || '—'}</div>
-            <p style="font-size:12px;color:var(--ink-dim);">Uma confirmação foi enviada por ${canal==='whatsapp'?'WhatsApp':'e-mail'}. Se não abriu automaticamente, use o botão abaixo.</p>
-            <button type="button" class="btn secondary" id="btn-reenviar-confirmacao" style="width:100%; justify-content:center; margin-top:8px;">Reenviar confirmação por ${canal==='whatsapp'?'WhatsApp':'E-mail'}</button>
-            <div style="text-align:center; margin-top:14px;"><span style="font-size:11px;color:var(--ink-dim);">Você já pode fechar esta janela.</span></div>
-          </div></div>`;
-        document.getElementById("btn-reenviar-confirmacao")?.addEventListener("click", () => enviarConfirmacaoVotoCipa(emp, el, codigo, canal));
+        const res = await registrarVotoCipa({ electionId: el.id, employeeId: emp.id, candidateId: candidate ? candidate.id : null, canal, token });
+        if(!res.ok){ alert("❌ " + res.erro); renderRemoteVoteScreen(); return; }
+        renderVoteReceiptScreen({ el, emp, codigo: res.codigo, dataHora: res.dataHora, canal });
       }
     });
   }
@@ -7495,6 +7701,15 @@ function renderPcmsoDash(root){
     const numDigits = Math.max(1, ...el.candidatos.map(c => String(c.numero).length));
     let buffer = "";
     let isBranco = false;
+    let enviando = false;
+    function enviar(cand){
+      if(enviando) return;
+      enviando = true;
+      const btn = container.querySelector("#urna-confirmar");
+      if(btn){ btn.disabled = true; btn.textContent = "⏳ Registrando voto..."; }
+      Promise.resolve(opts.onConfirm(cand)).catch(err => { console.error(err); alert("Não foi possível registrar o voto. Tente novamente."); })
+        .finally(() => { enviando = false; if(btn && btn.isConnected){ btn.disabled = false; btn.textContent = "✅ CONFIRMA (Enter)"; } });
+    }
 
     const displayEl = container.querySelector("#urna-display");
     const previewEl = container.querySelector("#urna-preview");
@@ -7535,8 +7750,8 @@ function renderPcmsoDash(root){
 
     function confirmar(){
       if(isBranco){
-        if(!confirm("Confirmar VOTO EM BRANCO?\n\nEsta ação não poderá ser desfeita.")) return;
-        opts.onConfirm(null);
+        if(enviando || !confirm("Confirmar VOTO EM BRANCO?\n\nEsta ação não poderá ser desfeita.")) return;
+        enviar(null);
         return;
       }
       if(buffer.length === 0){
@@ -7551,8 +7766,8 @@ function renderPcmsoDash(root){
         updateDisplay();
         return;
       }
-      if(!confirm(`Confirmar voto na Chapa ${cand.numero}?\n\nEsta ação não poderá ser desfeita.`)) return;
-      opts.onConfirm(cand);
+      if(enviando || !confirm(`Confirmar voto na Chapa ${cand.numero}?\n\nEsta ação não poderá ser desfeita.`)) return;
+      enviar(cand);
     }
 
     container.querySelectorAll("[data-key]").forEach(btn => {
@@ -7578,86 +7793,68 @@ function renderPcmsoDash(root){
     setTimeout(() => hiddenInput.focus(), 60);
   }
 
-  // Tela de comprovante de voto (ocupa a tela inteira, como a de login).
-  function renderVoteReceiptScreen(codigo, nome, onContinue){
+  // Comprovante exibido ao eleitor logo após o voto (link remoto ou terminal),
+  // com o código de autenticação que também consta no Relatório de Votantes.
+  function renderVoteReceiptScreen({ el, emp, codigo, dataHora, canal, onContinue, autoRetornoSeg }){
     const app = document.getElementById("app");
+    const nome = emp?.nome || "Eleitor";
+    const texto = cipaComprovanteTexto(el, nome, codigo, dataHora);
     app.innerHTML = `
       <div class="login-overlay">
-        <div class="login-card" style="text-align:center;">
-          <h2>✔ Voto Registrado</h2>
-          <p>Obrigado, <strong>${nome}</strong>. Seu voto foi registrado de forma sigilosa na urna eletrônica.</p>
-          <div style="font-size:11px; color:var(--ink-dim); margin-top:6px;">Código de comprovante de votação</div>
-          <div style="font-family:var(--font-mono); font-size:20px; letter-spacing:3px; margin:6px 0 20px; color:var(--ink);">${codigo || '—'}</div>
-          <button type="button" class="btn" id="btn-voto-continuar" style="width:100%; justify-content:center;">Continuar</button>
-        </div>
-      </div>
-    `;
-    document.getElementById("btn-voto-continuar").addEventListener("click", onContinue);
-  }
-
-  // Retorna a eleição com urna aberta na qual o usuário logado (via employeeId
-  // vinculado à sua conta) ainda precisa votar, ou null se não houver pendência.
-  function getPendingSelfVoteElection(){
-    if(!currentUser || !currentUser.employeeId) return null;
-    (state.cipaElections || []).forEach(ensureElectionVotingFields);
-    const el = state.cipaElections.find(e => e.urnaStatus === "Aberta");
-    if(!el || el.candidatos.length === 0) return null;
-    if(el.votantes.some(v => v.employeeId === currentUser.employeeId)) return null;
-    if(sessionStorage.getItem("cipa-skip-" + el.id + "-" + currentUser.id)) return null;
-    return el;
-  }
-
-  // Tela de votação exibida automaticamente para funcionários com usuário
-  // próprio assim que acessam o sistema, enquanto houver urna aberta pendente.
-  function renderSelfVoteScreen(el){
-    stopCipaPoll();
-    const app = document.getElementById("app");
-    const emp = state.employees.find(e => e.id === currentUser.employeeId);
-    const nome = emp ? emp.nome : currentUser.name;
-    app.innerHTML = `
-      <div class="login-overlay">
-        <div class="login-card cipa-terminal-card">
-          <h2>🗳️ Votação Eletrônica da CIPA</h2>
-          <p>Olá, <strong>${nome}</strong>. A urna está aberta para a gestão <strong>${el.gestao}</strong>. Registre seu voto para continuar.</p>
-          <div id="urna-container"></div>
-          <div style="text-align:center; margin-top:14px;">
-            <button type="button" class="action-link" id="btn-votar-depois">Votar depois</button>
+        <div class="login-card" style="max-width:460px; text-align:center;">
+          <h2>✅ Voto Registrado</h2>
+          <p>Obrigado, <strong>${empEsc(nome)}</strong>! Seu voto na eleição da CIPA (gestão <strong>${empEsc(el?.gestao || "—")}</strong>) foi registrado com sigilo em ${fmtDateTime(dataHora)} · ${cipaCanalLabel(canal)}.</p>
+          <div style="font-size:11px; color:var(--ink-dim); margin-top:10px;">Código de autenticação do voto</div>
+          <div id="cipa-auth-code" style="font-family:var(--font-mono); font-size:22px; font-weight:700; letter-spacing:2px; margin:6px 0 6px; color:var(--ink); word-break:break-all;">${empEsc(codigo)}</div>
+          <div style="font-size:11px; color:var(--ink-dim); margin-bottom:16px;">Guarde este código. Ele comprova o registro do voto, consta no Relatório de Votantes da comissão eleitoral e não revela o candidato escolhido.</div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <button type="button" class="btn secondary" id="btn-copiar-codigo" style="justify-content:center;">📋 Copiar código</button>
+            ${emp?.telefone ? `<button type="button" class="btn secondary" id="btn-comprovante-whatsapp" style="justify-content:center;">📲 Enviar comprovante por WhatsApp</button>` : ''}
+            ${emp?.email ? `<button type="button" class="btn secondary" id="btn-comprovante-email" style="justify-content:center;">✉️ Enviar comprovante por e-mail</button>` : ''}
+            ${onContinue ? `<button type="button" class="btn" id="btn-voto-continuar" style="justify-content:center;">Concluir${autoRetornoSeg ? ` <span id="cipa-retorno-seg">(${autoRetornoSeg})</span>` : ''}</button>` : `<div style="font-size:11px;color:var(--ink-dim);margin-top:6px;">Você já pode fechar esta janela.</div>`}
           </div>
         </div>
       </div>
     `;
-    const container = document.getElementById("urna-container");
-    container.innerHTML = buildUrnaBallotHtml(el);
-    wireUrnaBallot(container, el, {
-      onConfirm: async (candidate) => {
-        const codigo = registerCipaVote(el.id, currentUser.employeeId, candidate);
-        await saveState();
-        renderVoteReceiptScreen(codigo, nome, () => render());
+    document.getElementById("btn-copiar-codigo").addEventListener("click", async (ev) => {
+      try{ await navigator.clipboard.writeText(codigo); ev.currentTarget.textContent = "✔ Código copiado"; }
+      catch(e){ prompt("Copie o código de autenticação:", codigo); }
+    });
+    document.getElementById("btn-comprovante-whatsapp")?.addEventListener("click", () => window.open(cipaWhatsappUrl(emp.telefone, texto), "_blank"));
+    document.getElementById("btn-comprovante-email")?.addEventListener("click", () => cipaAbrirMailto(emp.email, "Comprovante de votação — CIPA " + (el?.gestao || ""), texto));
+    if(onContinue){
+      let timer = null;
+      const concluir = () => { if(timer) clearInterval(timer); onContinue(); };
+      document.getElementById("btn-voto-continuar").addEventListener("click", concluir);
+      if(autoRetornoSeg){
+        let restante = autoRetornoSeg;
+        timer = setInterval(() => {
+          const span = document.getElementById("cipa-retorno-seg");
+          if(!span){ clearInterval(timer); return; }
+          restante -= 1;
+          if(restante <= 0) concluir(); else span.textContent = `(${restante})`;
+        }, 1000);
       }
-    });
-    document.getElementById("btn-votar-depois").addEventListener("click", () => {
-      sessionStorage.setItem("cipa-skip-" + el.id + "-" + currentUser.id, "1");
-      render();
-    });
+    }
   }
 
-  // Tela do terminal físico de votação (usuário fixo "voto_cipa"), usado para
-  // funcionários sem conta própria no sistema. Fica esperando o Administrador
-  // ou Master liberar a urna para um funcionário específico.
+  // Tela do Terminal de Votação CIPA (usuário fixo "voto_cipa"). Fica
+  // aguardando o Administrador/Master liberar a urna para um eleitor.
   function renderVotoCipaTerminal(){
     const app = document.getElementById("app");
     (state.cipaElections || []).forEach(ensureElectionVotingFields);
     const el = state.cipaElections.find(e => e.urnaStatus === "Aberta" && e.votoPendente);
+    const emp = el ? state.employees.find(e => e.id === el.votoPendente.employeeId) : null;
 
     app.innerHTML = `
       <div class="login-overlay cipa-terminal-overlay">
         <div class="login-card cipa-terminal-card" style="text-align:center;">
           <h2>🖥️ Terminal de Votação CIPA</h2>
           ${el ? `
-            <p>Eleitor liberado para votar agora:<br><strong>${employeeName(el.votoPendente.employeeId)}</strong></p>
+            <p>Eleitor liberado para votar agora:<br><strong>${empEsc(emp?.nome || employeeName(el.votoPendente.employeeId))}</strong></p>
             <div id="urna-container"></div>
           ` : `
-            <p>Aguardando o Administrador/Master liberar a urna para um funcionário votar neste terminal.</p>
+            <p>Aguardando o Administrador/Master liberar a urna para um eleitor votar neste terminal.</p>
             <div class="empty" style="padding:30px 10px;">🔒 Nenhuma votação liberada no momento.</div>
           `}
           <div style="text-align:center; margin-top:18px;">
@@ -7666,27 +7863,28 @@ function renderPcmsoDash(root){
         </div>
       </div>
     `;
+    document.getElementById("btn-terminal-logout").addEventListener("click", () => { stopCipaPoll(); handleLogout(); });
 
     if(el){
-      stopCipaPoll();
+      const employeeId = el.votoPendente.employeeId;
       const container = document.getElementById("urna-container");
       container.innerHTML = buildUrnaBallotHtml(el);
+      // Se a liberação for cancelada enquanto a cédula está aberta, a tela volta a aguardar.
+      startCipaPoll(() => {
+        const atual = state.cipaElections.find(e => e.id === el.id);
+        if(!atual || atual.urnaStatus !== "Aberta" || atual.votoPendente?.employeeId !== employeeId) renderVotoCipaTerminal();
+      });
       wireUrnaBallot(container, el, {
         onConfirm: async (candidate) => {
-          const employeeId = el.votoPendente.employeeId;
-          const codigo = registerCipaVote(el.id, employeeId, candidate);
-          const terminalVoter = (state.employees || []).find(e=>e.id===employeeId);
-          if(terminalVoter) createCipaVoteAuth(el, terminalVoter);
-          el.votoPendente = null;
-          await saveState();
-          renderVoteReceiptScreen(codigo, employeeName(employeeId), () => render());
+          stopCipaPoll();
+          const res = await registrarVotoCipa({ electionId: el.id, employeeId, candidateId: candidate ? candidate.id : null, canal: "terminal" });
+          if(!res.ok){ alert("❌ " + res.erro); renderVotoCipaTerminal(); return; }
+          renderVoteReceiptScreen({ el, emp, codigo: res.codigo, dataHora: res.dataHora, canal: "terminal", onContinue: () => renderVotoCipaTerminal(), autoRetornoSeg: 45 });
         }
       });
     } else {
       startCipaPoll(() => renderVotoCipaTerminal());
     }
-
-    document.getElementById("btn-terminal-logout").addEventListener("click", () => { stopCipaPoll(); handleLogout(); });
   }
 
   function openCipaCandidateModal(electionId){
@@ -7737,29 +7935,53 @@ function renderPcmsoDash(root){
     });
   }
 
-  // Admin/Master libera a urna no Terminal de Votação CIPA para um funcionário
-  // específico que não possui usuário próprio cadastrado no sistema.
-  function openLiberarUrnaTerminalModal(electionId){
+  // Admin/Master libera a urna no Terminal de Votação CIPA para um eleitor
+  // pendente (qualquer funcionário que ainda não votou).
+  async function liberarUrnaTerminalPara(el, employeeId){
+    await atualizarEleicoesCipaDoBanco();
+    const atual = state.cipaElections.find(e => e.id === el.id);
+    if(!atual) return;
+    ensureElectionVotingFields(atual);
+    if(atual.urnaStatus !== "Aberta"){ alert("A urna não está aberta."); render(); return; }
+    if(atual.votoPendente){ alert(`O terminal já está liberado para ${employeeName(atual.votoPendente.employeeId)}. Aguarde a conclusão ou cancele a liberação.`); render(); return; }
+    if(atual.votantes.some(v => v.employeeId === employeeId)){ alert(`${employeeName(employeeId)} já votou nesta eleição.`); render(); return; }
+    const agora = new Date().toISOString();
+    atual.votoPendente = { employeeId, releasedAt: agora, releasedBy: currentUser?.name || "" };
+    atual.votoPendenteAtualizadoEm = agora;
+    const ok = await saveState();
+    if(!ok) alert("Não foi possível gravar a liberação. Verifique a conexão e tente novamente.");
+    render();
+  }
+
+  function openLiberarUrnaTerminalModal(electionId, employeeId){
     const el = state.cipaElections.find(e=>e.id===electionId);
     if(!el) return;
     ensureElectionVotingFields(el);
     if(el.votoPendente){ alert("Já existe uma votação liberada aguardando conclusão no terminal. Cancele-a ou aguarde a conclusão antes de liberar outra."); return; }
 
     const jaVotaramIds = new Set(el.votantes.map(v=>v.employeeId));
-    const semUsuario = employeesWithoutUser().filter(e=>!jaVotaramIds.has(e.id));
-    if(semUsuario.length===0){ alert("Não há funcionários elegíveis sem usuário cadastrado no sistema para votar pelo terminal."); return; }
+    const pendentes = state.employees.filter(e=>!jaVotaramIds.has(e.id))
+      .sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'));
+    if(pendentes.length===0){ alert("Todos os eleitores já votaram."); return; }
+
+    if(employeeId){
+      if(!pendentes.some(e=>e.id===employeeId)){ alert("Este eleitor já votou."); return; }
+      if(!confirm(`Liberar a urna no Terminal de Votação CIPA para ${employeeName(employeeId)}?\n\nConfira a identidade do eleitor antes de liberar.`)) return;
+      liberarUrnaTerminalPara(el, employeeId);
+      return;
+    }
 
     openModal(`
       <h3>Liberar Urna no Terminal de Votação</h3>
       <div class="sub" style="margin-bottom:14px;">
-        Selecione o funcionário sem usuário cadastrado que irá votar agora. Assim que liberada, a cédula aparecerá
-        no computador logado com o usuário <strong>Terminal de Votação CIPA</strong> (login: <code>voto_cipa</code>).
+        Confira a identidade do eleitor e selecione-o abaixo. A cédula aparecerá no computador logado com o usuário
+        <strong>Terminal de Votação CIPA</strong> (login: <code>voto_cipa</code>). Ao votar, o eleitor recebe o código de autenticação na tela.
       </div>
       <div class="field">
-        <label>Funcionário</label>
+        <label>Eleitor</label>
         <select id="liberar-emp-select">
           <option value="">Selecione...</option>
-          ${semUsuario.map(e=>`<option value="${e.id}">${e.nome} (${e.cargo||'—'})</option>`).join("")}
+          ${pendentes.map(e=>`<option value="${e.id}">${empEsc(e.nome)}${e.matricula?` · Matr. ${empEsc(e.matricula)}`:''} (${empEsc(e.cargo||'—')})</option>`).join("")}
         </select>
       </div>
       <div class="modal-actions">
@@ -7768,50 +7990,136 @@ function renderPcmsoDash(root){
       </div>
     `, (ov)=>{
       ov.querySelector("#btn-liberar-confirmar").addEventListener("click", async ()=>{
-        const employeeId = ov.querySelector("#liberar-emp-select").value;
-        if(!employeeId){ alert("Selecione o funcionário para continuar."); return; }
-        el.votoPendente = { employeeId, releasedAt: new Date().toISOString(), releasedBy: currentUser.name };
-        await saveState();
+        const selId = ov.querySelector("#liberar-emp-select").value;
+        if(!selId){ alert("Selecione o eleitor para continuar."); return; }
         window.closeModal();
-        render();
+        await liberarUrnaTerminalPara(el, selId);
       });
     });
   }
 
-  // Relatório com a lista de eleitores que já votaram (com comprovante) e os
-  // que ainda estão pendentes na eleição selecionada.
-  function openCipaVotantesReportModal(electionId){
-    const el = state.cipaElections.find(e=>e.id===electionId);
-    if(!el) return;
+  // ---------------- Relatório de Votantes ----------------
+  // Lista quem votou (canal, data/hora e código de autenticação) e quem está
+  // pendente. Nunca mostra em quem cada eleitor votou.
+  function cipaVotantesDados(el){
     ensureElectionVotingFields(el);
+    const legado = Array.isArray(state.cipaVoteAuth) ? state.cipaVoteAuth.filter(r => r.electionId === el.id) : [];
+    const empById = id => (state.employees || []).find(e => e.id === id);
+    const votaram = el.votantes.map(v => {
+      const emp = empById(v.employeeId);
+      const codigoLegado = legado.find(r => r.employeeId === v.employeeId)?.code;
+      return {
+        employeeId: v.employeeId,
+        nome: emp?.nome || "—", matricula: emp?.matricula || "—", setor: emp?.setor || "—",
+        canal: v.canal || "", dataHora: v.dataHora || "",
+        codigo: v.codigo || codigoLegado || "—",
+        codigoAlternativo: v.codigo && codigoLegado && codigoLegado !== v.codigo ? codigoLegado : ""
+      };
+    }).sort((a,b) => String(a.dataHora).localeCompare(String(b.dataHora)));
+    const votouIds = new Set(el.votantes.map(v => v.employeeId));
+    const pendentes = (state.employees || []).filter(e => !votouIds.has(e.id))
+      .sort((a,b) => String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"))
+      .map(e => ({
+        employeeId: e.id, nome: e.nome || "—", matricula: e.matricula || "—", setor: e.setor || "—",
+        envios: cipaEnviosResumo(el, e.id),
+        noTerminal: el.votoPendente?.employeeId === e.id
+      }));
+    const aptos = votaram.length + pendentes.length;
+    return { votaram, pendentes, aptos, participacao: aptos ? Math.round(votaram.length / aptos * 100) : 0 };
+  }
 
-    const votaram = el.votantes
-      .map(v => ({ ...v, nome: employeeName(v.employeeId) }))
-      .sort((a,b) => a.dataHora.localeCompare(b.dataHora));
-    const jaVotaramIds = new Set(el.votantes.map(v=>v.employeeId));
-    const pendentes = state.employees.filter(e => !jaVotaramIds.has(e.id));
+  async function openCipaVotantesReportModal(electionId){
+    await atualizarEleicoesCipaDoBanco();
+    const el = state.cipaElections.find(e=>e.id===electionId);
+    if(!el){ alert("Nenhuma eleição CIPA localizada."); return; }
+    const d = cipaVotantesDados(el);
 
     openModal(`
-      <h3>📋 Relatório de Votação · Gestão ${el.gestao}</h3>
-      <div class="sub" style="margin-bottom:14px;">Eleitores que já registraram o voto (${votaram.length}) e eleitores pendentes (${pendentes.length}).</div>
-      <div style="max-height:300px; overflow:auto; border:1px solid var(--line); border-radius:4px;">
+      <h3>📋 Relatório de Votantes · Gestão ${empEsc(el.gestao)}</h3>
+      <div class="sub" style="margin-bottom:12px;">
+        Aptos: <strong>${d.aptos}</strong> · Votaram: <strong>${d.votaram.length}</strong> · Pendentes: <strong>${d.pendentes.length}</strong> · Participação: <strong>${d.participacao}%</strong> · Urna: <strong>${empEsc(el.urnaStatus)}</strong>
+        <br><span style="font-size:11px;">O código de autenticação comprova o registro de cada voto e não identifica o candidato escolhido.</span>
+      </div>
+      <div class="field" style="margin-bottom:10px;">
+        <input id="cipa-rel-busca" type="search" placeholder="🔎 Conferir código de autenticação ou buscar eleitor..." autocomplete="off">
+      </div>
+      <div style="max-height:320px; overflow:auto; border:1px solid var(--line); border-radius:4px;">
         <table>
-          <thead><tr><th>Eleitor</th><th>Data/Hora do Voto</th><th>Comprovante</th></tr></thead>
-          <tbody>
-            ${votaram.length ? votaram.map(v => `<tr><td>${v.nome}</td><td>${fmtDateTime(v.dataHora)}</td><td><code>${v.codigo}</code></td></tr>`).join("") : `<tr><td colspan="3" style="text-align:center; color:var(--ink-dim); padding:18px;">Nenhum voto registrado ainda.</td></tr>`}
+          <thead><tr><th>#</th><th>Eleitor</th><th>Canal</th><th>Data/Hora</th><th>Código de Autenticação</th></tr></thead>
+          <tbody id="cipa-rel-votaram">
+            ${d.votaram.length ? d.votaram.map((v,i) => `<tr data-busca="${empEsc((v.nome+' '+v.matricula+' '+v.codigo+' '+v.codigoAlternativo).toLowerCase())}">
+              <td>${i+1}</td><td>${empEsc(v.nome)}${v.matricula!=="—"?`<br><span style="font-size:10px;color:var(--ink-dim);">Matr. ${empEsc(v.matricula)}</span>`:''}</td><td>${cipaCanalLabel(v.canal)}</td>
+              <td>${v.dataHora ? fmtDateTime(v.dataHora) : '—'}</td>
+              <td style="white-space:nowrap;"><code style="font-weight:700;">${empEsc(v.codigo)}</code>${v.codigoAlternativo ? `<br><span style="font-size:10px;color:var(--ink-dim);">também: ${empEsc(v.codigoAlternativo)}</span>` : ''}</td>
+            </tr>`).join("") : `<tr><td colspan="5" style="text-align:center; color:var(--ink-dim); padding:18px;">Nenhum voto registrado ainda.</td></tr>`}
           </tbody>
         </table>
       </div>
+      <div id="cipa-rel-sem-resultado" style="display:none; font-size:12px; color:var(--red); margin-top:8px;">Nenhum voto encontrado com esse código ou nome.</div>
       <div style="margin-top:16px;">
-        <label style="margin-bottom:6px;">Ainda não votaram (${pendentes.length})</label>
-        <div style="font-size:12px; color:var(--ink-dim); line-height:1.6;">
-          ${pendentes.length ? pendentes.map(e => `${e.nome}${userByEmployeeId(e.id) ? '' : ' <span style="color:var(--ink-dim);">(sem usuário — vota via terminal)</span>'}`).join("<br>") : "Todos os eleitores já votaram."}
+        <label style="margin-bottom:6px;">Ainda não votaram (${d.pendentes.length})</label>
+        <div style="max-height:180px; overflow:auto; font-size:12px; color:var(--ink-dim); line-height:1.6;">
+          ${d.pendentes.length ? d.pendentes.map(p => `${empEsc(p.nome)}${p.noTerminal ? ' · <strong style="color:var(--amber);">liberado no terminal</strong>' : ''}${p.envios ? ` <span style="font-size:11px;">(link enviado: ${p.envios.replace(/<br>/g,' · ')})</span>` : ''}`).join("<br>") : "Todos os eleitores já votaram."}
         </div>
       </div>
       <div class="modal-actions">
         <button type="button" class="btn secondary" onclick="window.closeModal()">Fechar</button>
+        <button type="button" class="btn" id="btn-print-cipa-report">📄 Gerar Relatório em PDF</button>
       </div>
-    `);
+    `, (ov) => {
+      const modal = ov.querySelector(".modal");
+      if(modal){ modal.style.maxWidth = "min(980px, calc(100vw - 24px))"; modal.style.width = "100%"; }
+      const busca = ov.querySelector("#cipa-rel-busca");
+      busca.addEventListener("input", () => {
+        const q = busca.value.trim().toLowerCase();
+        let visiveis = 0;
+        ov.querySelectorAll("#cipa-rel-votaram tr[data-busca]").forEach(tr => {
+          const ok = !q || tr.dataset.busca.includes(q);
+          tr.style.display = ok ? "" : "none";
+          if(ok) visiveis++;
+        });
+        ov.querySelector("#cipa-rel-sem-resultado").style.display = (q && d.votaram.length && !visiveis) ? "" : "none";
+      });
+      ov.querySelector("#btn-print-cipa-report").addEventListener("click", () => printCipaVotantesReport(el.id));
+    });
+  }
+
+  function printCipaVotantesReport(electionId){
+    const el = state.cipaElections.find(e=>e.id===electionId);
+    if(!el) return;
+    const d = cipaVotantesDados(el);
+    const w = window.open("", "_blank", "width=1000,height=750");
+    if(!w){ alert("O navegador bloqueou a janela do relatório. Permita pop-ups para gerar o PDF."); return; }
+    const esc = empEsc;
+    w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório de Votantes CIPA — ${esc(el.gestao)}</title>
+      <style>
+        body{font-family:Arial,sans-serif;color:#20242a;margin:28px}
+        h1{font-size:20px;margin:0 0 6px} h2{font-size:14px;margin:22px 0 8px}
+        .meta{font-size:12px;color:#555;margin-bottom:14px;line-height:1.6}
+        table{width:100%;border-collapse:collapse;font-size:11px}
+        th,td{border:1px solid #bbb;padding:6px;text-align:left} th{background:#eee}
+        code{font-family:Consolas,monospace;font-weight:700;font-size:11.5px}
+        .note{font-size:10px;color:#555;margin-top:14px}
+        .ass{display:flex;gap:40px;margin-top:48px;font-size:11px;text-align:center}
+        .ass div{flex:1;border-top:1px solid #333;padding-top:6px}
+        @media print{body{margin:12mm}}
+      </style></head><body>
+      ${reportLogoImgTag(84)}
+      <h1>Relatório de Votantes — Eleição da CIPA</h1>
+      <div class="meta">Gestão: <strong>${esc(el.gestao)}</strong> · Data da eleição: ${fmtDate(el.dataEleicao)} · Situação da urna: <strong>${esc(el.urnaStatus)}</strong><br>
+        Eleitores aptos: <strong>${d.aptos}</strong> · Votaram: <strong>${d.votaram.length}</strong> · Pendentes/abstenções: <strong>${d.pendentes.length}</strong> · Participação: <strong>${d.participacao}%</strong><br>
+        Emitido em: ${new Date().toLocaleString("pt-BR")}</div>
+      <h2>Eleitores que votaram</h2>
+      <table><thead><tr><th>#</th><th>Eleitor</th><th>Matrícula</th><th>Setor</th><th>Canal</th><th>Data/Hora</th><th>Código de Autenticação</th></tr></thead>
+      <tbody>${d.votaram.length ? d.votaram.map((v,i)=>`<tr><td>${i+1}</td><td>${esc(v.nome)}</td><td>${esc(v.matricula)}</td><td>${esc(v.setor)}</td><td>${cipaCanalLabel(v.canal)}</td><td>${v.dataHora?fmtDateTime(v.dataHora):'—'}</td><td><code>${esc(v.codigo)}</code>${v.codigoAlternativo?`<br><small>também: ${esc(v.codigoAlternativo)}</small>`:''}</td></tr>`).join("") : `<tr><td colspan="7" style="text-align:center">Nenhum voto registrado.</td></tr>`}</tbody></table>
+      <h2>Eleitores que não votaram</h2>
+      <table><thead><tr><th>Eleitor</th><th>Matrícula</th><th>Setor</th></tr></thead>
+      <tbody>${d.pendentes.length ? d.pendentes.map(p=>`<tr><td>${esc(p.nome)}</td><td>${esc(p.matricula)}</td><td>${esc(p.setor)}</td></tr>`).join("") : `<tr><td colspan="3" style="text-align:center">Todos os eleitores votaram.</td></tr>`}</tbody></table>
+      <div class="note">Cada código de autenticação é gerado aleatoriamente no momento do voto e entregue ao eleitor. Ele comprova o registro do voto, mas não guarda nem revela o candidato escolhido (voto secreto).</div>
+      <div class="ass"><div>Presidente da Comissão Eleitoral</div><div>Secretário(a) da Comissão Eleitoral</div></div>
+      <script>window.onload=()=>setTimeout(()=>window.print(),250);<\/script>
+      </body></html>`);
+    w.document.close();
   }
 
   // Gera o Edital de Convocação do processo eleitoral da CIPA em formato de documento
@@ -10902,12 +11210,6 @@ function renderPcmsoDash(root){
       return;
     }
 
-    const pendingSelfVote = getPendingSelfVoteElection();
-    if(pendingSelfVote){
-      renderSelfVoteScreen(pendingSelfVote);
-      return;
-    }
-
     stopCipaPoll();
 
     const app = document.getElementById("app");
@@ -11103,140 +11405,7 @@ function renderPcmsoDash(root){
   }
 
 
-  function buildCipaVotingReportHtml(election){
-    ensureCipaVoteAuth();
-    if(!election) return {rows:[]};
-
-    // Eleitores cadastrados na eleição.
-    const eligibleRaw = [
-      ...(Array.isArray(election.eleitores) ? election.eleitores : []),
-      ...(Array.isArray(election.eleitoresAptos) ? election.eleitoresAptos : []),
-      ...(Array.isArray(election.voters) ? election.voters : [])
-    ];
-    const eligibleIds = eligibleRaw.map(x=>typeof x==="object"?(x.employeeId||x.id):x).filter(Boolean);
-
-    // Quem já votou: cobre estruturas novas e antigas do sistema.
-    const votedIds=new Set();
-    [
-      ...(Array.isArray(election.votantesQueVotaram)?election.votantesQueVotaram:[]),
-      ...(Array.isArray(election.votedEmployeeIds)?election.votedEmployeeIds:[]),
-      ...(Array.isArray(election.votantes)?election.votantes:[])
-    ].forEach(x=>{
-      const id=typeof x==="object"?(x.employeeId||x.eleitorId||x.id):x;
-      if(id) votedIds.add(id);
-    });
-
-    // O sistema já possui registros individuais de voto/comparecimento.
-    (state.cipaVotes||[]).forEach(v=>{
-      if(v && (!v.electionId || v.electionId===election.id)){
-        const id=v.employeeId||v.eleitorId||v.voterId;
-        if(id) votedIds.add(id);
-      }
-    });
-    (state.cipaRemoteVoting?Object.values(state.cipaRemoteVoting):[]).forEach(v=>{
-      if(v?.electionId===election.id && v.voted && v.employeeId) votedIds.add(v.employeeId);
-    });
-    state.cipaVoteAuth.filter(r=>r.electionId===election.id).forEach(r=>votedIds.add(r.employeeId));
-
-    // Se a versão anterior já computou o voto mas ainda não criou o novo comprovante,
-    // cria o código agora, sem associá-lo ao candidato escolhido.
-    let changed=false;
-    votedIds.forEach(id=>{
-      if(!state.cipaVoteAuth.some(r=>r.electionId===election.id && r.employeeId===id)){
-        const voter=(state.employees||[]).find(e=>e.id===id);
-        if(voter){ createCipaVoteAuth(election,voter); changed=true; }
-      }
-    });
-    if(changed) saveState();
-
-    const ids=Array.from(new Set([...eligibleIds,...votedIds]));
-    return {rows:ids.map(id=>{
-      const emp=(state.employees||[]).find(e=>e.id===id);
-      const auth=state.cipaVoteAuth.find(r=>r.electionId===election.id && r.employeeId===id);
-      const voted=votedIds.has(id)||!!auth;
-      return {
-        nome:emp?.nome||"—",
-        matricula:emp?.matricula||"—",
-        status:voted?"Votou":"Pendente",
-        codigo:voted?(auth?.code||"Código não localizado"):"—",
-        data:auth?.createdAt?new Date(auth.createdAt).toLocaleString("pt-BR"):"—"
-      };
-    })};
-  }
-
-  function openCipaVotingReport(election){
-    if(!election){ alert("Nenhuma eleição CIPA localizada."); return; }
-    const {rows}=buildCipaVotingReportHtml(election);
-    openModal(`<h3>📋 Relatório de Votação CIPA</h3>
-      <div style="font-size:12px;color:var(--ink-dim);margin-bottom:12px;">
-        Gestão <strong>${election.gestao||"—"}</strong>. O código comprova o registro da participação e não identifica o candidato escolhido.
-      </div>
-      <div style="overflow:auto;max-height:60vh;">
-        <table>
-          <thead><tr><th>Eleitor</th><th>Matrícula</th><th>Situação</th><th>Código de Autenticação</th><th>Data/Hora</th></tr></thead>
-          <tbody>${rows.map(r=>`<tr><td>${r.nome}</td><td>${r.matricula}</td><td><strong>${r.status}</strong></td><td><strong>${r.codigo}</strong></td><td>${r.data}</td></tr>`).join("")}</tbody>
-        </table>
-      </div>
-      <div class="modal-actions">
-        <button class="btn secondary" type="button" onclick="closeModal()">Fechar</button>
-        <button class="btn" type="button" id="btn-print-cipa-report">📄 Gerar Relatório em PDF</button>
-      </div>`);
-    setTimeout(()=>{
-      document.querySelector("#btn-print-cipa-report")?.addEventListener("click",()=>printCipaVotingReport(election));
-    },0);
-  }
-
-  function printCipaVotingReport(election){
-    const {rows}=buildCipaVotingReportHtml(election);
-    const w=window.open("","_blank","width=1000,height=750");
-    if(!w){ alert("O navegador bloqueou a janela do relatório. Permita pop-ups para gerar o PDF."); return; }
-    const now=new Date().toLocaleString("pt-BR");
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Relatório de Votação CIPA</title>
-      <style>
-        body{font-family:Arial,sans-serif;color:#20242a;margin:28px}
-        h1{font-size:20px;margin:0 0 6px} .meta{font-size:12px;color:#555;margin-bottom:18px}
-        table{width:100%;border-collapse:collapse;font-size:11px}
-        th,td{border:1px solid #bbb;padding:7px;text-align:left} th{background:#eee}
-        .note{font-size:10px;color:#555;margin-top:14px}
-        @media print{button{display:none} body{margin:12mm}}
-      </style></head><body>
-      ${reportLogoImgTag(84)}
-      <h1>Relatório de Votação CIPA</h1>
-      <div class="meta">Gestão: <strong>${election.gestao||"—"}</strong><br>Emitido em: ${now}</div>
-      <table><thead><tr><th>Eleitor</th><th>Matrícula</th><th>Situação</th><th>Código de Autenticação</th><th>Data/Hora</th></tr></thead>
-      <tbody>${rows.map(r=>`<tr><td>${r.nome}</td><td>${r.matricula}</td><td>${r.status}</td><td>${r.codigo}</td><td>${r.data}</td></tr>`).join("")}</tbody></table>
-      <div class="note">O código de autenticação comprova o registro do voto, sem revelar o candidato escolhido.</div>
-      <script>window.onload=()=>setTimeout(()=>window.print(),250);<\/script>
-      </body></html>`);
-    w.document.close();
-  }
-
   function attachMainListeners(root){
-    root.querySelector("#btn-cipa-relatorio")?.addEventListener("click",(ev)=>{
-      ev.preventDefault(); ev.stopImmediatePropagation();
-      openCipaVotingReport(getActiveCipaElection());
-    }, true);
-    // Links de votação remota: gera URL individual do Terminal CIPA.
-    root.querySelectorAll("[data-cipa-remote-whatsapp],[data-cipa-remote-email]").forEach(btn=>{
-      btn.addEventListener("click", async ev=>{
-        const election = getActiveCipaElection();
-        const employeeId = btn.dataset.employeeId || btn.dataset.cipaRemoteWhatsapp || btn.dataset.cipaRemoteEmail;
-        if(!election || !employeeId) return;
-        const emp=(state.employees||[]).find(e=>e.id===employeeId);
-        const rec=getCipaRemoteToken(election.id,employeeId);
-        rec.sentAt=new Date().toISOString();
-        await saveState();
-        const url=buildCipaRemoteVotingUrl(election.id,employeeId);
-        const text=`Votação CIPA: acesse o Terminal de Votação pelo link: ${url}`;
-        if(btn.hasAttribute("data-cipa-remote-whatsapp")){
-          const phone=String(emp?.telefone||emp?.celular||"").replace(/\D/g,"");
-          window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`,"_blank");
-        }else{
-          const mail=emp?.email||"";
-          location.href=`mailto:${encodeURIComponent(mail)}?subject=${encodeURIComponent("Votação CIPA")}&body=${encodeURIComponent(text)}`;
-        }
-      });
-    });
     root.querySelector("#btn-new-train")?.addEventListener("click", openTrainingModal);
     root.querySelector("#btn-new-annual-plan")?.addEventListener("click", openAnnualTrainingPlanModal);
     root.querySelector("#btn-new-role-matrix")?.addEventListener("click", ()=>openRoleMatrixModal());
@@ -11644,6 +11813,11 @@ function renderPcmsoDash(root){
     }));
     root.querySelector("#btn-new-cipa-candidato")?.addEventListener("click", () => openCipaCandidateModal(currentVotacaoElectionId));
     root.querySelector("#btn-cipa-liberar-terminal")?.addEventListener("click", () => openLiberarUrnaTerminalModal(currentVotacaoElectionId));
+    root.querySelectorAll("[data-liberar-terminal-emp]").forEach(b => b.addEventListener("click", e => {
+      const btn = e.currentTarget;
+      if(btn.disabled) return;
+      openLiberarUrnaTerminalModal(currentVotacaoElectionId, btn.dataset.liberarTerminalEmp);
+    }));
 
     root.querySelectorAll("[data-send-voto-link]").forEach(b => b.addEventListener("click", e => {
       const btn = e.currentTarget;
@@ -11656,6 +11830,7 @@ function renderPcmsoDash(root){
       if(!el || !el.votoPendente) return;
       if(!confirm(`Cancelar a liberação da urna para ${employeeName(el.votoPendente.employeeId)}?`)) return;
       el.votoPendente = null;
+      el.votoPendenteAtualizadoEm = new Date().toISOString();
       await saveState(); render();
     });
     root.querySelector("#btn-cipa-boletim")?.addEventListener("click", () => generateCipaBoletimPdf(currentVotacaoElectionId));
@@ -11680,11 +11855,16 @@ function renderPcmsoDash(root){
     });
 
     root.querySelector("#btn-cipa-encerrar-urna")?.addEventListener("click", async () => {
+      if(!state.cipaElections.some(x => x.id === currentVotacaoElectionId)) return;
+      if(!confirm("Encerrar definitivamente a urna eletrônica?\n\nOs votos serão apurados, a comissão vigente será atualizada automaticamente e a votação não poderá ser reaberta.")) return;
+      // Apura com os votos mais recentes gravados no banco (links e terminal).
+      await atualizarEleicoesCipaDoBanco();
       const el = state.cipaElections.find(x => x.id === currentVotacaoElectionId);
       if(!el) return;
-      if(!confirm("Encerrar definitivamente a urna eletrônica?\n\nOs votos serão apurados, a comissão vigente será atualizada automaticamente e a votação não poderá ser reaberta.")) return;
       el.urnaStatus = "Encerrada";
       el.status = "Concluída";
+      el.votoPendente = null;
+      el.votoPendenteAtualizadoEm = new Date().toISOString();
       el.totalVotantes = el.votantes.length;
       el.totalInscritos = el.candidatos.length;
       applyCipaElectionResults(el);
@@ -11866,163 +12046,6 @@ function renderPcmsoDash(root){
   function isRemoteVoteMode(){
     return new URLSearchParams(window.location.search).get("votarCipa") === "1";
   }
-
-  // ===== VOTAÇÃO CIPA REMOTA INTEGRADA =====
-  function ensureCipaVoteAuth(){
-    if(!Array.isArray(state.cipaVoteAuth)) state.cipaVoteAuth=[];
-  }
-  function createCipaVoteAuth(election,voter){
-    ensureCipaVoteAuth();
-    let rec=state.cipaVoteAuth.find(r=>r.electionId===election.id && r.employeeId===voter.id);
-    if(rec) return rec;
-    const bytes=new Uint8Array(8);
-    if(window.crypto?.getRandomValues) window.crypto.getRandomValues(bytes);
-    else for(let i=0;i<bytes.length;i++) bytes[i]=Math.floor(Math.random()*256);
-    rec={
-      id:uid("authvote"),
-      electionId:election.id,
-      employeeId:voter.id,
-      code:"CIPA-"+Array.from(bytes).map(b=>b.toString(16).padStart(2,"0")).join("").toUpperCase(),
-      createdAt:new Date().toISOString()
-    };
-    state.cipaVoteAuth.push(rec);
-    return rec;
-  }
-  function cipaVoteAuthText(election,voter,rec){
-    return `Comprovante de Votação CIPA\nGestão: ${election.gestao||"—"}\nEleitor: ${voter.nome||"—"}\nCódigo de autenticação: ${rec.code}\nData/Hora: ${new Date(rec.createdAt).toLocaleString("pt-BR")}\n\nO código comprova o registro do voto sem identificar o candidato escolhido.`;
-  }
-  function deliverCipaVoteAuth(election,voter,rec){
-    const msg=cipaVoteAuthText(election,voter,rec);
-    const phone=String(voter.telefone||voter.celular||"").replace(/\D/g,"");
-    if(phone) window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`,"_blank");
-    if(voter.email) setTimeout(()=>{ location.href=`mailto:${encodeURIComponent(voter.email)}?subject=${encodeURIComponent("Código de autenticação do voto CIPA")}&body=${encodeURIComponent(msg)}`; },500);
-  }
-
-  function ensureCipaRemoteVotingState(){
-    if(!state.cipaRemoteVoting || typeof state.cipaRemoteVoting !== "object") state.cipaRemoteVoting = {};
-  }
-
-  function getActiveCipaElection(){
-    const elections = Array.isArray(state.cipaElections) ? state.cipaElections : [];
-    return elections.find(e => e.urnaAberta === true || e.status === "Aberta" || e.status === "Em andamento")
-      || elections.slice().sort((a,b)=>String(b.id||"").localeCompare(String(a.id||"")))[0]
-      || null;
-  }
-
-  function getCipaRemoteToken(electionId, employeeId){
-    ensureCipaRemoteVotingState();
-    const key = `${electionId}::${employeeId}`;
-    if(!state.cipaRemoteVoting[key]){
-      state.cipaRemoteVoting[key] = {
-        token: "cipa_" + Math.random().toString(36).slice(2) + Date.now().toString(36),
-        electionId, employeeId, voted:false, sentAt:null, votedAt:null
-      };
-    }
-    return state.cipaRemoteVoting[key];
-  }
-
-  function buildCipaRemoteVotingUrl(electionId, employeeId){
-    const rec = getCipaRemoteToken(electionId, employeeId);
-    const base = location.href.split("#")[0].split("?")[0];
-    return `${base}?cipaVote=${encodeURIComponent(rec.token)}#cipa-terminal`;
-  }
-
-  function findCipaRemoteVoteByToken(token){
-    ensureCipaRemoteVotingState();
-    return Object.values(state.cipaRemoteVoting).find(r => r && r.token === token) || null;
-  }
-
-  function cipaVoterHasVoted(election, employeeId){
-    if(!election) return false;
-    ensureCipaRemoteVotingState();
-    const key = `${election.id}::${employeeId}`;
-    if(state.cipaRemoteVoting[key]?.voted) return true;
-    const voted = Array.isArray(election.votantesQueVotaram) ? election.votantesQueVotaram : [];
-    return voted.includes(employeeId);
-  }
-
-  function registerCipaVoterAsVoted(election, employeeId, tokenRecord){
-    if(!election) return;
-    if(!Array.isArray(election.votantesQueVotaram)) election.votantesQueVotaram = [];
-    if(!election.votantesQueVotaram.includes(employeeId)) election.votantesQueVotaram.push(employeeId);
-    if(tokenRecord){
-      tokenRecord.voted = true;
-      tokenRecord.votedAt = new Date().toISOString();
-    }
-  }
-
-  function openCipaRemoteTerminal(token){
-    const remote = findCipaRemoteVoteByToken(token);
-    if(!remote){
-      alert("Link de votação inválido ou não localizado.");
-      return;
-    }
-    const election = (state.cipaElections || []).find(e=>e.id===remote.electionId);
-    const voter = (state.employees || []).find(e=>e.id===remote.employeeId);
-    if(!election || !voter){
-      alert("Não foi possível localizar a eleição ou o eleitor deste link.");
-      return;
-    }
-    if(remote.voted || cipaVoterHasVoted(election, voter.id)){
-      openModal(`<h3>🗳️ Terminal de Votação CIPA</h3>
-        <div class="empty">✅ Seu voto já foi registrado. Este link não possui mais voto pendente.</div>
-        <div class="modal-actions"><button class="btn secondary" type="button" onclick="closeModal()">Fechar</button></div>`);
-      return;
-    }
-    const candidates = Array.isArray(election.candidatos) ? election.candidatos : [];
-    const candidateRows = candidates.map(c=>{
-      const id = typeof c === "string" ? c : (c.employeeId || c.id);
-      const emp = (state.employees || []).find(e=>e.id===id);
-      const name = emp?.nome || c.nome || "Candidato";
-      return `<label style="display:flex;gap:10px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:8px;margin:7px 0;cursor:pointer;">
-        <input type="radio" name="cipa-remote-candidate" value="${id}" style="width:auto;margin:0;" required>
-        <strong>${name}</strong>
-      </label>`;
-    }).join("");
-
-    openModal(`<h3>🗳️ Terminal de Votação CIPA</h3>
-      <div style="margin-bottom:12px;">Eleitor: <strong>${voter.nome}</strong></div>
-      <div style="font-size:12px;color:var(--ink-dim);margin-bottom:12px;">Selecione um candidato e confirme. O voto será computado e este eleitor deixará automaticamente a lista de pendentes.</div>
-      <form id="cipa-remote-vote-form">
-        ${candidateRows || `<div class="empty">Nenhum candidato cadastrado nesta eleição.</div>`}
-        ${candidateRows ? `<div class="modal-actions"><button class="btn" type="submit">Confirmar Voto</button></div>` : ""}
-      </form>`);
-
-    document.querySelector("#cipa-remote-vote-form")?.addEventListener("submit", async ev=>{
-      ev.preventDefault();
-      if(remote.voted || cipaVoterHasVoted(election, voter.id)){
-        alert("Este eleitor já registrou voto nesta eleição.");
-        return;
-      }
-      const chosen = new FormData(ev.currentTarget).get("cipa-remote-candidate");
-      if(!chosen) return;
-      if(!election.votos || typeof election.votos !== "object") election.votos = {};
-      election.votos[chosen] = Number(election.votos[chosen] || 0) + 1;
-      registerCipaVoterAsVoted(election, voter.id, remote);
-      const authReceipt=createCipaVoteAuth(election,voter);
-      await saveState();
-      window.closeModal();
-      openModal(`<h3>🗳️ Terminal de Votação CIPA</h3>
-        <div class="empty">
-          ✅ Voto registrado com sucesso. Você não está mais pendente de voto.<br><br>
-          <strong>Código de autenticação do voto</strong><br>
-          <span style="font-size:20px;font-weight:800;letter-spacing:1px;">${authReceipt.code}</span><br><br>
-          <small>Este código comprova o registro do voto e não identifica o candidato escolhido.</small>
-        </div>
-        <div class="modal-actions">
-          <button class="btn secondary" type="button" onclick="closeModal()">Fechar</button>
-        </div>`);
-      deliverCipaVoteAuth(election,voter,authReceipt);
-      render();
-    });
-  }
-
-  function checkCipaRemoteVotingLink(){
-    const params = new URLSearchParams(location.search);
-    const token = params.get("cipaVote");
-    if(token) setTimeout(()=>openCipaRemoteTerminal(token), 250);
-  }
-
 
   // =====================================================================
   // MÓDULO FDS · Fichas com Dados de Segurança (NR-26 / ABNT NBR 14725)
@@ -13378,8 +13401,7 @@ function renderPcmsoDash(root){
       return;
     }
     if(isRemoteVoteMode()){
-      const params = new URLSearchParams(window.location.search);
-      renderRemoteVoteScreen(params.get("eleicaoId"), params.get("eleitorId"), params.get("canal") || "whatsapp");
+      renderRemoteVoteScreen();
       return;
     }
     // Persiste a posição de navegação deste navegador (módulo/aba atuais),
