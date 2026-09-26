@@ -2191,6 +2191,14 @@ nav button .nav-label{line-height:1.25}
 @media(max-width:700px){.brigade-grid,.inspection-filter-grid,.inspection-check-row,.qr-card,.brigade-mobile-filters{grid-template-columns:1fr}.inspection-filter-grid .btn,.inspection-check-row input{grid-column:auto}.qr-card img{margin:auto}.brigade-mobile .mobile-equip{align-items:stretch;flex-direction:column}}
 </style>
 
+<style>
+/* ===== Tela cheia ===== */
+.sst-header .sst-fs-btn{display:inline-grid;place-items:center;border-radius:999px;padding:0;width:36px;height:36px;min-height:0;color:var(--ink-dim)}
+.sst-header .sst-fs-btn:hover{color:var(--ink);border-color:var(--ink-dim)}
+.sst-header .sst-fs-btn svg{width:17px;height:17px;display:block}
+.sst-header .sst-fs-btn[hidden]{display:none}
+@media(max-width:900px){.sst-header .sst-fs-btn{width:44px;height:44px}}
+</style>
 </head>
 <style>
 /* =====================================================================
@@ -12542,6 +12550,7 @@ function renderPcmsoDash(root){
                 <span class="user-role">${empEsc(roleLabel(currentUser.role))}</span>
               </div>
             </div>
+            <button type="button" class="header-btn sst-fs-btn" id="btn-fullscreen" title="Tela cheia" aria-label="Entrar em tela cheia" aria-pressed="false"></button>
             <button class="header-btn sst-logout" id="btn-logout" title="Sair do Sistema" aria-label="Sair do sistema">🚪 <span class="sst-logout-label">Sair</span></button>
           </div>
         </div>
@@ -12585,6 +12594,7 @@ function renderPcmsoDash(root){
 
     document.getElementById("btn-logout").addEventListener("click", handleLogout);
     document.getElementById("btn-about").addEventListener("click", openAboutSystem);
+    if (window.sstFsBind) window.sstFsBind();
     document.getElementById("btn-about-footer").addEventListener("click", openAboutSystem);
     document.getElementById("btn-theme-toggle").addEventListener("click", toggleTheme);
 
@@ -14889,4 +14899,48 @@ function renderPcmsoDash(root){
 })();
 </script>
 
+
+<script>
+/* ===== Tela cheia: botão no cabeçalho + atalho F11 tratado pelo navegador ===== */
+(function(){
+  const ICON_ENTER='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>';
+  const ICON_EXIT='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/></svg>';
+  const root=document.documentElement;
+  const suportado=()=>!!(document.fullscreenEnabled||document.webkitFullscreenEnabled);
+  const ativo=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
+
+  function entrar(){
+    try{
+      const r=root.requestFullscreen?root.requestFullscreen({navigationUI:"hide"}):root.webkitRequestFullscreen&&root.webkitRequestFullscreen();
+      if(r&&r.catch) r.catch(e=>console.warn("Tela cheia bloqueada:",e));
+    }catch(e){console.warn("Tela cheia indisponível:",e);}
+  }
+  function sair(){
+    try{
+      const r=document.exitFullscreen?document.exitFullscreen():document.webkitExitFullscreen&&document.webkitExitFullscreen();
+      if(r&&r.catch) r.catch(()=>{});
+    }catch(e){}
+  }
+  function atualizar(){
+    const b=document.getElementById("btn-fullscreen");
+    if(!b) return;
+    if(!suportado()){ b.hidden=true; return; }
+    const on=ativo();
+    b.innerHTML=on?ICON_EXIT:ICON_ENTER;
+    b.title=on?"Sair da tela cheia (Esc)":"Tela cheia";
+    b.setAttribute("aria-label",on?"Sair da tela cheia":"Entrar em tela cheia");
+    b.setAttribute("aria-pressed",on?"true":"false");
+  }
+  window.sstToggleFullscreen=function(){ ativo()?sair():entrar(); };
+  window.sstFsBind=function(){
+    const b=document.getElementById("btn-fullscreen");
+    if(!b) return;
+    if(!b.dataset.fsBound){ b.addEventListener("click",window.sstToggleFullscreen); b.dataset.fsBound="1"; }
+    atualizar();
+  };
+  document.addEventListener("fullscreenchange",atualizar);
+  document.addEventListener("webkitfullscreenchange",atualizar);
+  window.sstFsBind(); // caso o cabeçalho já tenha sido desenhado antes deste script
+})();
+</script>
 </body></html>
