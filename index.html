@@ -2990,7 +2990,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     }
   }
 
-  const DEFAULT_STATE_SHAPE = {usersDb:[], employees:[],items:[],deliveries:[],stockMovements:[],pcmso:[],fireEquip:[],fireInspections:[],fireBrigadistas:[],fireCorrectiveActions:[],pgrRisks:[],pgrGhes:[],nr15Assessments:[],nr15Professionals:[],confinedSpaces:[],pets:[],ecSupervisors:[],ecPortalPublicUrl:"",fdsList:[],fdsPortalPublicUrl:"",trainings:[],courseCatalog:[],roleMatrix:[],roleTrainingCompliance:[],annualTrainingPlan:[],cipaMembers:[],cipaElections:[],cipaMeetings:[],cipaActions:[],tercEmpresas:[],tercFuncionarios:[],tercIntegracoes:[],tercTiposDocumento:[],tercDocumentos:[],modulePermissions:{master:[],usuario:[]},userSpecificPermissions:{},roleActionPermissions:{},roleSubitemPermissions:{Master:{}},companyLogo:null,systemLogo:null};
+  const DEFAULT_STATE_SHAPE = {usersDb:[], employees:[],items:[],deliveries:[],stockMovements:[],pcmso:[],fireEquip:[],fireInspections:[],fireBrigadistas:[],fireCorrectiveActions:[],pgrRisks:[],pgrGhes:[],nr15Assessments:[],nr15Professionals:[],confinedSpaces:[],pets:[],ecSupervisors:[],ecPortalPublicUrl:"",fdsList:[],fdsPortalPublicUrl:"",trainings:[],courseCatalog:[],roleMatrix:[],roleTrainingCompliance:[],annualTrainingPlan:[],cipaMembers:[],cipaElections:[],cipaMeetings:[],cipaActions:[],tercEmpresas:[],tercFuncionarios:[],tercIntegracoes:[],tercTiposDocumento:[],tercDocumentos:[],modulePermissions:{master:[],usuario:[]},userSpecificPermissions:{},roleActionPermissions:{},roleSubitemPermissions:{Master:{}},companyLogo:null,systemLogo:null,portariaLicenca:null};
 
   // Aplica migrações/valores-padrão em uma base carregada (de qualquer origem)
   // para manter compatibilidade com estados salvos por versões anteriores.
@@ -4089,6 +4089,77 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
 
   // Gestão separada das identidades visuais conforme o nível de acesso:
   // Administrador altera cabeçalho e relatórios; Master altera apenas relatórios.
+  // ---- ACESSO DE TERCEIROS (portaria.html) ----
+  // O Administrador define se o sistema de Acesso de Terceiros está desativado,
+  // em período de teste (até uma data) ou liberado. A portaria lê esta
+  // configuração (state.portariaLicenca) e bloqueia o uso fora do período.
+  function portariaLicencaInfo(){
+    const l = state.portariaLicenca || null;
+    if(!l || l.status === "desativado") return { ok:false, cls:"bad", titulo:"Desativado", texto:"O sistema de Acesso de Terceiros não está liberado para esta empresa." };
+    if(l.status === "liberado") return { ok:true, cls:"ok", titulo:"Liberado", texto:"Uso liberado sem prazo." };
+    const d = daysUntil(l.ate);
+    if(d < 0) return { ok:false, cls:"bad", titulo:"Teste encerrado", texto:`O período de teste terminou em ${fmtDate(l.ate)}.` };
+    return { ok:true, cls:"warn", titulo:"Em período de teste", texto: d === 0 ? `O teste termina hoje (${fmtDate(l.ate)}).` : `O teste termina em ${fmtDate(l.ate)} (${d} dia${d===1?"":"s"}).` };
+  }
+  function renderAdminPortaria(root){
+    if(!currentUser || !["Administrador","Master"].includes(currentUser.role)){
+      root.innerHTML = `<div class="panel"><div class="empty">🔒 Você não possui acesso a esta área.</div></div>`; return;
+    }
+    const e = empEsc, podeEditar = currentUser.role === "Administrador";
+    const l = state.portariaLicenca || { status:"desativado" }, info = portariaLicencaInfo();
+    const url = new URL("portaria.html", location.href).href;
+    const hoje = new Date().toISOString().slice(0,10);
+    root.innerHTML = `
+      <div class="panel" style="max-width:760px;">
+        <div class="panel-head"><h3>🚧 Acesso de Terceiros (Portaria)</h3><span class="status-pill ${info.cls}"><span class="dot"></span>${info.titulo}</span></div>
+        <div style="padding:18px;display:flex;flex-direction:column;gap:14px;">
+          <div class="sub">${e(info.texto)} O sistema usa as empresas e trabalhadores cadastrados em 👷 Terceiros e registra a entrada e saída por biometria.</div>
+          ${l.alteradoPor ? `<div style="font-size:12px;color:var(--ink-dim);">Última alteração: ${e(l.alteradoPor)} em ${fmtDateTime(l.alteradoEm)}</div>` : ""}
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <a class="btn" href="${e(url)}" target="_blank" rel="noopener">🚪 Abrir Acesso de Terceiros</a>
+            <a class="btn secondary" href="${e(url)}#/terminal" target="_blank" rel="noopener">🖐️ Abrir terminal biométrico</a>
+          </div>
+        </div>
+      </div>
+      ${podeEditar ? `
+      <div class="panel" style="max-width:760px;">
+        <div class="panel-head"><h3>🧪 Liberação e período de teste</h3></div>
+        <form id="portaria-lic-form" style="padding:18px;display:flex;flex-direction:column;gap:14px;">
+          <div class="field"><label>Situação do sistema</label>
+            <select name="status" id="portaria-lic-status">
+              <option value="desativado" ${l.status==="desativado"?"selected":""}>⛔ Desativado</option>
+              <option value="teste" ${l.status==="teste"?"selected":""}>🧪 Período de teste</option>
+              <option value="liberado" ${l.status==="liberado"?"selected":""}>✅ Liberado (sem prazo)</option>
+            </select></div>
+          <div id="portaria-lic-teste" class="field-row">
+            <div class="field"><label>Dias de teste</label><input type="number" name="dias" min="1" max="365" placeholder="Ex: 30"></div>
+            <div class="field"><label>Ou data final do teste</label><input type="date" name="ate" min="${hoje}" value="${l.status==="teste" && l.ate ? l.ate : ""}"></div>
+          </div>
+          <div class="sub">Durante o teste, a portaria mostra quantos dias faltam. Depois da data final, o terminal e a portaria ficam bloqueados até o Administrador prorrogar ou liberar.</div>
+          <div id="portaria-lic-msg" style="font-size:12px;color:var(--red);"></div>
+          <div><button class="btn" type="submit">💾 Salvar</button></div>
+        </form>
+      </div>` : `<div class="panel" style="max-width:760px;"><div style="padding:18px;" class="sub">🔒 Somente o Administrador do sistema pode alterar a liberação ou o período de teste.</div></div>`}`;
+    if(!podeEditar) return;
+    const sel = root.querySelector("#portaria-lic-status"), boxTeste = root.querySelector("#portaria-lic-teste");
+    const sync = () => { boxTeste.style.display = sel.value === "teste" ? "" : "none"; }; sync();
+    sel.addEventListener("change", sync);
+    root.querySelector("#portaria-lic-form").addEventListener("submit", async ev => {
+      ev.preventDefault();
+      const d = Object.fromEntries(new FormData(ev.target)), msg = root.querySelector("#portaria-lic-msg");
+      const nova = { status: d.status, ate: null, alteradoPor: currentUser.name || currentUser.username, alteradoEm: new Date().toISOString() };
+      if(d.status === "teste"){
+        nova.ate = d.dias ? addDays(hoje, Number(d.dias)) : d.ate;
+        if(!nova.ate){ msg.textContent = "Informe os dias de teste ou a data final."; return; }
+        if(nova.ate < hoje){ msg.textContent = "A data final não pode ser anterior a hoje."; return; }
+      }
+      state.portariaLicenca = nova;
+      const ok = await saveState();
+      if(ok === false){ msg.textContent = "Não foi possível salvar. Verifique a conexão e tente de novo."; return; }
+      renderAdminPortaria(root);
+    });
+  }
+
   function renderAdminLogoV2(root){
     if(!currentUser || !["Administrador","Master"].includes(currentUser.role)){
       root.innerHTML = `<div class="panel"><div class="empty">🔒 Você não possui acesso ao módulo de logomarcas.</div></div>`;
@@ -12524,6 +12595,7 @@ function renderPcmsoDash(root){
         <button data-tab="admin-users-tab" class="${currentTab==="admin-users-tab"?'active':''}">👥 Gerenciar Usuários</button>
         <button data-tab="admin-access-tab" class="${currentTab==="admin-access-tab"?'active':''}">🔐 Matriz de Acessos</button>
         <button data-tab="admin-logo-tab" class="${currentTab==="admin-logo-tab"?'active':''}">🖼️ Logo dos Relatórios</button>
+        <button data-tab="admin-portaria-tab" class="${currentTab==="admin-portaria-tab"?'active':''}">🚧 Acesso de Terceiros</button>
         <button data-tab="my-account-tab" class="${currentTab==="my-account-tab"?'active':''}">🔑 Alterar Minha Senha</button>
       `;
     } else {
@@ -12679,6 +12751,7 @@ function renderPcmsoDash(root){
       if(currentTab === "admin-users-tab") renderAdminUsers(main);
       else if(currentTab === "admin-access-tab") renderAdminPermissions(main);
       else if(currentTab === "admin-logo-tab") renderAdminLogoV2(main);
+      else if(currentTab === "admin-portaria-tab") renderAdminPortaria(main);
       return;
     }
 
