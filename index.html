@@ -2192,6 +2192,160 @@ nav button .nav-label{line-height:1.25}
 </style>
 
 </head>
+<style>
+/* =====================================================================
+   MODO CELULAR — gaveta de módulos, abas fixas, áreas seguras (notch)
+   e listas em cartões. Só age em telas de até 900px; o desktop não muda.
+   ===================================================================== */
+.sst-menu-btn,.sst-drawer-head,.sst-drawer-foot,.sst-drawer-backdrop{display:none}
+#app{min-height:100vh;min-height:100dvh}
+main img,main video,main canvas,.modal img{max-width:100%;height:auto}
+
+@media (max-width:900px){
+  /* Cabeçalho compacto numa linha só, respeitando o notch/barra de status */
+  .sst-header-top{
+    gap:8px;
+    padding:calc(6px + env(safe-area-inset-top,0px)) calc(10px + env(safe-area-inset-right,0px)) 6px calc(10px + env(safe-area-inset-left,0px));
+  }
+  .sst-header .brand{min-width:0;flex:1 1 auto;justify-content:flex-start}
+  .sst-header .brand-logo{height:40px;max-height:40px;max-width:150px}
+  .sst-header .header-user-section{gap:6px;flex:0 0 auto}
+  .sst-menu-btn{
+    all:unset;display:inline-grid;place-items:center;flex:0 0 44px;width:44px;height:44px;border-radius:10px;
+    background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-size:22px;line-height:1;cursor:pointer;
+  }
+  .sst-menu-btn:focus-visible,.sst-drawer-close:focus-visible,.sst-drawer-opt:focus-visible{outline:2px solid var(--yellow);outline-offset:2px}
+  .sst-header .sst-logout,.sst-about-btn{min-height:44px;box-sizing:border-box}
+
+  /* Módulos viram gaveta lateral (antes: faixa rolável que ocupava uma linha inteira) */
+  .sst-header .header-modules{
+    position:fixed;top:0;bottom:0;left:0;z-index:62;
+    width:min(320px,86vw);
+    display:flex;flex-direction:column;flex-wrap:nowrap;align-items:stretch;justify-content:flex-start;gap:2px;
+    overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+    padding:calc(8px + env(safe-area-inset-top,0px)) 10px calc(14px + env(safe-area-inset-bottom,0px)) calc(10px + env(safe-area-inset-left,0px));
+    background:var(--panel);border-top:0;border-right:1px solid var(--line);
+    box-shadow:8px 0 28px rgba(0,0,0,.28);
+    transform:translateX(-104%);visibility:hidden;
+    transition:transform .22s ease,visibility 0s linear .22s;
+  }
+  body.sst-drawer-open .sst-header .header-modules{transform:none;visibility:visible;transition:transform .22s ease,visibility 0s}
+  body.sst-drawer-open{overflow:hidden}
+  body.sst-drawer-open header.top-header.sst-header{z-index:45}
+  .sst-drawer-backdrop{
+    display:block;position:fixed;inset:0;z-index:61;background:#0000007a;
+    opacity:0;pointer-events:none;transition:opacity .22s ease;
+  }
+  body.sst-drawer-open .sst-drawer-backdrop{opacity:1;pointer-events:auto}
+
+  .sst-drawer-head{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:6px 4px 12px 8px;margin-bottom:6px;border-bottom:1px solid var(--line);
+  }
+  .sst-drawer-head strong{display:block;font-size:16px}
+  .sst-drawer-head small{display:block;margin-top:2px;font-size:11.5px;color:var(--ink-dim);overflow-wrap:anywhere}
+  .sst-drawer-close{all:unset;cursor:pointer;display:grid;place-items:center;width:44px;height:44px;border-radius:10px;font-size:18px;color:var(--ink-dim)}
+  .sst-drawer-close:hover{background:var(--panel-2);color:var(--ink)}
+
+  .sst-header .header-modules .header-btn{
+    min-height:48px;padding:12px 12px;border:0;border-left:3px solid transparent;border-radius:6px;
+    font-size:14.5px;white-space:normal;line-height:1.3;color:var(--ink);box-sizing:border-box;width:100%;
+  }
+  .sst-header .header-modules .header-btn.active{background:var(--panel-2);border-left-color:var(--yellow);border-bottom-color:transparent;font-weight:700}
+  .sst-header .header-modules .header-btn.disabled{display:none}
+
+  .sst-drawer-foot{display:flex;flex-direction:column;gap:2px;margin-top:auto;padding-top:12px;border-top:1px solid var(--line)}
+  .sst-drawer-opt{
+    all:unset;cursor:pointer;box-sizing:border-box;width:100%;min-height:46px;padding:12px;border-radius:6px;
+    font-size:13.5px;font-weight:500;color:var(--ink-dim);
+  }
+  .sst-drawer-opt:hover{background:var(--panel-2);color:var(--ink)}
+
+  /* Abas do módulo: faixa fixa logo abaixo do cabeçalho */
+  .sidebar{
+    position:sticky;top:var(--sst-hdr-h,60px);z-index:20;
+    padding:6px 0;box-shadow:0 1px 0 var(--line);
+  }
+  .sidebar:has(nav:empty){display:none}
+  .sidebar .theme-toggle-container{display:none}
+  nav{
+    padding:0 calc(8px + env(safe-area-inset-right,0px)) 2px calc(8px + env(safe-area-inset-left,0px));
+    scroll-padding-inline:24px;
+    -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 22px),transparent 100%);
+            mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 22px),transparent 100%);
+  }
+  nav button{border-left:0!important;border-bottom:3px solid transparent;border-radius:6px 6px 0 0}
+  nav button.active{border-bottom-color:var(--yellow)}
+
+  main{padding-left:calc(14px + env(safe-area-inset-left,0px));padding-right:calc(14px + env(safe-area-inset-right,0px))}
+  .sst-footer{font-size:11px;padding-left:16px;padding-right:16px}
+
+  /* Toque: sem efeitos de "hover" que grudam no dedo */
+  @media (hover:none){
+    .terc-icon-btn:hover,.btn:hover{transform:none}
+  }
+}
+
+@media (max-width:600px){
+  .sst-header .brand-logo{height:34px;max-height:34px;max-width:120px}
+  .sst-about-btn{display:none}
+  .sst-logout-label{display:none}
+  .sst-header .sst-logout{padding:8px 11px}
+  main{padding-left:calc(10px + env(safe-area-inset-left,0px));padding-right:calc(10px + env(safe-area-inset-right,0px))}
+  .sst-footer span{text-align:center}
+}
+
+/* Listas em cartões: cada linha da tabela vira um cartão com rótulos.
+   Aplicado pelo script "sstTableCards" só em tabelas simples. */
+@media (max-width:700px){
+  table.sst-cards{display:block;min-width:0!important;width:100%!important;table-layout:auto!important;border:0;padding:10px 10px 2px;box-sizing:border-box}
+  table.sst-cards thead{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  table.sst-cards tbody,table.sst-cards tfoot,table.sst-cards tr{display:block;width:auto!important}
+  table.sst-cards colgroup{display:none}
+  table.sst-cards tr{
+    display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px 14px;
+    border:1px solid var(--line);border-radius:10px;background:var(--panel);
+    margin:0 0 10px;padding:12px 14px;
+  }
+  table.sst-cards td{
+    display:block;width:auto!important;max-width:none!important;min-width:0!important;
+    padding:0!important;border:0!important;background:none;
+    text-align:left!important;white-space:normal!important;overflow-wrap:anywhere;font-size:13.5px;line-height:1.35;
+  }
+  table.sst-cards td[data-label]:not([data-label=""])::before{
+    content:attr(data-label);display:block;margin-bottom:3px;
+    font-size:11px;font-weight:600;line-height:1.3;color:var(--ink-dim);
+  }
+  /* 1ª coluna = identificação do registro: ocupa a largura toda, sem rótulo */
+  table.sst-cards td:first-child{grid-column:1/-1;font-weight:600;font-size:14.5px;padding-bottom:10px!important;border-bottom:1px solid var(--line)!important}
+  table.sst-cards td:first-child::before{display:none!important}
+  table.sst-cards td.sst-cell-wide,table.sst-cards td.sst-cell-full{grid-column:1/-1}
+  table.sst-cards td.sst-cell-full{text-align:center!important;color:var(--ink-dim);padding:6px 0!important}
+  table.sst-cards tr:has(> td.sst-cell-full:only-child){display:block}
+  table.sst-cards td:empty{display:none}
+  table.sst-cards [class*="chip"],table.sst-cards [class*="badge"],table.sst-cards .emp-date{white-space:normal;max-width:100%}
+  table.sst-cards .row-actions,table.sst-cards .emp-actions,table.sst-cards .terc-empresa-actions,table.sst-cards .user-actions{justify-content:flex-start;flex-wrap:wrap;gap:8px}
+  table.sst-cards .emp-action{width:44px;height:44px}
+  table.sst-cards .action-link{display:inline-flex;align-items:center;min-height:40px;padding:0 4px}
+  table.sst-cards .emp-person{min-width:0}
+}
+
+/* Grades definidas direto no HTML (style="...") que não quebravam linha no celular */
+@media (max-width:900px){
+  main .annual-kpis[style*="repeat("]{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+}
+@media (max-width:650px){
+  main .annual-kpis[style*="repeat("]{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  main [style*="grid-template-columns:minmax("]{grid-template-columns:minmax(0,1fr)!important}
+  .annual-kpi{padding:11px 12px;gap:9px}
+  .annual-kpi .num{font-size:22px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .sst-header .header-modules,.sst-drawer-backdrop{transition:none!important}
+}
+</style>
+
 <body>
 <div id="app"></div>
 <script id="__STATE__" type="application/json">{"usersDb":[{"id":"u1","username":"admin","pass":"admin123","role":"Administrador","name":"Administrador Geral","trialExpires":null,"mustChangePassword":false,"employeeId":null},{"id":"u2","username":"master","pass":"master123","role":"Master","name":"Diretoria / Master","trialExpires":null,"mustChangePassword":false,"employeeId":null},{"id":"u3","username":"usuario","pass":"Usuario","role":"Usuario","name":"Operador de Sistema","trialExpires":null,"mustChangePassword":true,"employeeId":null},{"id":"u4","username":"voto_cipa","pass":"cipa2026","role":"VotacaoCIPA","name":"Terminal de Votação CIPA","trialExpires":null,"mustChangePassword":false,"employeeId":null}],"employees":[{"id":"emp_mu5gt37kabugiu","nome":"João Silva","cargo":"Operador","setor":"Produção","admissao":"2024-01-15"},{"id":"emp_mu5gt37kps00yw","nome":"Marcos Oliveira","cargo":"Vigia NR-33","setor":"Manutenção","admissao":"2023-05-10"},{"id":"emp_mu5gt37kcrad4p","nome":"Ana Costa","cargo":"Supervisora de Entrada","setor":"Segurança do Trabalho","admissao":"2022-03-01"}],"items":[{"id":"item_mu5gt37kl0t3g4","nome":"Capacete de segurança","ca":"31469","vidaUtilDias":365,"estoque":14,"estoqueMinimo":5}],"deliveries":[],"pcmso":[],"fireEquip":[{"id":"fire_mu5gt37ks8iuyp","tipo":"Extintor","identificador":"EXT-01","categoria":"PQS ABC 6kg","localizacao":"Galpão A","dataCarga":"2025-10-10","vencimentoCarga":"2026-10-10","vencimentoHidro":"2030-10-10","periodicidadeInspMeses":1,"ultimaInspecao":"2026-02-15"}],"fireInspections":[{"id":"insp_mu5gt37k1wk4pa","equipId":"fire_mu5gt37ks8iuyp","dataInspecao":"2026-02-15","proximaInspecao":"2026-03-15","tipoChecagem":"Mensal Visual","inspetor":"Carlos TST","resultado":"Aprovado","observacoes":"Pressão ok, lacre intacto"}],"pgrRisks":[{"id":"pgr_mu5gt37kr9qwu1","setor":"Usinagem","atividade":"Operação de Torno","perigo":"Ruído excessivo de motores","tipo":"Físico","severidade":3,"probabilidade":3,"medidaControle":"Uso obrigatório de Protetor Auricular Plug"}],"confinedSpaces":[{"id":"ec_mu5gt37kqzlpnz","tag":"EC-01","nome":"Tanque de Armazenamento TK-101","localizacao":"Setor de Utilidades / Galpão B","dimensoes":"Diâmetro: 4m, Altura: 6m (Vol: 75m³)","aberturas":"01 Boca de visita superior (18\") e 01 lateral","riscos":"Deficiência de O2, Vapores Orgânicos Inflamáveis, Asfixia","isolamento":"Bloqueio e Etiquetagem (LOTO), CDateTime de válvulas e raqueteamento","ventilacao":"Exaustão mecânica contínua antecedida de insuflação por 30min","equipamentos":"Detector multigás (O2, LEL, CO, H2S), Tripé com resgatador, Cinto paraquedista, Exaustor autônomo"}],"pets":[{"id":"pet_mu5gt37kk5s78q","numeroPet":"PET-2026/001","ecId":"ec_mu5gt37kqzlpnz","dataEmissao":"2026-03-10","validadeHoras":"8 horas","supervisorId":"emp_mu5gt37kcrad4p","vigiaId":"emp_mu5gt37kps00yw","trabalhadores":"João Silva, Pedro Santos","trabalhoExecutar":"Limpeza de resíduos e inspeção das paredes internas do tanque","status":"Ativa"}],"trainings":[{"id":"tr_mu5gt37k2kvkwb","employeeId":"emp_mu5gt37kps00yw","curso":"NR-33 Vigia e Trabalhador Autorizado","cargaHoraria":"16h","dataRealizacao":"2025-04-10","validadeMeses":12,"dataVencimento":"2026-04-10","entidade":"Centro de Formação SST"},{"id":"tr_mu5gt37k8r94bl","employeeId":"emp_mu5gt37kcrad4p","curso":"NR-33 Supervisor de Entrada","cargaHoraria":"40h","dataRealizacao":"2025-08-01","validadeMeses":12,"dataVencimento":"2026-08-01","entidade":"Instituto de Segurança Industrial"}],"roleMatrix":[{"id":"mtx_mu5gt37kh6gfd8","cargo":"Operador","procedimento":"Treinamento Integração de Segurança (NR-01)","tipo":"Obrigatório","cargaHoraria":"4h","reciclagemMeses":12,"descricao":"Capacitação básica inicial sobre riscos da operação e regras do site."},{"id":"mtx_mu5gt37kpmtwf7","cargo":"Vigia NR-33","procedimento":"NR-33 Capacitação para Vigias e Trabalhadores","tipo":"Obrigatório","cargaHoraria":"16h","reciclagemMeses":12,"descricao":"Procedimentos de monitoramento, controle de acesso e resgate inicial em EC."},{"id":"mtx_mu5gt37kyu6x36","cargo":"Supervisora de Entrada","procedimento":"NR-33 Capacitação para Supervisores de Entrada","tipo":"Obrigatório","cargaHoraria":"40h","reciclagemMeses":12,"descricao":"Emissão de PET, medição atmosférica e gerenciamento de permissões de risco."}],"cipaMembers":[{"id":"cipam_mu5gt37kqy2azk","employeeId":"emp_mu5gt37kcrad4p","representacao":"Empregador","tipo":"Titular","funcaoComissao":"Presidente","mandatoInicio":"2025-06-01","mandatoFim":"2026-06-01","ativo":true,"gestao":"2025/2026","eleicaoId":"cipael_mu5gt37kpu70w0"},{"id":"cipam_mu5gt37kjq537x","employeeId":"emp_mu5gt37kps00yw","representacao":"Empregado","tipo":"Titular","funcaoComissao":"Vice-Presidente","mandatoInicio":"2025-06-01","mandatoFim":"2026-06-01","ativo":true,"gestao":"2025/2026","eleicaoId":"cipael_mu5gt37kpu70w0"},{"id":"cipam_mu5gt37kto66id","employeeId":"emp_mu5gt37kabugiu","representacao":"Empregado","tipo":"Suplente","funcaoComissao":"Membro","mandatoInicio":"2025-06-01","mandatoFim":"2026-06-01","ativo":true,"gestao":"2025/2026","eleicaoId":"cipael_mu5gt37kpu70w0"}],"cipaElections":[{"id":"cipael_mu5gt37kpu70w0","gestao":"2025/2026","dataEdital":"2025-04-15","dataInscricaoInicio":"2025-04-20","dataInscricaoFim":"2025-05-05","dataEleicao":"2025-05-20","dataPosse":"2025-06-01","totalInscritos":3,"totalVotantes":42,"status":"Concluída","observacoes":"Eleição realizada sem impugnações. Ata registrada em livro próprio.","vagasTitulares":2,"vagasSuplentes":1,"urnaStatus":"Encerrada","votosBrancos":2,"candidatos":[{"id":"cand_mu5gt37k3ctl5o","employeeId":"emp_mu5gt37kcrad4p","numero":"01","representacao":"Empregador","votos":25,"proposta":"Mais diálogo entre liderança e operação."},{"id":"cand_mu5gt37kse6qfq","employeeId":"emp_mu5gt37kps00yw","numero":"02","representacao":"Empregado","votos":15,"proposta":"Reforço de treinamentos de NR-33."},{"id":"cand_mu5gt37kxolj42","employeeId":"emp_mu5gt37kabugiu","numero":"03","representacao":"Empregado","votos":0,"proposta":"Melhoria da sinalização interna."}],"votantes":[]}],"cipaMeetings":[{"id":"cipareu_mu5gt37krkij4m","dataReuniao":"2026-02-10","tipo":"Ordinária","pauta":"Análise de indicadores de acidentes do mês, revisão do mapa de risco do setor de Produção.","participantes":"Presidente, Vice-Presidente e demais membros titulares","deliberacoes":"Solicitar sinalização adicional no corredor da Usinagem e reforçar treinamento de uso de EPI.","proximaReuniao":"2026-03-10"}],"cipaActions":[{"id":"cipaacao_mu5gt37kpj0ze1","descricao":"Instalar sinalização de piso escorregadio no corredor da Usinagem","origem":"Reunião CIPA","reuniaoId":"cipareu_mu5gt37krkij4m","responsavelId":"emp_mu5gt37kps00yw","prazo":"2026-04-15","status":"Pendente","observacoes":""}],"tercEmpresas":[{"id":"terce_mu5gt37kn3szng","razaoSocial":"Rápido Manutenções Industriais Ltda","cnpj":"12.345.678/0001-90","servico":"Manutenção elétrica predial e industrial","contatoResponsavel":"Carlos Mendes","telefone":"(47) 99876-5432","email":"contato@rapidomanutencoes.com.br","dataInicioContrato":"2025-08-01","dataFimContrato":"2026-07-31","responsavelInternoId":"emp_mu5gt37kcrad4p","status":"Ativo","observacoes":"Contrato anual, com possibilidade de renovação automática mediante avaliação."}],"tercFuncionarios":[{"id":"tercf_mu5gt37k3sqqzk","empresaId":"terce_mu5gt37kn3szng","nome":"Roberto Alves Pereira","funcao":"Eletricista de Manutenção","cpf":"123.456.789-00","dataInicioAtividade":"2025-08-01","dataFimAtividade":"2026-07-31","status":"Ativo","observacoes":""}],"tercDocumentos":[{"id":"tercd_mu5gt37kcreume","empresaId":"terce_mu5gt37kn3szng","tipo":"Contrato de Prestação de Serviços","numero":"CT-2025-118","dataEmissao":"2025-08-01","dataVencimento":"2026-07-31","observacoes":""},{"id":"tercd_mu5gt37knea2r3","empresaId":"terce_mu5gt37kn3szng","tipo":"Ordem de Serviço (NR-01)","numero":"OS-2025-118","dataEmissao":"2025-08-01","dataVencimento":"2026-08-01","observacoes":""},{"id":"tercd_mu5gt37kh57mvh","empresaId":"terce_mu5gt37kn3szng","tipo":"Certidão Negativa de Débitos (CND)","numero":"","dataEmissao":"2025-12-01","dataVencimento":"2026-06-01","observacoes":"Renovar junto à Receita Federal antes do vencimento."}],"modulePermissions":{"master":["trainings","ec","pgr","epi","pcmso","incendio","cipa","terceiros","geral"],"usuario":["trainings","epi"]},"userSpecificPermissions":{}}</script>
@@ -12375,6 +12529,7 @@ function renderPcmsoDash(root){
     app.innerHTML = `
       <header class="top-header sst-header">
         <div class="sst-header-top">
+          <button type="button" class="sst-menu-btn" id="btn-mobile-menu" aria-label="Abrir menu de módulos" aria-expanded="false" aria-controls="sst-modules"><span aria-hidden="true">☰</span></button>
           <div class="brand">
             <img class="brand-logo" src="${FIXED_SYSTEM_LOGO}" alt="Partner · sistema modular de SST">
           </div>
@@ -12387,11 +12542,16 @@ function renderPcmsoDash(root){
                 <span class="user-role">${empEsc(roleLabel(currentUser.role))}</span>
               </div>
             </div>
-            <button class="header-btn sst-logout" id="btn-logout" title="Sair do Sistema">🚪 Sair</button>
+            <button class="header-btn sst-logout" id="btn-logout" title="Sair do Sistema" aria-label="Sair do sistema">🚪 <span class="sst-logout-label">Sair</span></button>
           </div>
         </div>
 
-        <div class="header-modules" role="navigation" aria-label="Módulos do sistema">
+        <div class="sst-drawer-backdrop" id="sst-drawer-backdrop"></div>
+        <div class="header-modules" id="sst-modules" role="navigation" aria-label="Módulos do sistema">
+          <div class="sst-drawer-head">
+            <div><strong>Módulos</strong><small>${empEsc(currentUser.name)} · ${empEsc(roleLabel(currentUser.role))}</small></div>
+            <button type="button" class="sst-drawer-close" id="btn-mobile-menu-close" aria-label="Fechar menu">✕</button>
+          </div>
           ${ALL_MODULES.map(m => {
             const isAllowed = availableMods.includes(m.id);
             return `<button class="header-btn ${currentModule===m.id?'active':''} ${!isAllowed?'disabled':''}" data-mod="${m.id}">${m.name}</button>`;
@@ -12400,6 +12560,11 @@ function renderPcmsoDash(root){
           ${currentUser.role === 'Administrador' || currentUser.role === 'Master' ? `
             <button class="header-btn ${currentModule==='admin-perms'?'active':''}" data-mod="admin-perms">⚙️ Administração</button>
           ` : ''}
+          <div class="sst-drawer-foot">
+            <button type="button" class="sst-drawer-opt" id="btn-theme-toggle-m">🌓 Usar tema ${currentTheme === "dark" ? "claro" : "escuro"}</button>
+            <button type="button" class="sst-drawer-opt" id="btn-table-mode-m">${(window.sstTableMode && window.sstTableMode()) === "table" ? "▤ Mostrar listas como cartões" : "▦ Mostrar tabelas completas"}</button>
+            <button type="button" class="sst-drawer-opt" id="btn-about-m">ℹ️ Sobre o sistema</button>
+          </div>
         </div>
       </header>
 
@@ -12421,12 +12586,46 @@ function renderPcmsoDash(root){
     document.getElementById("btn-logout").addEventListener("click", handleLogout);
     document.getElementById("btn-about").addEventListener("click", openAboutSystem);
     document.getElementById("btn-about-footer").addEventListener("click", openAboutSystem);
-    app.querySelector(".header-modules .header-btn.active")?.scrollIntoView({block:"nearest",inline:"nearest"});
     document.getElementById("btn-theme-toggle").addEventListener("click", toggleTheme);
+
+    // ===== Celular: gaveta de módulos, abas fixas e aba ativa visível =====
+    const isPhoneLayout = window.matchMedia("(max-width: 900px)").matches;
+    const menuBtn = document.getElementById("btn-mobile-menu");
+    const setDrawer = (open) => {
+      document.body.classList.toggle("sst-drawer-open", open);
+      menuBtn.setAttribute("aria-expanded", open ? "true" : "false");
+      if(open) setTimeout(() => (app.querySelector("#sst-modules .header-btn.active") || app.querySelector("#btn-mobile-menu-close"))?.focus({preventScroll:true}), 60);
+      else if(document.activeElement && document.activeElement.closest("#sst-modules")) menuBtn.focus({preventScroll:true});
+    };
+    document.body.classList.remove("sst-drawer-open");
+    menuBtn.addEventListener("click", () => setDrawer(!document.body.classList.contains("sst-drawer-open")));
+    document.getElementById("btn-mobile-menu-close").addEventListener("click", () => setDrawer(false));
+    document.getElementById("sst-drawer-backdrop").addEventListener("click", () => setDrawer(false));
+    document.getElementById("btn-theme-toggle-m").addEventListener("click", () => { document.body.classList.remove("sst-drawer-open"); toggleTheme(); });
+    document.getElementById("btn-table-mode-m").addEventListener("click", () => { window.sstToggleTableMode && window.sstToggleTableMode(); document.body.classList.remove("sst-drawer-open"); renderShell(); });
+    document.getElementById("btn-about-m").addEventListener("click", () => { setDrawer(false); openAboutSystem(); });
+    if(!window.__sstDrawerKeys){
+      window.__sstDrawerKeys = true;
+      document.addEventListener("keydown", (e) => {
+        if(e.key === "Escape" && document.body.classList.contains("sst-drawer-open")){
+          document.body.classList.remove("sst-drawer-open");
+          document.getElementById("btn-mobile-menu")?.setAttribute("aria-expanded","false");
+          document.getElementById("btn-mobile-menu")?.focus();
+        }
+      });
+    }
+    if(isPhoneLayout){
+      app.querySelector("nav button.active")?.scrollIntoView({block:"nearest",inline:"center"});
+    } else {
+      app.querySelector(".header-modules .header-btn.active")?.scrollIntoView({block:"nearest",inline:"nearest"});
+    }
+    window.sstSyncHeaderHeight && window.sstSyncHeaderHeight();
 
     app.querySelectorAll("[data-mod]").forEach(btn => {
       btn.addEventListener("click", (e) => {
         const mod = e.currentTarget.dataset.mod;
+        document.body.classList.remove("sst-drawer-open");
+        window.scrollTo(0, 0);
         currentModule = mod;
         if(mod === "admin-perms") {
           currentTab = "admin-users-tab";
@@ -12442,6 +12641,7 @@ function renderPcmsoDash(root){
     app.querySelectorAll("nav button[data-tab]").forEach(btn => {
       btn.addEventListener("click", (e) => {
         currentTab = e.currentTarget.dataset.tab;
+        if(window.matchMedia("(max-width: 900px)").matches) window.scrollTo(0, 0);
         renderContent();
         renderShell();
       });
@@ -14581,6 +14781,112 @@ function renderPcmsoDash(root){
       navigator.serviceWorker.register("service-worker.js").catch(() => {});
     });
   }
+</script>
+
+<script>
+/* ===== Modo celular: altura do cabeçalho e listas em cartões ===== */
+(function(){
+  var KEY = "sst-mobile-table-mode";
+  var phone = window.matchMedia("(max-width: 700px)");
+  var drawerMq = window.matchMedia("(max-width: 900px)");
+  var SKIP = ".permissions-table,.sheet-table,.meta-table,[data-no-cards]";
+
+  function mode(){ try{ return localStorage.getItem(KEY) || "cards"; }catch(e){ return "cards"; } }
+  window.sstTableMode = mode;
+  window.sstToggleTableMode = function(){
+    try{ localStorage.setItem(KEY, mode() === "cards" ? "table" : "cards"); }catch(e){}
+    schedule();
+  };
+
+  window.sstSyncHeaderHeight = function(){
+    var h = document.querySelector("header.sst-header");
+    if(h) document.documentElement.style.setProperty("--sst-hdr-h", h.offsetHeight + "px");
+  };
+
+  function headerLabels(t){
+    var head = t.tHead;
+    if(!head || head.rows.length !== 1) return null;
+    var cells = Array.prototype.slice.call(head.rows[0].cells);
+    for(var i=0;i<cells.length;i++){ if(cells[i].colSpan > 1 || cells[i].rowSpan > 1) return null; }
+    return cells.map(function(c){
+      return (c.textContent || "").replace(/\s+/g," ").trim()
+        .replace(/([\u2600-\u27BF\uFE0F]|[\uD83C-\uDBFF][\uDC00-\uDFFF])(?=[A-Za-zÀ-ÿ0-9])/g, "$1 ");
+    });
+  }
+
+  function prepare(t){
+    if(t.matches(SKIP) || t.closest("[data-no-cards]")) return false;
+    if(t.querySelector("td[rowspan]")) return false;
+    var labels = headerLabels(t);
+    if(!labels || labels.length < 2 || labels.length > 12) return false;
+    for(var b=0;b<t.tBodies.length;b++){
+      var rows = t.tBodies[b].rows;
+      for(var r=0;r<rows.length;r++){
+        var cells = rows[r].cells;
+        if(cells.length !== labels.length){
+          for(var k=0;k<cells.length;k++){ if(cells[k].colSpan > 1) cells[k].classList.add("sst-cell-full"); }
+          continue;
+        }
+        for(var c=0;c<cells.length;c++){
+          var cell = cells[c];
+          if(cell.getAttribute("data-label") !== labels[c]) cell.setAttribute("data-label", labels[c]);
+          var wide = /^\W*(a[cç][õo]es|opera[cç][õo]es)\b/i.test(labels[c]) ||
+                     (cell.textContent || "").trim().length > 38 ||
+                     !!cell.querySelector("textarea, table, ul, ol");
+          if(cell.classList.contains("sst-cell-wide") !== wide) cell.classList.toggle("sst-cell-wide", wide);
+        }
+      }
+    }
+    return true;
+  }
+
+  // Teclado certo no celular: numérico para CNPJ/CPF, telefone e e-mail.
+  function tuneInputs(){
+    var inputs = document.querySelectorAll('#app input:not([data-sst-kb]), .modal-overlay input:not([data-sst-kb])');
+    for(var i=0;i<inputs.length;i++){
+      var el = inputs[i], type = (el.getAttribute("type") || "text").toLowerCase();
+      el.setAttribute("data-sst-kb", "1");
+      if(type !== "text" || el.hasAttribute("inputmode")) continue;
+      var hint = ((el.name || "") + " " + (el.id || "") + " " + (el.placeholder || "")).toLowerCase();
+      if(/e-?mail|@/.test(hint)){
+        el.setAttribute("inputmode","email"); el.setAttribute("autocapitalize","off"); el.setAttribute("autocorrect","off"); el.spellcheck = false;
+      } else if(/telefone|celular|whats|phone|\bfone\b|\(00\)/.test(hint)){
+        el.setAttribute("inputmode","tel");
+      } else if(/cnpj|cpf|cep|00\.000|000\.000/.test(hint)){
+        el.setAttribute("inputmode","numeric");
+      }
+    }
+  }
+
+  function apply(){
+    pending = false;
+    tuneInputs();
+    var on = phone.matches && mode() === "cards";
+    var tables = document.querySelectorAll("#app table, .modal-overlay table");
+    for(var i=0;i<tables.length;i++){
+      var t = tables[i], ok = on && prepare(t);
+      if(t.classList.contains("sst-cards") !== ok) t.classList.toggle("sst-cards", ok);
+    }
+    window.sstSyncHeaderHeight();
+  }
+
+  var pending = false;
+  function schedule(){ if(!pending){ pending = true; requestAnimationFrame(apply); } }
+
+  new MutationObserver(function(list){
+    for(var i=0;i<list.length;i++){ if(list[i].addedNodes.length){ schedule(); return; } }
+  }).observe(document.documentElement, {childList:true, subtree:true});
+
+  function onViewportChange(){
+    if(!drawerMq.matches) document.body.classList.remove("sst-drawer-open");
+    schedule();
+  }
+  (phone.addEventListener ? phone.addEventListener("change", onViewportChange) : phone.addListener(onViewportChange));
+  (drawerMq.addEventListener ? drawerMq.addEventListener("change", onViewportChange) : drawerMq.addListener(onViewportChange));
+  window.addEventListener("resize", function(){ window.sstSyncHeaderHeight(); });
+  window.addEventListener("orientationchange", function(){ setTimeout(window.sstSyncHeaderHeight, 250); });
+  document.addEventListener("DOMContentLoaded", schedule);
+})();
 </script>
 
 </body></html>
