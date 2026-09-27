@@ -763,24 +763,6 @@
   #main-content:has(.hz-table) .emp-action{width:30px;height:30px;padding:0;display:grid;place-items:center;}
   @media(max-width:900px){#main-content:has(#hz-new),#main-content:has(.hz-table){padding:16px}#main-content:has(#hz-new) .hz-filter-row,#main-content:has(.hz-table) .hz-filter-row{grid-template-columns:1fr 1fr}}
   @media(max-width:600px){#main-content:has(#hz-new) .emp-kpis,#main-content:has(.hz-table) .emp-kpis{grid-template-columns:1fr 1fr}#main-content:has(#hz-new) .hz-filter-row,#main-content:has(.hz-table) .hz-filter-row{grid-template-columns:1fr}}
-
-/* Foto do trabalhador terceiro */
-.terc-foto-wrap{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-.terc-foto-prev{width:96px;height:96px;border-radius:50%;border:2px dashed var(--line);background:var(--panel-2);display:flex;align-items:center;justify-content:center;font-size:38px;overflow:hidden;flex-shrink:0}
-.terc-foto-prev.has{border-style:solid;border-color:var(--accent,#f5b800)}
-.terc-foto-prev img{width:100%;height:100%;object-fit:cover;max-width:none}
-.terc-foto-btns{display:flex;gap:8px;flex-wrap:wrap}
-.terc-foto-btns .btn{padding:8px 12px;font-size:13px}
-.terc-cam{margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:12px;background:var(--panel-2)}
-.terc-cam-stage{position:relative;width:100%;max-width:360px;aspect-ratio:1/1;margin:0 auto;border-radius:10px;overflow:hidden;background:#000}
-.terc-cam-stage video{width:100%;height:100%;object-fit:cover;display:block;max-width:none}
-.terc-cam-stage::after{content:"";position:absolute;inset:12%;border:2px solid rgba(255,255,255,.55);border-radius:50%;pointer-events:none}
-.terc-cam-stage.mirror video{transform:scaleX(-1)}
-.terc-cam-actions{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;margin-top:10px}
-.terc-cam-msg{font-size:12px;color:var(--ink-dim);text-align:center;margin-top:6px}
-.terc-avatar{width:38px;height:38px;border-radius:50%;object-fit:cover;flex-shrink:0;border:1px solid var(--line);max-width:none}
-.terc-avatar.ph{display:inline-flex;align-items:center;justify-content:center;background:var(--panel-2);font-size:18px}
-.terc-name-cell{display:flex;gap:10px;align-items:center}
 </style>
 
 <style>
@@ -3551,7 +3533,6 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
   function ecById(id){ return state.confinedSpaces.find(x=>x.id===id); }
 
   window.closeModal = function(){
-    if(typeof window.__tercCamStop === "function") window.__tercCamStop();
     const ov = document.querySelector(".modal-overlay");
     if(ov) ov.remove();
   };
@@ -7572,7 +7553,7 @@ function renderPcmsoDash(root){
             const dleft = daysUntil(f.dataFimAtividade);
             const stLabel = f.status==="Inativo" ? "Inativo" : st==="bad" ? `Vencido há ${Math.abs(dleft)}d` : st==="warn" ? `Vence em ${dleft}d` : "Ativo";
             return `<tr>
-              <td><div class="terc-name-cell">${f.foto?`<img class="terc-avatar" src="${f.foto}" alt="Foto de ${f.nome}">`:`<span class="terc-avatar ph">👷</span>`}<div><strong>${f.nome}</strong><br><span style="font-size:11px;color:var(--ink-dim);">${f.cpf||'—'}</span></div></div></td>
+              <td>${f.foto ? `<img src="${empEsc(f.foto)}" alt="" style="width:34px;height:34px;border-radius:50%;object-fit:cover;vertical-align:middle;margin-right:8px;border:1px solid var(--line);float:left;">` : ""}<strong>${f.nome}</strong><br><span style="font-size:11px;color:var(--ink-dim);">${f.cpf||'—'}</span></td>
               <td>${tercEmpresaNome(f.empresaId)}</td>
               <td>${f.funcao||'—'}</td>
               <td><span class="ca-tag">${f.tipoVinculo||'Fixo'}</span><br><span style="font-size:11px;color:var(--ink-dim);">${f.validadeMeses||12} meses</span></td>
@@ -7729,28 +7710,6 @@ function renderPcmsoDash(root){
           <label>Empresa Terceirizada</label>
           <select required name="empresaId">${state.tercEmpresas.map(e=>`<option value="${e.id}" ${atual?.empresaId===e.id?'selected':''}>${e.razaoSocial}</option>`).join("")}</select>
         </div>
-        <div class="field">
-          <label>📷 Foto do Trabalhador</label>
-          <div class="terc-foto-wrap">
-            <div class="terc-foto-prev" id="terc-foto-prev">👷</div>
-            <div class="terc-foto-btns">
-              <button type="button" class="btn secondary" id="terc-foto-cam">📷 Usar Câmera</button>
-              <button type="button" class="btn secondary" id="terc-foto-file-btn">🖼️ Enviar Arquivo</button>
-              <button type="button" class="btn secondary" id="terc-foto-del" style="display:none;">🗑️ Remover</button>
-            </div>
-          </div>
-          <input type="hidden" name="foto" id="terc-foto-val">
-          <input type="file" accept="image/*" id="terc-foto-file" style="display:none;">
-          <div class="terc-cam" id="terc-cam" style="display:none;">
-            <div class="terc-cam-stage mirror" id="terc-cam-stage"><video id="terc-cam-video" autoplay playsinline muted></video></div>
-            <div class="terc-cam-msg">Centralize o rosto dentro do círculo.</div>
-            <div class="terc-cam-actions">
-              <button type="button" class="btn" id="terc-cam-shot">📸 Capturar</button>
-              <button type="button" class="btn secondary" id="terc-cam-flip">🔄 Trocar Câmera</button>
-              <button type="button" class="btn secondary" id="terc-cam-cancel">✖ Fechar Câmera</button>
-            </div>
-          </div>
-        </div>
         <div class="field-row">
           <div class="field"><label>👤 Nome Completo</label><input required name="nome" value="${atual?.nome||''}" placeholder="Nome do trabalhador"></div>
           <div class="field"><label>🪪 CPF</label><input name="cpf" value="${atual?.cpf||''}" placeholder="000.000.000-00"></div>
@@ -7763,6 +7722,20 @@ function renderPcmsoDash(root){
         <div class="field-row">
           <div class="field"><label>📅 Início da Atividade</label><input type="date" required name="dataInicioAtividade" id="terc-inicio-atividade" value="${atual?.dataInicioAtividade||new Date().toISOString().slice(0,10)}"></div>
           <div class="field"><label>📅 Validade Calculada</label><input type="date" readonly name="dataFimAtividade" id="terc-fim-atividade" value="${atual?.dataFimAtividade||addMonths(new Date().toISOString().slice(0,10),12)}"></div>
+        </div>
+        <div class="field">
+          <label>Foto do trabalhador (aparece na portaria e no terminal de acesso)</label>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div id="terc-foto-preview">${atual?.foto ? `<img class="employee-photo-preview" style="width:68px;height:68px;object-fit:cover" src="${empEsc(atual.foto)}" alt="Foto do trabalhador">` : `<div class="cipa-candidate-avatar">👤</div>`}</div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:8px;">
+              <input id="terc-foto-file" type="file" accept="image/*">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <button id="terc-foto-camera" class="btn secondary" type="button">📷 Tirar foto com a câmera</button>
+                <button id="terc-foto-remover" class="btn secondary" type="button" ${atual?.foto ? "" : "style=\"display:none\""}>🗑️ Remover foto</button>
+              </div>
+              <div id="terc-foto-camera-box"></div>
+            </div>
+          </div>
         </div>
         <div class="field">
           <label>Status</label>
@@ -7778,6 +7751,47 @@ function renderPcmsoDash(root){
         </div>
       </form>
     `, (ov)=>{
+      // ---- Foto do trabalhador terceiro (reduzida para ~480px, JPEG) ----
+      let tercFoto = atual?.foto || "";
+      let tercCamStream = null;
+      const pararCam = ()=>{ if(tercCamStream){ tercCamStream.getTracks().forEach(t=>t.stop()); tercCamStream=null; } };
+      const vigiaCam = setInterval(()=>{ if(!document.body.contains(ov)){ pararCam(); clearInterval(vigiaCam); } }, 800);
+      const mostrarFoto = ()=>{
+        ov.querySelector('#terc-foto-preview').innerHTML = tercFoto ? `<img class="employee-photo-preview" style="width:68px;height:68px;object-fit:cover" src="${tercFoto}" alt="Foto do trabalhador">` : `<div class="cipa-candidate-avatar">👤</div>`;
+        ov.querySelector('#terc-foto-remover').style.display = tercFoto ? "" : "none";
+      };
+      const reduzir = (fonte, w, h)=>{
+        const max = 480, esc = Math.min(1, max / Math.max(w, h));
+        const c = document.createElement("canvas"); c.width = Math.round(w*esc); c.height = Math.round(h*esc);
+        c.getContext("2d").drawImage(fonte, 0, 0, c.width, c.height);
+        return c.toDataURL("image/jpeg", 0.82);
+      };
+      ov.querySelector('#terc-foto-file').addEventListener('change', e=>{
+        const file = e.target.files?.[0]; if(!file) return;
+        if(!file.type.startsWith("image/")){ alert("Selecione um arquivo de imagem."); e.target.value=""; return; }
+        const img = new Image(), url = URL.createObjectURL(file);
+        img.onload = ()=>{ tercFoto = reduzir(img, img.naturalWidth, img.naturalHeight); URL.revokeObjectURL(url); mostrarFoto(); };
+        img.onerror = ()=>{ URL.revokeObjectURL(url); alert("Não foi possível ler esta imagem."); };
+        img.src = url;
+      });
+      ov.querySelector('#terc-foto-remover').addEventListener('click', ()=>{ tercFoto = ""; ov.querySelector('#terc-foto-file').value=""; mostrarFoto(); });
+      const camBtn = ov.querySelector('#terc-foto-camera'), camBox = ov.querySelector('#terc-foto-camera-box');
+      camBtn.addEventListener('click', async ()=>{
+        if(!navigator.mediaDevices?.getUserMedia){ alert("Este navegador não oferece acesso à câmera. Use um navegador atualizado em HTTPS."); return; }
+        try{ tercCamStream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"user" }, audio:false }); }
+        catch(err){ alert("Não foi possível abrir a câmera: " + (err.message||err)); return; }
+        camBtn.disabled = true;
+        camBox.innerHTML = `<div style="padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);">
+          <video autoplay playsinline muted style="width:100%;max-width:360px;aspect-ratio:4/3;object-fit:cover;border-radius:8px;background:#111;display:block;"></video>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;"><button class="btn" type="button" data-cap>📸 Capturar</button><button class="btn secondary" type="button" data-fechar>Cancelar</button></div></div>`;
+        const video = camBox.querySelector("video"); video.srcObject = tercCamStream;
+        const fechar = ()=>{ pararCam(); camBox.innerHTML = ""; camBtn.disabled = false; };
+        camBox.querySelector("[data-fechar]").addEventListener("click", fechar);
+        camBox.querySelector("[data-cap]").addEventListener("click", ()=>{
+          if(!video.videoWidth){ alert("Aguarde a câmera carregar e tente novamente."); return; }
+          tercFoto = reduzir(video, video.videoWidth, video.videoHeight); mostrarFoto(); fechar();
+        });
+      });
       const tipo = ov.querySelector('#terc-tipo-vinculo');
       const meses = ov.querySelector('#terc-validade-meses');
       const inicio = ov.querySelector('#terc-inicio-atividade');
@@ -7787,75 +7801,13 @@ function renderPcmsoDash(root){
       meses.addEventListener('input', atualizarValidade);
       inicio.addEventListener('change', atualizarValidade);
       atualizarValidade();
-      // ---- Foto: câmera do equipamento ou arquivo ----
-      const fotoVal = ov.querySelector('#terc-foto-val');
-      const fotoPrev = ov.querySelector('#terc-foto-prev');
-      const fotoDel = ov.querySelector('#terc-foto-del');
-      const fotoFile = ov.querySelector('#terc-foto-file');
-      const camBox = ov.querySelector('#terc-cam');
-      const camStage = ov.querySelector('#terc-cam-stage');
-      const video = ov.querySelector('#terc-cam-video');
-      let stream = null, facing = 'user';
-      const setFoto = (url)=>{
-        fotoVal.value = url || '';
-        fotoPrev.innerHTML = url ? `<img src="${url}" alt="Foto">` : '👷';
-        fotoPrev.classList.toggle('has', !!url);
-        fotoDel.style.display = url ? '' : 'none';
-      };
-      // Recorte quadrado central, redimensionado para 400px em JPEG (arquivo leve para salvar).
-      const toSquareJpeg = (src, w, h, mirror)=>{
-        const size = Math.min(w, h), out = 400;
-        const c = document.createElement('canvas'); c.width = out; c.height = out;
-        const ctx = c.getContext('2d');
-        if(mirror){ ctx.translate(out,0); ctx.scale(-1,1); }
-        ctx.drawImage(src, (w-size)/2, (h-size)/2, size, size, 0, 0, out, out);
-        return c.toDataURL('image/jpeg', 0.82);
-      };
-      const stopCam = ()=>{
-        if(stream){ stream.getTracks().forEach(t=>t.stop()); stream = null; }
-        video.srcObject = null; camBox.style.display = 'none';
-      };
-      window.__tercCamStop = stopCam;
-      const startCam = async ()=>{
-        if(!navigator.mediaDevices?.getUserMedia){
-          alert('A câmera não está disponível neste navegador (é necessário acesso via HTTPS ou localhost). Selecione um arquivo de imagem.');
-          fotoFile.setAttribute('capture','user'); fotoFile.click(); return;
-        }
-        try{
-          if(stream) stream.getTracks().forEach(t=>t.stop());
-          stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode: facing, width:{ideal:1280}, height:{ideal:1280} }, audio:false });
-          video.srcObject = stream;
-          camStage.classList.toggle('mirror', facing==='user');
-          camBox.style.display = '';
-          camBox.scrollIntoView({behavior:'smooth', block:'nearest'});
-        }catch(err){
-          stopCam();
-          alert(err && err.name==='NotAllowedError' ? 'Permissão da câmera negada. Libere o acesso nas configurações do navegador.' : 'Não foi possível acessar a câmera deste equipamento.');
-        }
-      };
-      ov.querySelector('#terc-foto-cam').addEventListener('click', startCam);
-      ov.querySelector('#terc-cam-flip').addEventListener('click', ()=>{ facing = facing==='user' ? 'environment' : 'user'; startCam(); });
-      ov.querySelector('#terc-cam-cancel').addEventListener('click', stopCam);
-      ov.querySelector('#terc-cam-shot').addEventListener('click', ()=>{
-        if(!video.videoWidth){ alert('Aguarde a câmera iniciar.'); return; }
-        setFoto(toSquareJpeg(video, video.videoWidth, video.videoHeight, facing==='user'));
-        stopCam();
-      });
-      ov.querySelector('#terc-foto-file-btn').addEventListener('click', ()=>{ fotoFile.removeAttribute('capture'); fotoFile.click(); });
-      fotoFile.addEventListener('change', ()=>{
-        const file = fotoFile.files && fotoFile.files[0]; if(!file) return;
-        const img = new Image(), url = URL.createObjectURL(file);
-        img.onload = ()=>{ setFoto(toSquareJpeg(img, img.naturalWidth, img.naturalHeight, false)); URL.revokeObjectURL(url); fotoFile.value=''; };
-        img.onerror = ()=>{ alert('Arquivo de imagem inválido.'); URL.revokeObjectURL(url); };
-        img.src = url;
-      });
-      fotoDel.addEventListener('click', ()=>setFoto(''));
-      setFoto(atual?.foto || '');
       ov.querySelector("#terc-func-form").addEventListener("submit", async(e)=>{
         e.preventDefault();
         const data = Object.fromEntries(new FormData(e.target));
         data.validadeMeses = Number(data.validadeMeses);
         data.dataFimAtividade = addMonths(data.dataInicioAtividade, data.validadeMeses);
+        data.foto = tercFoto || "";
+        pararCam();
         if(atual) Object.assign(atual, data); else state.tercFuncionarios.push({id:uid("tercf"), ...data});
         await saveState(); window.closeModal(); render();
       });
