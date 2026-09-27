@@ -12549,12 +12549,12 @@ function renderPcmsoDash(root){
   function ecPortalSpaceId(){const raw=location.hash.split('?')[1]||'';return new URLSearchParams(raw).get('ec')||''}
   function ecFilteredSpaces(root){const q=normalizeText(root.dataset.ecSearch||''),loc=root.dataset.ecLocation||'';return(state.confinedSpaces||[]).filter(ec=>(!q||normalizeText([ec.tag,ec.nome,ec.localizacao,ec.riscos,ec.equipamentos].join(' ')).includes(q))&&(!loc||ec.localizacao===loc))}
   function ecFilteredPets(root){const q=normalizeText(root.dataset.petSearch||''),status=root.dataset.petStatus||'',ecId=root.dataset.petSpace||'';return(state.pets||[]).filter(p=>{const ec=ecById(p.ecId),sup=(state.employees||[]).find(e=>e.id===p.supervisorId);return(!q||normalizeText([p.numeroPet,ec?.tag,ec?.nome,sup?.nome,p.trabalhadores,p.trabalhoExecutar].join(' ')).includes(q))&&(!status||p.status===status)&&(!ecId||p.ecId===ecId)})}
-  function renderEcTableListV2(list,allowActions=false){if(!list.length)return`<div class="empty">Nenhum espaço confinado encontrado.</div>`;return`<div style="overflow:auto"><table><thead><tr><th>🏷️ TAG</th><th>🏭 Espaço</th><th>📍 Localização</th><th>⚠️ Riscos</th><th>🛟 Equipamentos</th><th>📱 QR</th>${allowActions?'<th>⚙️ Ações</th>':''}</tr></thead><tbody>${list.map(ec=>`<tr><td><span class="ca-tag">${empEsc(ec.tag)}</span></td><td><strong>${empEsc(ec.nome)}</strong><br><small>${empEsc(ec.dimensoes||'—')}</small></td><td>${empEsc(ec.localizacao||'—')}</td><td style="color:var(--amber);font-size:12px">${empEsc(ec.riscos||'—')}</td><td style="font-size:12px">${empEsc(ec.equipamentos||'—')}</td><td><button class="action-link" data-ec-qr="${ec.id}">📱 Ver QR</button></td>${allowActions?`<td class="row-actions"><button class="action-link" data-edit-ec="${ec.id}">✏️ Editar</button><button class="action-link danger-link" data-del-ec="${ec.id}">🗑️ Remover</button></td>`:''}</tr>`).join('')}</tbody></table></div>`}
-  function renderPetsTableListV2(list,allowActions=false){if(!list.length)return`<div class="empty">Nenhuma PET encontrada.</div>`;return`<div style="overflow:auto"><table><thead><tr><th>📜 PET</th><th>🏭 Espaço</th><th>📅 Emissão / Validade</th><th>👀 Vigia</th><th>👷 Supervisor</th><th>✍️ Assinatura</th><th>🚦 Situação</th>${allowActions?'<th>⚙️ Ações</th>':''}</tr></thead><tbody>${list.map(p=>{const ec=ecById(p.ecId),st=p.status==='Ativa'?'warn':p.status==='Encerrada'?'ok':'bad';return`<tr><td><strong>${empEsc(p.numeroPet)}</strong></td><td>${empEsc(ec?`${ec.tag} · ${ec.nome}`:'—')}</td><td>${fmtDate(p.dataEmissao)}<br><small>${empEsc(p.validadeHoras||'—')}</small></td><td>${empEsc(employeeName(p.vigiaId))}</td><td>${empEsc(employeeName(p.supervisorId))}</td><td>${p.supervisorSignature?'<span class="status-pill ok">● Assinada na tela</span>':'<span class="status-pill warn">● Pendente</span>'}</td><td><span class="status-pill ${st}"><span class="dot"></span>${empEsc(p.status)}</span></td>${allowActions?`<td class="row-actions"><button class="action-link" data-report-pet="${p.id}">📄 Relatório</button><button class="action-link" data-edit-pet="${p.id}">✏️ Editar</button>${p.status==='Ativa'?`<button class="action-link" data-close-pet="${p.id}">✅ Encerrar</button>`:''}<button class="action-link danger-link" data-del-pet="${p.id}">🗑️ Remover</button></td>`:'<td><button class="action-link" data-report-pet="${p.id}">📄 Relatório</button></td>'}</tr>`}).join('')}</tbody></table></div>`}
+  function renderEcTableListV2(list,allowActions=false){if(!list.length)return`<div class="empty">Nenhum espaço confinado encontrado.</div>`;return`<div style="overflow:auto"><table><thead><tr><th>🏷️ TAG</th><th>🏭 Espaço</th><th>📍 Localização</th><th>⚠️ Riscos</th><th>🛟 Equipamentos</th><th>📱 QR</th>${allowActions?'<th>⚙️ Ações</th>':''}</tr></thead><tbody>${list.map(ec=>`<tr><td><span class="ca-tag">${empEsc(ec.tag)}</span></td><td><strong>${empEsc(ec.nome)}</strong><br><small>${empEsc(ec.dimensoes||'—')}</small></td><td>${empEsc(ec.localizacao||'—')}</td><td style="color:var(--amber);font-size:12px">${empEsc(ec.riscos||'—')}</td><td style="font-size:12px">${empEsc(ec.equipamentos||'—')}</td><td><button class="action-link" data-ec-qr="${ec.id}">📱 Ver QR</button><br><button class="action-link" data-ec-sheet="${ec.id}">📄 Ficha PDF</button></td>${allowActions?`<td class="row-actions"><button class="action-link" data-edit-ec="${ec.id}">✏️ Editar</button><button class="action-link danger-link" data-del-ec="${ec.id}">🗑️ Remover</button></td>`:''}</tr>`).join('')}</tbody></table></div>`}
+  function renderPetsTableListV2(list,allowActions=false){if(!list.length)return`<div class="empty">Nenhuma PET encontrada.</div>`;return`<div style="overflow:auto"><table><thead><tr><th>📜 PET</th><th>🏭 Espaço</th><th>📅 Emissão / Validade</th><th>👀 Vigia</th><th>👷 Supervisor</th><th>✍️ Assinatura</th><th>🚦 Situação</th>${allowActions?'<th>⚙️ Ações</th>':''}</tr></thead><tbody>${list.map(p=>{const ec=ecById(p.ecId),st=p.status==='Ativa'?'warn':p.status==='Encerrada'?'ok':'bad';return`<tr><td><strong>${empEsc(p.numeroPet)}</strong></td><td>${empEsc(ec?`${ec.tag} · ${ec.nome}`:'—')}</td><td>${fmtDate(p.dataEmissao)}<br><small>${empEsc(p.validadeHoras||'—')}</small></td><td>${empEsc(employeeName(p.vigiaId))}</td><td>${empEsc(employeeName(p.supervisorId))}</td><td>${(()=>{const s=ecPetSignSummary(p);return `<span class="status-pill ${s.all?'ok':'warn'}">● ${s.all?'Completa':'Pendente'}</span><br><small>Sup ${s.sup?'✔':'✖'} · Vigia ${s.vig?'✔':'✖'} · Trab ${s.ws}/${s.wt}</small>`})()}</td><td><span class="status-pill ${st}"><span class="dot"></span>${empEsc(p.status)}</span></td>${allowActions?`<td class="row-actions"><button class="action-link" data-report-pet="${p.id}">📄 PDF</button><button class="action-link" data-edit-pet="${p.id}">✏️ Editar</button>${p.status==='Ativa'?`<button class="action-link" data-close-pet="${p.id}">✅ Encerrar</button>`:''}<button class="action-link danger-link" data-del-pet="${p.id}">🗑️ Remover</button></td>`:`<td><button class="action-link" data-report-pet="${p.id}">📄 PDF</button></td>`}</tr>`}).join('')}</tbody></table></div>`}
   renderEcTableList=renderEcTableListV2;renderPetsTableList=renderPetsTableListV2;
   function renderEcDashV2(root){const spaces=ecFilteredSpaces(root),pets=ecFilteredPets(root),active=pets.filter(p=>p.status==='Ativa').length,signed=pets.filter(p=>p.supervisorSignature).length,supervisors=(state.ecSupervisors||[]).filter(s=>ecSupervisorEffectiveStatus(s).ativo).length;root.innerHTML=`<div class="page-head"><div><h2>🚧 Espaço Confinado (NR-33) · Painel Geral</h2><div class="sub">Inventário, supervisores autorizados, emissão e rastreabilidade de PETs.</div></div></div><div class="annual-kpis emp-kpis" style="grid-template-columns:repeat(4,minmax(0,1fr))"><div class="annual-kpi"><div class="annual-kpi-icon amber">📜</div><div><div class="num">${active}</div><div class="label">PETs ativas</div></div></div><div class="annual-kpi"><div class="annual-kpi-icon blue">🏭</div><div><div class="num">${spaces.length}</div><div class="label">Espaços mapeados</div></div></div><div class="annual-kpi"><div class="annual-kpi-icon green">👷</div><div><div class="num">${supervisors}</div><div class="label">Supervisores ativos</div></div></div><div class="annual-kpi"><div class="annual-kpi-icon green">✍️</div><div><div class="num">${signed}</div><div class="label">PETs assinadas</div></div></div></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="ec-dash-search" value="${empEsc(root.dataset.ecSearch||'')}" placeholder="Espaço, TAG, localização, PET ou supervisor"></div><div class="field"><label>Situação da PET</label><select id="ec-dash-status"><option value="">Todas</option>${['Ativa','Encerrada','Cancelada'].map(x=>`<option ${root.dataset.petStatus===x?'selected':''}>${x}</option>`).join('')}</select></div><button class="btn secondary" id="ec-dash-clear">🧹 Limpar</button></div></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>📜 PETs encontradas</h3><span>${pets.length}</span></div>${renderPetsTableListV2(pets.slice(0,10))}</div><div class="panel"><div class="panel-head"><h3>🏭 Espaços confinados</h3><span>${spaces.length}</span></div>${renderEcTableListV2(spaces.slice(0,6))}</div>`}
   renderEcDash=renderEcDashV2;
-  function renderEcInventoryV2(root){const rows=ecFilteredSpaces(root),locations=[...new Set((state.confinedSpaces||[]).map(x=>x.localizacao).filter(Boolean))];root.innerHTML=`<div class="page-head"><div><h2>🏭 Inventário de Espaços Confinados</h2><div class="sub">Cadastro, consulta e QR Code individual de cada local.</div></div><button class="btn" id="btn-new-ec">+ Cadastrar Espaço</button></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${rows.length} de ${(state.confinedSpaces||[]).length}</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="ec-search" value="${empEsc(root.dataset.ecSearch||'')}" placeholder="TAG, espaço, risco ou equipamento"></div><div class="field"><label>Localização</label><select id="ec-location"><option value="">Todas</option>${locations.map(x=>`<option ${root.dataset.ecLocation===x?'selected':''}>${empEsc(x)}</option>`).join('')}</select></div><button class="btn secondary" id="ec-clear">🧹 Limpar</button></div></div><div class="panel">${renderEcTableListV2(rows,checkPermission('Administrador'))}</div>`}
+  function renderEcInventoryV2(root){const rows=ecFilteredSpaces(root),locations=[...new Set((state.confinedSpaces||[]).map(x=>x.localizacao).filter(Boolean))];root.innerHTML=`<div class="page-head"><div><h2>🏭 Inventário de Espaços Confinados</h2><div class="sub">Cadastro, consulta e QR Code individual de cada local.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn secondary" id="btn-ec-inventory-pdf">📄 Gerar PDF do Inventário</button><button class="btn" id="btn-new-ec">+ Cadastrar Espaço</button></div></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${rows.length} de ${(state.confinedSpaces||[]).length}</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="ec-search" value="${empEsc(root.dataset.ecSearch||'')}" placeholder="TAG, espaço, risco ou equipamento"></div><div class="field"><label>Localização</label><select id="ec-location"><option value="">Todas</option>${locations.map(x=>`<option ${root.dataset.ecLocation===x?'selected':''}>${empEsc(x)}</option>`).join('')}</select></div><button class="btn secondary" id="ec-clear">🧹 Limpar</button></div></div><div class="panel">${renderEcTableListV2(rows,checkPermission('Administrador'))}</div>`}
   renderEcInventory=renderEcInventoryV2;
   function renderEcPetsV2(root){const rows=ecFilteredPets(root);root.innerHTML=`<div class="page-head"><div><h2>📜 Gestão de PETs</h2><div class="sub">Emissão, assinatura, acompanhamento e encerramento das permissões.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn secondary" id="ec-refresh-pets">🔄 Atualizar PETs</button><button class="btn" id="btn-new-pet">+ Emitir PET</button></div></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${rows.length} de ${(state.pets||[]).length}</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="pet-search" value="${empEsc(root.dataset.petSearch||'')}" placeholder="Número, espaço, supervisor ou trabalho"></div><div class="field"><label>Espaço</label><select id="pet-space"><option value="">Todos</option>${(state.confinedSpaces||[]).map(ec=>`<option value="${ec.id}" ${root.dataset.petSpace===ec.id?'selected':''}>${empEsc(ec.tag)} · ${empEsc(ec.nome)}</option>`).join('')}</select></div><div class="field"><label>Situação</label><select id="pet-status"><option value="">Todas</option>${['Ativa','Encerrada','Cancelada'].map(x=>`<option ${root.dataset.petStatus===x?'selected':''}>${x}</option>`).join('')}</select></div><button class="btn secondary" id="pet-clear">🧹 Limpar</button></div></div><div class="panel">${renderPetsTableListV2(rows,checkPermission('Administrador'))}</div>`}
   renderEcPets=renderEcPetsV2;
@@ -12564,13 +12564,6 @@ function renderPcmsoDash(root){
   function renderEcPortalSettings(root){const base=ecPortalUrl(),local=location.protocol==='file:';root.innerHTML=`<div class="page-head"><div><h2>📱 Portal de Emissão de PET</h2><div class="sub">QR Codes individuais para acesso do supervisor em cada espaço confinado.</div></div></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔗 Endereço público</h3></div><div style="padding:16px"><div class="field"><label>Endereço HTTPS onde o sistema foi publicado</label><input id="ec-public-url" type="url" value="${empEsc(state.ecPortalPublicUrl||'')}" placeholder="https://seu-site.github.io/sistema/"><small>Endereços file:/// não abrem em outro celular.</small></div><button class="btn" id="ec-save-url">💾 Salvar endereço</button>${local?'<div class="note" style="margin-top:12px">⚠️ Publique o sistema em um endereço HTTPS para o QR Code funcionar no celular.</div>':''}</div></div><div class="panel"><div class="panel-head"><h3>🏭 QR Codes por espaço</h3><span>${(state.confinedSpaces||[]).length}</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;padding:16px">${(state.confinedSpaces||[]).map(ec=>{const url=ecPortalUrl(ec.id),qr=url?`https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(url)}`:'';return`<div class="panel" style="padding:14px;text-align:center"><h3>${empEsc(ec.tag)} · ${empEsc(ec.nome)}</h3>${qr?`<img src="${qr}" alt="QR Code ${empEsc(ec.tag)}" style="width:180px;height:180px;background:#fff;padding:8px;border-radius:8px">`:'<div class="empty">Informe o endereço público.</div>'}<p class="muted">📍 ${empEsc(ec.localizacao||'—')}</p>${url?`<button class="btn secondary" data-copy-ec-url="${empEsc(url)}">📋 Copiar link</button> <button class="btn secondary" data-print-ec-qr="${ec.id}">🖨️ Imprimir</button>`:''}</div>`}).join('')||'<div class="empty">Cadastre um espaço confinado para gerar o QR Code.</div>'}</div></div>`}
   function showEcQrModal(id){const ec=ecById(id),url=ecPortalUrl(id);if(!ec)return;const qr=url?`https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(url)}`:'';openModal(`<h2>📱 QR Code · ${empEsc(ec.tag)}</h2><div style="text-align:center">${qr?`<img src="${qr}" style="width:260px;height:260px;background:#fff;padding:10px;border-radius:10px">`:'<div class="empty">Configure primeiro o endereço público do portal.</div>'}<h3>${empEsc(ec.nome)}</h3><p>${empEsc(ec.localizacao||'—')}</p></div><div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Fechar</button>${url?`<button class="btn" data-copy-ec-url="${empEsc(url)}">📋 Copiar link</button>`:''}</div>`)}
   function setupSignatureCanvas(canvas,clearButton){const ctx=canvas.getContext('2d');let drawing=false,signed=false;const resize=()=>{const ratio=Math.max(window.devicePixelRatio||1,1),rect=canvas.getBoundingClientRect();canvas.width=Math.round(rect.width*ratio);canvas.height=Math.round(190*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);ctx.lineWidth=2.2;ctx.lineCap='round';ctx.strokeStyle='#17202a'};resize();const point=e=>{const r=canvas.getBoundingClientRect(),t=e.touches?.[0]||e;return{x:t.clientX-r.left,y:t.clientY-r.top}};const start=e=>{e.preventDefault();drawing=true;signed=true;const p=point(e);ctx.beginPath();ctx.moveTo(p.x,p.y)};const move=e=>{if(!drawing)return;e.preventDefault();const p=point(e);ctx.lineTo(p.x,p.y);ctx.stroke()};const stop=()=>drawing=false;canvas.addEventListener('pointerdown',start);canvas.addEventListener('pointermove',move);canvas.addEventListener('pointerup',stop);canvas.addEventListener('pointerleave',stop);clearButton.addEventListener('click',()=>{ctx.clearRect(0,0,canvas.width,canvas.height);signed=false});return{isSigned:()=>signed,data:()=>canvas.toDataURL('image/png')}}
-  function openEcPetReport(id){
-    const p=(state.pets||[]).find(x=>x.id===id);if(!p)return;
-    const ec=ecById(p.ecId),signature=/^data:image\/(?:png|jpeg);base64,[a-zA-Z0-9+/=]+$/.test(p.supervisorSignature||'')?p.supervisorSignature:'';
-    const row=(label,value)=>`<div style="padding:9px;border-bottom:1px solid #ddd"><strong>${label}:</strong> ${empEsc(value||'—')}</div>`;
-    const body=`<h1>Relatório da PET ${empEsc(p.numeroPet)}</h1><p>Registro para conferência administrativa · Situação: <strong>${empEsc(p.status)}</strong></p>${row('Espaço',ec?ec.tag+' · '+ec.nome:'—')}${row('Localização',ec?.localizacao)}${row('Data de emissão',fmtDate(p.dataEmissao))}${row('Validade',p.validadeHoras)}${row('Supervisor',employeeName(p.supervisorId))}${row('Vigia',employeeName(p.vigiaId))}${row('Trabalhadores',p.trabalhadores)}${row('Trabalho',p.trabalhoExecutar)}${row('Verificações e controles',p.controles)}${row('Assinada em',p.signedAt?new Date(p.signedAt).toLocaleString('pt-BR'):'—')}${signature?`<p><strong>Assinatura registrada</strong><br><img src="${signature}" alt="Assinatura do supervisor" style="max-width:350px;max-height:140px;border:1px solid #ddd"></p>`:''}<p>Alterações registradas: ${(p.edits||[]).length}</p>`;
-    openModal(`<h2>📄 Relatório da PET</h2><div id="ec-pet-report" style="max-height:65vh;overflow:auto">${body}</div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Fechar</button><button type="button" class="btn" id="ec-print-report">🖨️ Imprimir / Salvar PDF</button></div>`,ov=>ov.querySelector('#ec-print-report').addEventListener('click',()=>{const win=window.open('','_blank');if(!win){alert('Permita a abertura de janelas para imprimir o relatório.');return}win.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Relatório ${empEsc(p.numeroPet)}</title><style>body{font-family:Arial,sans-serif;max-width:800px;margin:32px auto;color:#222}h1{font-size:22px}img{object-fit:contain}@media print{body{margin:12mm}}</style></head><body>${body}</body></html>`);win.document.close();win.onload=()=>win.print()}));
-  }
   function openEcPetEdit(id){
     if(!checkPermission('Administrador'))return;
     const p=(state.pets||[]).find(x=>x.id===id);if(!p)return;
@@ -12582,10 +12575,385 @@ function renderPcmsoDash(root){
     ctx.drawImage(canvas,0,0,target.width,target.height);
     return target.toDataURL('image/jpeg',.72);
   }
-  function renderEcPetPortal(){const app=document.getElementById('app'),spaceId=ecPortalSpaceId(),space=ecById(spaceId),active=(state.ecSupervisors||[]).filter(s=>ecSupervisorEmployee(s)&&ecSupervisorEffectiveStatus(s).ativo);let session=null;try{session=JSON.parse(sessionStorage.getItem('sst-ec-supervisor-session')||'null')}catch(e){}const supervisor=active.find(s=>s.id===session?.supervisorId),emp=ecSupervisorEmployee(supervisor);if(!supervisor||!emp){app.innerHTML=`<div class="brigade-mobile"><div class="brigade-mobile-shell"><div class="mobile-card"><img class="brand-logo" src="${FIXED_SYSTEM_LOGO}" alt="Partner" style="height:68px"><h2>🚧 Portal NR-33 · Emissão de PET</h2>${space?`<div class="note">🏭 ${empEsc(space.tag)} · ${empEsc(space.nome)}<br>📍 ${empEsc(space.localizacao||'—')}</div>`:''}<form id="ec-portal-login"><div class="field"><label>Supervisor autorizado</label><select name="supervisorId" required><option value="">Selecione seu nome</option>${active.map(s=>{const e=ecSupervisorEmployee(s);return`<option value="${s.id}">${empEsc(e.nome)}</option>`}).join('')}</select></div><div class="field"><label>Matrícula (senha)</label><input type="password" name="matricula" required inputmode="numeric"></div><button class="btn" style="width:100%">Entrar no portal</button></form>${active.length?'':'<div class="empty">Nenhum supervisor autorizado ativo.</div>'}</div></div></div>`;app.querySelector('#ec-portal-login')?.addEventListener('submit',e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),s=active.find(x=>x.id===d.supervisorId),u=ecSupervisorEmployee(s);if(!s||!u||String(u.matricula||'').trim()!==String(d.matricula||'').trim()){alert('Supervisor ou matrícula inválidos.');return}sessionStorage.setItem('sst-ec-supervisor-session',JSON.stringify({supervisorId:s.id,employeeId:u.id}));renderEcPetPortal()});return}
-    const next=`PET-${new Date().getFullYear()}/${String((state.pets||[]).length+1).padStart(3,'0')}`,spaces=space?[space]:(state.confinedSpaces||[]);
-    app.innerHTML=`<div class="brigade-mobile"><div class="brigade-mobile-shell"><div class="mobile-card"><h2>📜 Emitir PET</h2><div class="sub">Supervisor: <strong>${empEsc(emp.nome)}</strong></div><button class="btn secondary" id="ec-portal-logout">Sair</button></div><div class="mobile-card"><form id="ec-portal-pet-form"><div class="field"><label>Número da PET</label><input name="numeroPet" readonly value="${next}"></div><div class="field"><label>Espaço confinado</label><select name="ecId" required>${spaces.map(ec=>`<option value="${ec.id}">${empEsc(ec.tag)} · ${empEsc(ec.nome)}</option>`).join('')}</select></div><div class="field-row"><div class="field"><label>Data da emissão</label><input type="date" name="dataEmissao" required value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Validade</label><select name="validadeHoras"><option>4 horas</option><option selected>8 horas (Turno)</option><option>12 horas</option></select></div></div><div class="field"><label>Vigia designado *</label><select name="vigiaId" required><option value="">Selecione</option>${(state.employees||[]).map(e=>`<option value="${e.id}">${empEsc(e.nome)} · ${empEsc(e.cargo||'—')}</option>`).join('')}</select></div><div class="field"><label>Trabalhadores autorizados *</label><input name="trabalhadores" required placeholder="Nomes separados por vírgula"></div><div class="field"><label>Trabalho a executar *</label><textarea name="trabalhoExecutar" required></textarea></div><div class="field"><label>Verificações e controles adotados</label><textarea name="controles" placeholder="Isolamento, bloqueio, ventilação, monitoramento e resgate"></textarea></div><div class="field"><label>✍️ Assinatura do supervisor *</label><div style="border:2px solid var(--line);border-radius:10px;background:#fff;padding:6px"><canvas id="ec-signature" style="width:100%;height:190px;display:block;touch-action:none"></canvas></div><small>Assine escrevendo com o dedo, caneta digital ou mouse.</small><button type="button" class="btn secondary" id="ec-clear-signature" style="margin-top:7px">🧹 Limpar assinatura</button></div><button class="btn" style="width:100%">✅ Assinar e emitir PET</button></form></div></div></div>`;
-    app.querySelector('#ec-portal-logout').addEventListener('click',()=>{sessionStorage.removeItem('sst-ec-supervisor-session');renderEcPetPortal()});const sig=setupSignatureCanvas(app.querySelector('#ec-signature'),app.querySelector('#ec-clear-signature'));app.querySelector('#ec-portal-pet-form').addEventListener('submit',async e=>{e.preventDefault();if(!sig.isSigned()){alert('Faça a assinatura na tela antes de emitir a PET.');return}const d=Object.fromEntries(new FormData(e.target));const button=e.target.querySelector('button[type="submit"],button.btn:last-child');if(button){button.disabled=true;button.textContent='Salvando PET...'}let saved;try{if(!window.firestoreCreatePortalPet)throw new Error('Conexão com o banco indisponível.');const pet={id:uid('pet'),status:'Ativa',...d,supervisorId:emp.id,supervisorAuthorizationId:supervisor.id,supervisorSignature:ecCompactSignature(app.querySelector('#ec-signature')),signedAt:new Date().toISOString(),issuedFromPortal:true};saved=await window.firestoreCreatePortalPet(pet);state.pets=saved.pets;}catch(error){console.error('Falha ao registrar PET:',error);alert('Não foi possível registrar a PET no sistema. Nenhuma confirmação foi emitida. Erro: '+String(error?.code||error?.message||'conexão indisponível'));if(button){button.disabled=false;button.textContent='✅ Assinar e emitir PET'}return}d.numeroPet=saved.numeroPet;app.innerHTML=`<div class="brigade-mobile"><div class="brigade-mobile-shell"><div class="mobile-card" style="text-align:center"><h2>✅ PET emitida</h2><p><strong>${empEsc(d.numeroPet)}</strong></p><p>A permissão foi assinada e registrada no sistema.</p><button class="btn" id="ec-new-pet">Emitir outra PET</button></div></div></div>`;app.querySelector('#ec-new-pet').addEventListener('click',renderEcPetPortal)})}
+  // =====================================================================
+  // NR-33 · Laudo do Inventário, Relatório da PET e Portal PET (celular)
+  // =====================================================================
+  const EC_PET_CHECKLIST=[
+    'Espaço isolado e sinalizado, com acesso restrito à equipe autorizada',
+    'Energias perigosas bloqueadas e etiquetadas (LOTO) conforme procedimento',
+    'Linhas de produtos/fluidos desconectadas, raqueteadas ou drenadas',
+    'Limpeza, purga ou inertização realizada quando aplicável',
+    'Ventilação/exaustão instalada e em funcionamento',
+    'Detector multigás calibrado e com teste de resposta (bump test) realizado',
+    'Monitoramento atmosférico contínuo durante toda a atividade',
+    'Vigia posicionado na entrada, com meio de comunicação com a equipe',
+    'Equipamentos de resgate disponíveis e serviço de emergência acionável',
+    'EPIs adequados à atividade inspecionados e em condições de uso',
+    'Iluminação e ferramentas adequadas à atmosfera (à prova de explosão quando aplicável)',
+    'Trabalhadores com capacitação NR-33 válida e ASO apto para espaço confinado'
+  ];
+  const EC_GAS=[
+    {k:'o2',label:'Oxigênio (O₂)',unit:'% vol',ref:'19,5 a 23,0 %',ok:v=>v>=19.5&&v<=23},
+    {k:'lel',label:'Inflamáveis (LIE / LEL)',unit:'% LIE',ref:'inferior a 10 % LIE',ok:v=>v<10},
+    {k:'co',label:'Monóxido de carbono (CO)',unit:'ppm',ref:'até 39 ppm (NR-15)',ok:v=>v<=39},
+    {k:'h2s',label:'Sulfeto de hidrogênio (H₂S)',unit:'ppm',ref:'até 8 ppm (NR-15)',ok:v=>v<=8}
+  ];
+  const EC_SPACE_FIELDS=['tag','nome','localizacao','dimensoes','aberturas','riscos','isolamento','ventilacao','equipamentos'];
+  function ecNum(v){const n=parseFloat(String(v??'').replace(',','.'));return Number.isFinite(n)?n:null}
+  function ecTxt(v){const s=String(v??'').trim();return s?empEsc(s).replace(/\n/g,'<br>'):'<span class="na">Não informado</span>'}
+  function ecSigOk(v){return /^data:image\/(?:png|jpeg);base64,[a-zA-Z0-9+/=]+$/.test(v||'')}
+  function ecSplitList(v){return String(v||'').split(/[,;\n]+/).map(x=>x.trim()).filter(Boolean)}
+  function ecStamp(d=new Date()){return d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'})}
+  function ecHash(str){let h=5381;for(const c of String(str))h=((h<<5)+h+c.charCodeAt(0))>>>0;return h.toString(16).toUpperCase().padStart(8,'0')}
+  function ecQrSrc(ecId,size=150){const url=ecPortalUrl(ecId);return url?`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&margin=0&data=${encodeURIComponent(url)}`:''}
+  function ecSnapshot(ec){const o={};EC_SPACE_FIELDS.forEach(k=>o[k]=ec?.[k]||'');return o}
+  function ecEmp(id){return(state.employees||[]).find(e=>e.id===id)||null}
+
+  const EC_REPORT_CSS=`
+    @page{size:A4;margin:13mm 12mm 15mm}
+    *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body{font:11px/1.5 Arial,Helvetica,sans-serif;color:#1d2329;margin:0;background:#fff}
+    .wrap{max-width:186mm;margin:0 auto;padding:10px 0 30px}
+    .dh{display:grid;grid-template-columns:120px 1fr 175px;border:1.5px solid #1d2329;align-items:stretch}
+    .dh-logo{display:flex;align-items:center;justify-content:center;padding:8px;border-right:1.5px solid #1d2329}
+    .dh-logo img{max-width:104px;max-height:58px;object-fit:contain}
+    .dh-title{padding:8px 12px;text-align:center;display:flex;flex-direction:column;justify-content:center}
+    .dh-kicker{font-size:8.5px;letter-spacing:.14em;color:#5b636b;font-weight:700}
+    .dh-title h1{font-size:16px;margin:3px 0 2px;letter-spacing:.02em;text-transform:uppercase}
+    .dh-sub{font-size:10px;color:#4a525a}
+    .dh-meta{border-collapse:collapse;border-left:1.5px solid #1d2329;font-size:9.5px;width:100%}
+    .dh-meta th,.dh-meta td{border-bottom:1px solid #c7ccd1;padding:4px 7px;text-align:left}
+    .dh-meta tr:last-child th,.dh-meta tr:last-child td{border-bottom:0}
+    .dh-meta th{background:#eef0f2;width:62px;font-weight:700}
+    .stripe{height:7px;margin:0 0 12px;background:repeating-linear-gradient(-45deg,#F5B700 0 10px,#1d2329 10px 20px)}
+    h2.sec{font-size:11.5px;margin:18px 0 8px;padding:6px 10px;background:#1d2329;color:#fff;text-transform:uppercase;letter-spacing:.05em;break-after:avoid}
+    h2.sec .n{display:inline-block;background:#F5B700;color:#1d2329;border-radius:3px;padding:0 6px;margin-right:8px}
+    h3{font-size:11.5px;margin:12px 0 6px;break-after:avoid}
+    p{margin:0 0 7px;text-align:justify}
+    table{width:100%;border-collapse:collapse;margin:0 0 8px}
+    th,td{border:1px solid #c7ccd1;padding:5px 7px;text-align:left;vertical-align:top}
+    thead th{background:#1d2329;color:#fff;font-size:9.5px;text-transform:uppercase;letter-spacing:.03em}
+    tr{break-inside:avoid}
+    table.kv th{background:#eef0f2;width:32%;font-weight:700}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:6px 0 10px}
+    .kpi{border:1px solid #c7ccd1;border-left:4px solid #F5B700;padding:7px 9px}
+    .kpi b{display:block;font-size:18px}.kpi span{font-size:9.5px;color:#5b636b;text-transform:uppercase}
+    .tag{display:inline-block;white-space:nowrap;background:#F5B700;color:#1d2329;font:700 10px 'Courier New',monospace;padding:2px 6px;border-radius:3px}
+    .chips{display:flex;flex-wrap:wrap;gap:4px}
+    .chip{border:1px solid #d0891c;background:#fff6e5;color:#8a4b00;border-radius:10px;padding:1px 8px;font-size:9.5px;font-weight:700}
+    .na{color:#8a9197;font-style:italic}
+    .box{border:1px solid #c7ccd1;border-radius:4px;padding:8px 10px;margin-bottom:8px;break-inside:avoid}
+    .box h4{margin:0 0 4px;font-size:10.5px;text-transform:uppercase;letter-spacing:.03em;color:#39414a}
+    .box.warn{border-left:4px solid #D6553D}.box.info{border-left:4px solid #2f6fb0}.box.ok{border-left:4px solid #3b8a57}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .ficha{break-before:page}
+    .ficha-head{display:grid;grid-template-columns:1fr 140px;gap:10px;align-items:start}
+    .ficha-title{border:1.5px solid #1d2329;padding:8px 10px;margin-bottom:8px}
+    .ficha-title .tag{font-size:12px}
+    .ficha-title h3{font-size:14px;margin:5px 0 2px}
+    .qr{border:1.5px solid #1d2329;text-align:center;padding:8px 6px;font-size:8.5px;color:#4a525a}
+    .qr img{width:118px;height:118px;display:block;margin:0 auto 4px}
+    .qr b{display:block;color:#1d2329;font-size:9px}
+    .status{display:inline-block;padding:2px 10px;border-radius:10px;font-weight:700;font-size:10px;border:1.5px solid}
+    .st-ok{color:#1f6b3a;border-color:#1f6b3a;background:#e9f6ee}.st-warn{color:#8a4b00;border-color:#d0891c;background:#fff6e5}.st-bad{color:#a02b19;border-color:#D6553D;background:#fdecea}
+    .validity{display:grid;grid-template-columns:repeat(4,1fr);border:1.5px solid #1d2329;margin-bottom:10px}
+    .validity div{padding:6px 9px;border-right:1px solid #c7ccd1}.validity div:last-child{border-right:0}
+    .validity span{display:block;font-size:8.5px;text-transform:uppercase;color:#5b636b;letter-spacing:.05em}
+    .validity b{font-size:12px}
+    .ck{text-align:center;font-weight:700;width:52px}
+    .ck-sim{color:#1f6b3a}.ck-nao{color:#a02b19}.ck-na{color:#5b636b}
+    .sig-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+    .sig{border:1px solid #c7ccd1;padding:6px 8px 8px;text-align:center;break-inside:avoid}
+    .sig .img{height:62px;display:flex;align-items:flex-end;justify-content:center;border-bottom:1px solid #1d2329;margin-bottom:5px}
+    .sig .img img{max-height:58px;max-width:100%;object-fit:contain;mix-blend-mode:multiply;margin-bottom:3px}
+    .sig .img em{color:#a02b19;font-size:9px;padding-bottom:6px}
+    .sig b{display:block;font-size:10.5px}.sig span{display:block;font-size:9px;color:#5b636b}
+    .sig .role{display:inline-block;margin-top:3px;font-size:8.5px;font-weight:700;text-transform:uppercase;background:#eef0f2;padding:1px 6px;border-radius:3px;color:#1d2329}
+    .sign-final{display:grid;grid-template-columns:1fr 1fr;gap:30px;margin-top:40px;break-inside:avoid}
+    .sign-final div{text-align:center;border-top:1px solid #1d2329;padding-top:5px;font-size:10px}
+    .sign-final b{display:block;font-size:11px}
+    .term{border:1.5px solid #1d2329;background:#fafbfc;padding:8px 10px;font-size:10px;margin-bottom:10px}
+    .auth{margin-top:16px;border-top:1px dashed #9aa1a8;padding-top:6px;font-size:8.5px;color:#5b636b;display:flex;justify-content:space-between;gap:10px}
+    .toc{columns:2;font-size:10px}.toc div{padding:1px 0}
+    @media screen{body{background:#e9ecef}.wrap{background:#fff;padding:14mm 12mm;margin:12px auto;box-shadow:0 2px 12px rgba(0,0,0,.15)}}
+    @media print{.wrap{padding:0;max-width:none;width:100%}}
+  `;
+  function ecReportDoc(title,body,autoPrint){
+    const printer=autoPrint?`<script>(function(){var imgs=[].slice.call(document.images),n=imgs.length,c=0;function go(){setTimeout(function(){window.print()},300)}if(!n)return go();imgs.forEach(function(i){if(i.complete){if(++c>=n)go()}else{i.onload=i.onerror=function(){if(++c>=n)go()}}})})();<\/script>`:'';
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${empEsc(title)}</title><style>${EC_REPORT_CSS}</style></head><body><div class="wrap">${body}</div>${printer}</body></html>`;
+  }
+  function ecOpenReport(title,body){
+    const w=window.open('','_blank');
+    if(!w){alert('Permita a abertura de janelas (pop-ups) para gerar o PDF.');return}
+    w.document.open();w.document.write(ecReportDoc(title,body,true));w.document.close();
+  }
+  function ecDocHeader({title,subtitle,code,rev,date,extra=''}){
+    return `<header class="dh"><div class="dh-logo"><img src="${state.companyLogo||FIXED_SYSTEM_LOGO}" alt="Logo"></div><div class="dh-title"><div class="dh-kicker">SEGURANÇA E SAÚDE NO TRABALHO · NR-33</div><h1>${title}</h1><div class="dh-sub">${subtitle}</div></div><table class="dh-meta"><tr><th>Documento</th><td>${empEsc(code)}</td></tr><tr><th>Revisão</th><td>${empEsc(rev)}</td></tr><tr><th>Emissão</th><td>${empEsc(date)}</td></tr>${extra}</table></header><div class="stripe"></div>`;
+  }
+  function ecSec(n,title){return `<h2 class="sec"><span class="n">${n}</span>${title}</h2>`}
+
+  // ---------------- Laudo do Inventário de Espaços Confinados ----------------
+  function ecInventoryReportBody(spaces,opt){
+    const now=new Date(),date=now.toLocaleDateString('pt-BR'),ymd=now.toISOString().slice(0,10).replace(/-/g,'');
+    const single=!!opt.single;
+    const code=single?`FT-EC-${spaces[0].tag||'—'}-${ymd}`:`LT-EC-${ymd}`;
+    const petsOf=ec=>(state.pets||[]).filter(p=>p.ecId===ec.id).sort((a,b)=>String(b.dataEmissao||'').localeCompare(String(a.dataEmissao||'')));
+    const locs=[...new Set(spaces.map(x=>x.localizacao).filter(Boolean))];
+    const allPets=spaces.flatMap(petsOf),activePets=allPets.filter(p=>p.status==='Ativa').length;
+    const title=single?'Ficha Técnica de Espaço Confinado':'Laudo Técnico · Inventário de Espaços Confinados';
+    const verif=ecHash(code+spaces.map(s=>s.id+s.updatedAt).join('|'));
+    let n=0;const sec=t=>ecSec(++n,t);
+    const ficha=(ec,i)=>{const pets=petsOf(ec),qr=opt.qr?ecQrSrc(ec.id,240):'',risks=ecSplitList(ec.riscos);return `<section class="${single||i===0?'':'ficha'}">
+      ${!single&&i===0?sec('Fichas técnicas individuais'):''}${single?'':`<h2 class="sec"><span class="n">${n}.${i+1}</span>Ficha técnica · ${empEsc(ec.tag)} · ${empEsc(ec.nome)}</h2>`}
+      <div class="ficha-head"><div><div class="ficha-title"><span class="tag">${empEsc(ec.tag||'—')}</span><h3>${empEsc(ec.nome||'—')}</h3><div>📍 ${ecTxt(ec.localizacao)}</div></div>
+      <table class="kv"><tr><th>Identificação (TAG)</th><td>${ecTxt(ec.tag)}</td></tr><tr><th>Denominação</th><td>${ecTxt(ec.nome)}</td></tr><tr><th>Localização</th><td>${ecTxt(ec.localizacao)}</td></tr><tr><th>Volume / dimensões</th><td>${ecTxt(ec.dimensoes)}</td></tr><tr><th>Aberturas de entrada e saída</th><td>${ecTxt(ec.aberturas)}</td></tr><tr><th>Data de cadastro</th><td>${ec.createdAt?ecStamp(new Date(ec.createdAt)):'<span class="na">Não registrada</span>'}</td></tr><tr><th>Última atualização</th><td>${ec.updatedAt?ecStamp(new Date(ec.updatedAt)):'<span class="na">Sem alterações</span>'}</td></tr></table></div>
+      ${qr?`<div class="qr"><img src="${qr}" alt="QR Code"><b>PORTAL PET</b>Aponte a câmera do celular para acessar a emissão da PET deste espaço.</div>`:`<div class="qr"><b>QR CODE</b><br>Endereço público do portal não configurado.</div>`}</div>
+      <div class="box warn"><h4>⚠️ Riscos atmosféricos e físicos identificados</h4>${risks.length?`<div class="chips">${risks.map(r=>`<span class="chip">${empEsc(r)}</span>`).join('')}</div>`:'<span class="na">Não informado</span>'}</div>
+      <div class="grid2"><div class="box info"><h4>🔒 Isolamento / bloqueio de energias (LOTO)</h4>${ecTxt(ec.isolamento)}</div><div class="box info"><h4>💨 Ventilação requerida</h4>${ecTxt(ec.ventilacao)}</div></div>
+      <div class="box ok"><h4>🛟 Equipamentos de medição, proteção e resgate</h4>${ecTxt(ec.equipamentos)}</div>
+      <h3>Histórico de Permissões de Entrada e Trabalho (últimas 5)</h3>
+      ${pets.length?`<table><thead><tr><th>PET</th><th>Emissão</th><th>Supervisor</th><th>Vigia</th><th>Situação</th></tr></thead><tbody>${pets.slice(0,5).map(p=>`<tr><td><b>${empEsc(p.numeroPet)}</b></td><td>${fmtDate(p.dataEmissao)}</td><td>${empEsc(employeeName(p.supervisorId))}</td><td>${empEsc(employeeName(p.vigiaId))}</td><td>${empEsc(p.status||'—')}</td></tr>`).join('')}</tbody></table>`:'<p class="na">Nenhuma PET emitida para este espaço até a data deste documento.</p>'}
+    </section>`};
+    return `${ecDocHeader({title,subtitle:single?`${empEsc(spaces[0].tag)} · ${empEsc(spaces[0].nome)}`:'Identificação, caracterização de riscos e medidas de controle',code,rev:opt.rev||'00',date,extra:`<tr><th>Espaços</th><td>${spaces.length}</td></tr>`})}
+      ${sec('Identificação do documento')}
+      <table class="kv"><tr><th>Título</th><td>${title}</td></tr><tr><th>Elaborado por</th><td>${ecTxt(opt.autor)}</td></tr><tr><th>Função / registro profissional</th><td>${ecTxt(opt.registro)}</td></tr><tr><th>Data de emissão</th><td>${ecStamp(now)}</td></tr><tr><th>Abrangência</th><td>${single?'Espaço confinado individual':`${spaces.length} espaço(s) confinado(s) em ${locs.length} localização(ões)`}${opt.filtro?` · Filtro aplicado: ${empEsc(opt.filtro)}`:''}</td></tr><tr><th>Vigência sugerida</th><td>Revisão anual ou sempre que houver alteração de processo, instalação ou condição de risco</td></tr></table>
+      ${single?'':`${sec('Objetivo')}
+      <p>O presente laudo tem por objetivo registrar o inventário dos espaços confinados existentes no estabelecimento, contendo a identificação, a localização, a caracterização dos riscos atmosféricos e físicos e as medidas de controle requeridas para cada local, servindo de base para a emissão das Permissões de Entrada e Trabalho (PET), para a sinalização dos acessos e para o planejamento das ações de resgate e emergência.</p>
+      ${sec('Referências normativas')}
+      <table><tbody><tr><td style="width:30%"><b>NR-33</b></td><td>Segurança e Saúde nos Trabalhos em Espaços Confinados (Portaria MTP nº 1.690/2022).</td></tr><tr><td><b>NR-01</b></td><td>Disposições Gerais e Gerenciamento de Riscos Ocupacionais (GRO/PGR).</td></tr><tr><td><b>NR-06</b></td><td>Equipamento de Proteção Individual – EPI.</td></tr><tr><td><b>NR-10 / NR-12</b></td><td>Controle de energias perigosas (bloqueio e etiquetagem) quando aplicável.</td></tr><tr><td><b>NR-15</b></td><td>Limites de tolerância para agentes químicos (referência para monitoramento atmosférico).</td></tr><tr><td><b>ABNT NBR 16577</b></td><td>Espaço confinado – Prevenção de acidentes, procedimentos e medidas de proteção.</td></tr></tbody></table>
+      ${sec('Critérios e metodologia')}
+      <p>Foram considerados espaços confinados as áreas ou ambientes não projetados para ocupação humana contínua, que possuam meios limitados de entrada e saída e nos quais existam ou possam existir atmosferas perigosas, deficiência ou enriquecimento de oxigênio, ou outros riscos que possam comprometer a integridade física dos trabalhadores.</p>
+      <p>O levantamento foi conduzido por meio de reconhecimento em campo, consulta a desenhos e documentação dos equipamentos e análise das atividades executadas. Cada espaço recebeu uma identificação única (TAG) e um QR Code individual vinculado ao Portal de Emissão de PET, permitindo que o supervisor de entrada acesse no local as informações deste inventário.</p>
+      ${sec('Quadro-resumo do inventário')}
+      <div class="kpis"><div class="kpi"><b>${spaces.length}</b><span>Espaços inventariados</span></div><div class="kpi"><b>${locs.length}</b><span>Localizações</span></div><div class="kpi"><b>${allPets.length}</b><span>PETs emitidas</span></div><div class="kpi"><b>${activePets}</b><span>PETs ativas</span></div></div>
+      <table><thead><tr><th style="width:26px">Nº</th><th>TAG</th><th>Espaço confinado</th><th>Localização</th><th>Dimensões</th><th>Principais riscos</th><th>PETs</th></tr></thead><tbody>${spaces.map((ec,i)=>`<tr><td>${String(i+1).padStart(2,'0')}</td><td><span class="tag">${empEsc(ec.tag||'—')}</span></td><td><b>${empEsc(ec.nome||'—')}</b></td><td>${empEsc(ec.localizacao||'—')}</td><td>${empEsc(ec.dimensoes||'—')}</td><td>${empEsc(ec.riscos||'—')}</td><td style="text-align:center">${petsOf(ec).length}</td></tr>`).join('')}</tbody></table>`}
+      ${opt.fichas||single?`${single?sec('Caracterização do espaço confinado'):''}${spaces.map(ficha).join('')}`:''}
+      ${sec('Medidas gerais de controle e recomendações')}
+      <div class="box"><p>1. Manter todos os espaços confinados sinalizados de forma permanente junto às entradas, com o QR Code de acesso ao portal PET, e impedir a entrada de pessoas não autorizadas.</p><p>2. Nenhuma entrada deve ocorrer sem a emissão prévia da Permissão de Entrada e Trabalho (PET), assinada pelo Supervisor de Entrada, com vigia designado e trabalhadores autorizados identificados e cientes dos riscos.</p><p>3. Realizar avaliação atmosférica inicial antes da entrada e monitoramento contínuo durante toda a atividade, com equipamento calibrado e teste de resposta realizado.</p><p>4. Garantir ventilação adequada, bloqueio e etiquetagem de energias perigosas e isolamento de linhas antes da liberação da entrada.</p><p>5. Manter plano de resgate específico, equipe de emergência capacitada e equipamentos de resgate disponíveis e inspecionados.</p><p>6. Assegurar que supervisores, vigias e trabalhadores autorizados possuam capacitação NR-33 válida e aptidão registrada no ASO.</p><p>7. Revisar este inventário sempre que houver alterações de processo, instalações ou condições de risco, e arquivar as PETs pelo prazo mínimo exigido pela NR-33.</p></div>
+      ${sec('Conclusão')}
+      <p>${opt.conclusao?empEsc(opt.conclusao).replace(/\n/g,'<br>'):`${single?'O espaço confinado descrito neste documento encontra-se':`Os ${spaces.length} espaço(s) confinado(s) descrito(s) neste laudo encontram-se`} identificado(s) e caracterizado(s) quanto aos riscos e às medidas de controle necessárias. A entrada em qualquer desses locais somente poderá ocorrer mediante Permissão de Entrada e Trabalho válida e cumprimento integral das medidas aqui descritas.`}</p>
+      <div class="sign-final"><div><b>${empEsc(opt.autor||'Responsável técnico')}</b>${empEsc(opt.registro||'Função / registro profissional')}<br>Responsável pela elaboração</div><div><b>&nbsp;</b>Responsável pela organização<br>Ciência e aprovação</div></div>
+      <div class="auth"><span>Documento gerado pelo Sistema Modular SST em ${ecStamp(now)}.</span><span>Código de verificação: <b>${verif}</b></span></div>`;
+  }
+  function openEcInventoryPdfModal(ids,filtro='',asSheet=false){
+    const spaces=ids.map(id=>ecById(id)).filter(Boolean);
+    if(!spaces.length){alert('Nenhum espaço confinado para gerar o documento.');return}
+    const single=!!asSheet&&spaces.length===1,profs=(state.nr15Professionals||[]).filter(p=>p.ativo!==false);
+    openModal(`<h2>📄 ${single?'Ficha técnica do espaço (PDF)':'Laudo do inventário (PDF)'}</h2><div class="note">${single?`${empEsc(spaces[0].tag)} · ${empEsc(spaces[0].nome)}`:`${spaces.length} espaço(s) serão incluídos${filtro?` · filtro: ${empEsc(filtro)}`:''}.`}</div><form id="ec-inv-pdf-form">
+      ${profs.length?`<div class="field"><label>Responsável técnico cadastrado</label><select id="ec-inv-prof"><option value="">— Preencher manualmente —</option>${profs.map(p=>`<option value="${p.id}">${empEsc(p.nome)} · ${empEsc(p.conselho||'')} ${empEsc(p.registro||'')}</option>`).join('')}</select></div>`:''}
+      <div class="field-row"><div class="field"><label>Elaborado por *</label><input name="autor" required value="${empEsc(currentUser?.name||'')}"></div><div class="field"><label>Função / registro profissional</label><input name="registro" placeholder="Ex.: Téc. Segurança do Trabalho · MTE 00000"></div></div>
+      <div class="field-row"><div class="field"><label>Revisão</label><input name="rev" value="00"></div><div class="field"><label>Opções</label><label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" name="qr" checked style="width:auto"> Incluir QR Code de cada espaço</label>${single?'':`<label style="display:flex;gap:8px;align-items:center;font-weight:400"><input type="checkbox" name="fichas" checked style="width:auto"> Incluir fichas técnicas individuais</label>`}</div></div>
+      <div class="field"><label>Conclusão (opcional)</label><textarea name="conclusao" rows="3" placeholder="Deixe em branco para usar a conclusão padrão."></textarea></div>
+      <div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn" type="submit">📄 Gerar PDF</button></div></form>`,ov=>{
+      const f=ov.querySelector('#ec-inv-pdf-form');
+      ov.querySelector('#ec-inv-prof')?.addEventListener('change',e=>{const p=profs.find(x=>x.id===e.target.value);if(!p)return;f.autor.value=p.nome||'';f.registro.value=[p.profissao,[p.conselho,p.registro].filter(Boolean).join(' ')].filter(Boolean).join(' · ')});
+      f.addEventListener('submit',e=>{e.preventDefault();const d=Object.fromEntries(new FormData(f));const opt={single,autor:d.autor,registro:d.registro,rev:d.rev,conclusao:d.conclusao,qr:!!d.qr,fichas:single||!!d.fichas,filtro};const t=single?`Ficha Técnica ${spaces[0].tag}`:'Laudo Inventário de Espaços Confinados';closeModal();ecOpenReport(t,ecInventoryReportBody(spaces,opt))});
+    });
+  }
+
+  // ---------------- Relatório da PET (com assinaturas) ----------------
+  function ecPetWorkers(p){return Array.isArray(p.trabalhadoresAssinaturas)&&p.trabalhadoresAssinaturas.length?p.trabalhadoresAssinaturas:ecSplitList(p.trabalhadores).map(nome=>({nome}))}
+  function ecPetSignSummary(p){const w=ecPetWorkers(p),ws=w.filter(x=>ecSigOk(x.signature)).length,sup=ecSigOk(p.supervisorSignature),vig=ecSigOk(p.vigiaSignature),all=sup&&vig&&w.length&&ws===w.length;return{sup,vig,ws,wt:w.length,all}}
+  function ecPetReportBody(p){
+    const ec=p.espacoSnapshot||ecById(p.ecId)||{},cur=ecById(p.ecId),sup=ecEmp(p.supervisorId),vig=ecEmp(p.vigiaId),workers=ecPetWorkers(p);
+    const st=p.status==='Ativa'?'st-warn':p.status==='Encerrada'?'st-ok':'st-bad';
+    const verif=ecHash(`${p.id}|${p.numeroPet}|${p.signedAt}|${p.supervisorId}`);
+    let n=0;const sec=t=>ecSec(++n,t);
+    const sig=(img,nome,role,info,when)=>`<div class="sig"><div class="img">${ecSigOk(img)?`<img src="${img}" alt="Assinatura">`:'<em>Assinatura não registrada</em>'}</div><b>${empEsc(nome||'—')}</b><span>${empEsc(info||'')}</span><span>${when?ecStamp(new Date(when)):''}</span><span class="role">${role}</span></div>`;
+    const meds=p.medicoes||null;
+    const medRows=meds?EC_GAS.map(g=>{const v=ecNum(meds[g.k]);const ok=v==null?null:g.ok(v);return`<tr><td><b>${g.label}</b></td><td style="text-align:center">${v==null?'<span class="na">—</span>':`${String(meds[g.k]).replace('.',',')} ${g.unit}`}</td><td>${g.ref}</td><td style="text-align:center">${ok==null?'<span class="na">Não medido</span>':ok?'<span class="status st-ok">Conforme</span>':'<span class="status st-bad">Não conforme</span>'}</td></tr>`}).join(''):'';
+    const ck=Array.isArray(p.checklist)?p.checklist:[];
+    const ckCls=r=>r==='Sim'?'ck-sim':r==='Não'?'ck-nao':'ck-na';
+    return `${ecDocHeader({title:'Permissão de Entrada e Trabalho – PET',subtitle:`Espaço confinado ${empEsc(ec.tag||'—')} · ${empEsc(ec.nome||'—')}`,code:p.numeroPet||'—',rev:'00',date:fmtDate(p.dataEmissao),extra:`<tr><th>Situação</th><td><span class="status ${st}">${empEsc(p.status||'—')}</span></td></tr>`})}
+      <div class="validity"><div><span>Data de emissão</span><b>${fmtDate(p.dataEmissao)}</b></div><div><span>Hora de início</span><b>${empEsc(p.horaInicio||(p.signedAt?new Date(p.signedAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):'—'))}</b></div><div><span>Validade</span><b>${empEsc(p.validadeHoras||'—')}</b></div><div><span>Encerramento</span><b>${p.closedAt?ecStamp(new Date(p.closedAt)):p.status==='Ativa'?'Em andamento':'—'}</b></div></div>
+      ${sec('Identificação do espaço confinado')}
+      <table class="kv"><tr><th>TAG / denominação</th><td><span class="tag">${empEsc(ec.tag||'—')}</span> <b>${empEsc(ec.nome||'—')}</b></td></tr><tr><th>Localização</th><td>${ecTxt(ec.localizacao)}</td></tr><tr><th>Volume / dimensões</th><td>${ecTxt(ec.dimensoes)}</td></tr><tr><th>Aberturas de entrada e saída</th><td>${ecTxt(ec.aberturas)}</td></tr><tr><th>Riscos identificados no inventário</th><td>${ecSplitList(ec.riscos).length?`<div class="chips">${ecSplitList(ec.riscos).map(r=>`<span class="chip">${empEsc(r)}</span>`).join('')}</div>`:'<span class="na">Não informado</span>'}</td></tr><tr><th>Isolamento / LOTO requerido</th><td>${ecTxt(ec.isolamento)}</td></tr><tr><th>Ventilação requerida</th><td>${ecTxt(ec.ventilacao)}</td></tr><tr><th>Equipamentos de medição e resgate</th><td>${ecTxt(ec.equipamentos)}</td></tr></table>
+      ${p.espacoSnapshot?'<p style="font-size:9px;color:#5b636b">Dados do inventário registrados no momento da emissão da PET.</p>':(!cur?'<p class="na">Espaço removido do inventário.</p>':'')}
+      ${sec('Descrição do trabalho autorizado')}
+      <div class="box">${ecTxt(p.trabalhoExecutar)}</div>
+      ${sec('Equipe autorizada')}
+      <table><thead><tr><th>Função na PET</th><th>Nome</th><th>Cargo / função</th><th>Matrícula</th><th>Assinatura</th></tr></thead><tbody>
+        <tr><td><b>Supervisor de Entrada</b></td><td>${empEsc(sup?.nome||employeeName(p.supervisorId))}</td><td>${empEsc(sup?.cargo||'—')}</td><td>${empEsc(sup?.matricula||'—')}</td><td>${ecSigOk(p.supervisorSignature)?'✔ Assinado':'Pendente'}</td></tr>
+        <tr><td><b>Vigia</b></td><td>${empEsc(vig?.nome||employeeName(p.vigiaId))}</td><td>${empEsc(vig?.cargo||'—')}</td><td>${empEsc(vig?.matricula||'—')}</td><td>${ecSigOk(p.vigiaSignature)?'✔ Assinado':'Pendente'}</td></tr>
+        ${workers.map(w=>{const e=ecEmp(w.employeeId);return`<tr><td><b>Trabalhador autorizado</b></td><td>${empEsc(w.nome)}</td><td>${empEsc(w.funcao||e?.cargo||'—')}</td><td>${empEsc(e?.matricula||'—')}</td><td>${ecSigOk(w.signature)?'✔ Assinado':'Pendente'}</td></tr>`}).join('')}
+      </tbody></table>
+      ${sec('Avaliação atmosférica inicial')}
+      ${meds?`<table><thead><tr><th>Parâmetro</th><th style="text-align:center">Valor medido</th><th>Faixa aceitável</th><th style="text-align:center">Resultado</th></tr></thead><tbody>${medRows}</tbody></table><table class="kv"><tr><th>Detector / nº de série</th><td>${ecTxt(meds.detector)}</td></tr><tr><th>Horário da medição</th><td>${ecTxt(meds.hora)}</td></tr></table>`:'<p class="na">Medições atmosféricas não registradas nesta PET.</p>'}
+      ${sec('Lista de verificação para liberação da entrada')}
+      ${ck.length?`<table><thead><tr><th style="width:26px">Nº</th><th>Item verificado</th><th class="ck">Resp.</th></tr></thead><tbody>${ck.map((c,i)=>`<tr><td>${i+1}</td><td>${empEsc(c.item)}</td><td class="ck ${ckCls(c.resposta)}">${empEsc(c.resposta||'—')}</td></tr>`).join('')}</tbody></table>`:'<p class="na">Lista de verificação não registrada nesta PET.</p>'}
+      ${sec('Medidas de controle adotadas')}
+      <div class="box">${ecTxt(p.controles)}</div>
+      ${sec('Termo de ciência e assinaturas')}
+      <div class="term">Declaramos que tomamos conhecimento dos riscos existentes no espaço confinado acima identificado, das medidas de controle adotadas e dos procedimentos de emergência e resgate, e que estamos aptos e capacitados, conforme a NR-33, para executar o trabalho descrito nesta Permissão de Entrada e Trabalho. A entrada está condicionada às condições aqui registradas; qualquer alteração exige a interrupção dos trabalhos e a reavaliação da PET.</div>
+      <div class="sig-grid">
+        ${sig(p.supervisorSignature,sup?.nome||employeeName(p.supervisorId),'Supervisor de Entrada',[sup?.cargo,sup?.matricula&&`Mat. ${sup.matricula}`].filter(Boolean).join(' · '),p.signedAt)}
+        ${sig(p.vigiaSignature,vig?.nome||employeeName(p.vigiaId),'Vigia',[vig?.cargo,vig?.matricula&&`Mat. ${vig.matricula}`].filter(Boolean).join(' · '),p.vigiaSignedAt)}
+        ${workers.map(w=>sig(w.signature,w.nome,'Trabalhador autorizado',w.funcao||ecEmp(w.employeeId)?.cargo||'',w.signedAt)).join('')}
+      </div>
+      ${sec('Encerramento e rastreabilidade')}
+      <table class="kv"><tr><th>Situação da PET</th><td><span class="status ${st}">${empEsc(p.status||'—')}</span></td></tr><tr><th>Emitida por</th><td>${p.issuedFromPortal?'Portal PET (celular) · QR Code do espaço':'Sistema SST'}</td></tr><tr><th>Assinada pelo supervisor em</th><td>${p.signedAt?ecStamp(new Date(p.signedAt)):'—'}</td></tr><tr><th>Encerrada em</th><td>${p.closedAt?ecStamp(new Date(p.closedAt)):'—'}${p.closedBy?` · por ${empEsc(p.closedBy)}`:''}</td></tr><tr><th>Alterações registradas</th><td>${(p.edits||[]).length?(p.edits||[]).map(e=>`${ecStamp(new Date(e.at))} · ${empEsc(e.by||'—')}`).join('<br>'):'Nenhuma alteração após a emissão'}</td></tr></table>
+      <p style="font-size:9.5px;color:#5b636b">Esta PET é válida somente para a atividade, o local e o período nela indicados. Deve permanecer disponível no local de trabalho durante toda a atividade e ser arquivada pelo prazo mínimo exigido pela NR-33.</p>
+      <div class="auth"><span>Documento gerado pelo Sistema Modular SST em ${ecStamp()}.</span><span>Código de verificação: <b>${verif}</b></span></div>`;
+  }
+  function ecPrintPetReport(p){if(!p)return;ecOpenReport(`PET ${String(p.numeroPet||'').replace(/\//g,'-')}`,ecPetReportBody(p))}
+  function openEcPetReport(id){
+    const p=(state.pets||[]).find(x=>x.id===id);if(!p)return;
+    openModal(`<h2>📄 Relatório da PET ${empEsc(p.numeroPet)}</h2><iframe id="ec-pet-preview" title="Pré-visualização" style="width:100%;height:65vh;border:1px solid var(--line);border-radius:8px;background:#fff"></iframe><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Fechar</button><button type="button" class="btn" id="ec-print-report">📄 Gerar PDF</button></div>`,ov=>{
+      ov.querySelector('.modal')?.style.setProperty('max-width','980px');
+      ov.querySelector('#ec-pet-preview').srcdoc=ecReportDoc(`PET ${p.numeroPet}`,ecPetReportBody(p),false);
+      ov.querySelector('#ec-print-report').addEventListener('click',()=>ecPrintPetReport(p));
+    });
+  }
+
+  // ---------------- Portal PET para celular ----------------
+  const ECP_CSS=`<style>
+    .ecp-head{display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .ecp-head h2{margin:0 0 2px;font-size:19px}
+    .ecp-space summary{cursor:pointer;font-weight:700;font-size:15px;list-style:none;display:flex;justify-content:space-between;align-items:center}
+    .ecp-space summary::-webkit-details-marker{display:none}
+    .ecp-space summary::after{content:'▾';color:var(--ink-dim)}.ecp-space[open] summary::after{content:'▴'}
+    .ecp-id{display:flex;gap:10px;align-items:center;margin:12px 0}
+    .ecp-tag{background:var(--yellow);color:var(--yellow-ink);font:600 13px var(--font-mono);padding:5px 9px;border-radius:6px;white-space:nowrap}
+    .ecp-id h3{margin:0;font-size:16px}.ecp-id .sub{font-size:13px;color:var(--ink-dim)}
+    .ecp-kv{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+    .ecp-kv div{background:var(--panel-2);border-radius:8px;padding:8px 10px}
+    .ecp-kv span{display:block;font-size:11px;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.04em}
+    .ecp-blk{border-left:3px solid var(--line);background:var(--panel-2);border-radius:0 8px 8px 0;padding:9px 11px;margin-bottom:8px;font-size:14px;line-height:1.45}
+    .ecp-blk b{display:block;font-size:12px;margin-bottom:3px}
+    .ecp-blk.risk{border-color:var(--red)}.ecp-blk.iso{border-color:var(--amber)}.ecp-blk.ven{border-color:#3f86c9}.ecp-blk.eq{border-color:var(--green)}
+    .ecp-chips{display:flex;flex-wrap:wrap;gap:5px}.ecp-chip{background:rgba(214,85,61,.14);color:var(--red);border:1px solid rgba(214,85,61,.4);border-radius:14px;padding:2px 9px;font-size:12px;font-weight:600}
+    .ecp-step{display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700;margin:4px 0 12px}
+    .ecp-step i{font-style:normal;background:var(--yellow);color:var(--yellow-ink);width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px}
+    .ecp-meds{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+    .ecp-meds input{font-size:16px}
+    .ecp-meds small{display:block;color:var(--ink-dim);font-size:11px}
+    .ecp-meds .bad input{border-color:var(--red);color:var(--red)}
+    .ecp-ck{padding:10px 0;border-bottom:1px solid var(--line)}.ecp-ck:last-child{border-bottom:0}
+    .ecp-ck p{margin:0 0 7px;font-size:14px;line-height:1.35}
+    .ecp-seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+    .ecp-seg label{position:relative;overflow:hidden;border:1px solid var(--line);border-radius:8px;text-align:center;padding:8px 4px;font-weight:600;font-size:13px;cursor:pointer;margin:0}
+    .ecp-seg input{position:absolute;left:0;top:0;opacity:0;pointer-events:none;width:1px!important;height:1px!important;margin:0!important;padding:0!important}
+    .ecp-seg label:has(input[value="Sim"]:checked){background:var(--green);border-color:var(--green);color:#fff}
+    .ecp-seg label:has(input[value="Não"]:checked){background:var(--red);border-color:var(--red);color:#fff}
+    .ecp-seg label:has(input[value="N.A."]:checked){background:#6b7280;border-color:#6b7280;color:#fff}
+    .brigade-mobile .btn{box-sizing:border-box;justify-content:center;min-height:42px}
+    .ecp-sig{border:2px dashed var(--line);border-radius:10px;background:#fff;padding:4px}
+    .ecp-sig canvas{width:100%;height:190px;display:block;touch-action:none}
+    .ecp-sig-foot{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px}
+    .ecp-sig-foot small{color:var(--ink-dim)}
+    .ecp-worker{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:12px;background:var(--panel-2)}
+    .ecp-worker-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-weight:700}
+    .ecp-pet{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)}.ecp-pet:last-child{border-bottom:0}
+    .ecp-pet small{color:var(--ink-dim)}
+    .ecp-term{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.4;margin:6px 0 14px}
+    .ecp-term input{width:22px;height:22px;flex:0 0 auto;margin-top:2px}
+    .brigade-mobile .field input,.brigade-mobile .field select,.brigade-mobile .field textarea{font-size:16px}
+    @media(max-width:480px){.brigade-mobile{padding:10px}.ecp-kv{grid-template-columns:1fr}}
+  </style>`;
+  function ecSpaceMobileDetails(ec){
+    if(!ec)return '<div class="empty">Espaço confinado não localizado no inventário.</div>';
+    const risks=ecSplitList(ec.riscos);
+    return `<details class="ecp-space" open><summary>🏭 Dados do espaço (inventário)</summary>
+      <div class="ecp-id"><span class="ecp-tag">${empEsc(ec.tag||'—')}</span><div><h3>${empEsc(ec.nome||'—')}</h3><div class="sub">📍 ${empEsc(ec.localizacao||'—')}</div></div></div>
+      <div class="ecp-kv"><div><span>Volume / dimensões</span>${empEsc(ec.dimensoes||'—')}</div><div><span>Aberturas de entrada e saída</span>${empEsc(ec.aberturas||'—')}</div></div>
+      <div class="ecp-blk risk"><b>⚠️ Riscos atmosféricos e físicos</b>${risks.length?`<div class="ecp-chips">${risks.map(r=>`<span class="ecp-chip">${empEsc(r)}</span>`).join('')}</div>`:'Não informado'}</div>
+      <div class="ecp-blk iso"><b>🔒 Isolamento / LOTO</b>${ecTxt(ec.isolamento)}</div>
+      <div class="ecp-blk ven"><b>💨 Ventilação requerida</b>${ecTxt(ec.ventilacao)}</div>
+      <div class="ecp-blk eq"><b>🛟 Equipamentos de medição e resgate</b>${ecTxt(ec.equipamentos)}</div>
+    </details>`;
+  }
+  function ecSignatureBox(id,label){return `<div class="field"><label>${label}</label><div class="ecp-sig"><canvas id="${id}"></canvas></div><div class="ecp-sig-foot"><small>Assine com o dedo ou caneta.</small><button type="button" class="btn secondary" id="${id}-clear">🧹 Limpar</button></div></div>`}
+  function renderEcPetPortal(){
+    const app=document.getElementById('app'),spaceId=ecPortalSpaceId(),space=ecById(spaceId),active=(state.ecSupervisors||[]).filter(s=>ecSupervisorEmployee(s)&&ecSupervisorEffectiveStatus(s).ativo);
+    let session=null;try{session=JSON.parse(sessionStorage.getItem('sst-ec-supervisor-session')||'null')}catch(e){}
+    const supervisor=active.find(s=>s.id===session?.supervisorId),emp=ecSupervisorEmployee(supervisor);
+    if(!supervisor||!emp){
+      app.innerHTML=`${ECP_CSS}<div class="brigade-mobile"><div class="brigade-mobile-shell"><div class="mobile-card"><img class="brand-logo" src="${FIXED_SYSTEM_LOGO}" alt="Logo" style="height:68px"><h2>🚧 Portal NR-33 · Emissão de PET</h2>${space?`<div class="ecp-id"><span class="ecp-tag">${empEsc(space.tag)}</span><div><h3>${empEsc(space.nome)}</h3><div class="sub">📍 ${empEsc(space.localizacao||'—')}</div></div></div>`:''}<form id="ec-portal-login"><div class="field"><label>Supervisor autorizado</label><select name="supervisorId" required><option value="">Selecione seu nome</option>${active.map(s=>{const e=ecSupervisorEmployee(s);return`<option value="${s.id}">${empEsc(e.nome)}</option>`}).join('')}</select></div><div class="field"><label>Matrícula (senha)</label><input type="password" name="matricula" required inputmode="numeric" autocomplete="off"></div><button class="btn" style="width:100%">Entrar no portal</button></form>${active.length?'':'<div class="empty">Nenhum supervisor autorizado ativo.</div>'}<p class="sub" style="margin-top:12px;font-size:12px">Após o acesso, os dados completos do espaço confinado cadastrados no inventário serão exibidos.</p></div></div></div>`;
+      app.querySelector('#ec-portal-login')?.addEventListener('submit',e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),s=active.find(x=>x.id===d.supervisorId),u=ecSupervisorEmployee(s);if(!s||!u||String(u.matricula||'').trim()!==String(d.matricula||'').trim()){alert('Supervisor ou matrícula inválidos.');return}sessionStorage.setItem('sst-ec-supervisor-session',JSON.stringify({supervisorId:s.id,employeeId:u.id}));renderEcPetPortal()});
+      return;
+    }
+    const spaces=space?[space]:(state.confinedSpaces||[]),emps=(state.employees||[]);
+    const firstSpace=space||spaces[0];
+    const nowTime=new Date().toTimeString().slice(0,5);
+    const recent=ecId=>(state.pets||[]).filter(p=>p.ecId===ecId).sort((a,b)=>String(b.signedAt||b.dataEmissao||'').localeCompare(String(a.signedAt||a.dataEmissao||''))).slice(0,5);
+    const recentHtml=ecId=>{const rows=recent(ecId);return rows.length?rows.map(p=>`<div class="ecp-pet"><div><strong>${empEsc(p.numeroPet)}</strong><br><small>${fmtDate(p.dataEmissao)} · ${empEsc(p.status||'—')} · ${empEsc(employeeName(p.supervisorId))}</small></div><button type="button" class="btn secondary" data-ecp-pdf="${p.id}">📄 PDF</button></div>`).join(''):'<div class="sub">Nenhuma PET emitida para este espaço.</div>'};
+    app.innerHTML=`${ECP_CSS}<div class="brigade-mobile"><div class="brigade-mobile-shell">
+      <div class="mobile-card ecp-head"><div><h2>📜 Emitir PET</h2><div class="sub">Supervisor: <strong>${empEsc(emp.nome)}</strong></div></div><button class="btn secondary" id="ec-portal-logout">Sair</button></div>
+      <div class="mobile-card" id="ecp-space-box">${ecSpaceMobileDetails(firstSpace)}</div>
+      <div class="mobile-card"><details class="ecp-space"><summary>🗂️ Últimas PETs deste espaço</summary><div id="ecp-recent" style="margin-top:8px">${firstSpace?recentHtml(firstSpace.id):''}</div></details></div>
+      <form id="ec-portal-pet-form">
+        <div class="mobile-card"><div class="ecp-step"><i>1</i>Dados da permissão</div>
+          <div class="field"><label>Número da PET</label><input name="numeroPet" readonly value="Gerado automaticamente ao emitir"></div>
+          <div class="field"><label>Espaço confinado</label><select name="ecId" id="ecp-space-sel" required>${spaces.map(ec=>`<option value="${ec.id}">${empEsc(ec.tag)} · ${empEsc(ec.nome)}</option>`).join('')}</select></div>
+          <div class="field-row"><div class="field"><label>Data</label><input type="date" name="dataEmissao" required value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Hora de início</label><input type="time" name="horaInicio" required value="${nowTime}"></div></div>
+          <div class="field"><label>Validade</label><select name="validadeHoras"><option>4 horas</option><option selected>8 horas (Turno)</option><option>12 horas</option></select></div>
+          <div class="field"><label>Trabalho a executar *</label><textarea name="trabalhoExecutar" required rows="3" placeholder="Descreva a atividade, ferramentas e método de trabalho"></textarea></div>
+        </div>
+        <div class="mobile-card"><div class="ecp-step"><i>2</i>Avaliação atmosférica inicial</div>
+          <div class="ecp-meds">${EC_GAS.map(g=>`<div class="field" data-gas="${g.k}"><label>${g.label}</label><input name="med_${g.k}" inputmode="decimal" required placeholder="${g.unit}"><small>Aceitável: ${g.ref}</small></div>`).join('')}</div>
+          <div class="field-row"><div class="field"><label>Detector / nº de série</label><input name="med_detector" placeholder="Modelo e nº de série"></div><div class="field"><label>Horário da medição</label><input type="time" name="med_hora" value="${nowTime}"></div></div>
+        </div>
+        <div class="mobile-card"><div class="ecp-step"><i>3</i>Lista de verificação</div>
+          ${EC_PET_CHECKLIST.map((item,i)=>`<div class="ecp-ck"><p>${i+1}. ${empEsc(item)}</p><div class="ecp-seg">${['Sim','Não','N.A.'].map(o=>`<label><input type="radio" name="chk_${i}" value="${o}" required>${o}</label>`).join('')}</div></div>`).join('')}
+          <div class="field" style="margin-top:10px"><label>Medidas de controle adotadas / observações</label><textarea name="controles" rows="3" placeholder="Isolamento, bloqueios, ventilação, monitoramento, resgate..."></textarea></div>
+        </div>
+        <div class="mobile-card"><div class="ecp-step"><i>4</i>Vigia</div>
+          <div class="field"><label>Vigia designado *</label><select name="vigiaId" required><option value="">Selecione</option>${emps.map(e=>`<option value="${e.id}">${empEsc(e.nome)} · ${empEsc(e.cargo||'—')}</option>`).join('')}</select></div>
+          ${ecSignatureBox('ecp-sig-vigia','✍️ Assinatura do vigia *')}
+        </div>
+        <div class="mobile-card"><div class="ecp-step"><i>5</i>Trabalhadores autorizados</div>
+          <datalist id="ecp-emp-list">${emps.map(e=>`<option value="${empEsc(e.nome)}">${empEsc(e.cargo||'')}</option>`).join('')}</datalist>
+          <div id="ecp-workers"></div>
+          <button type="button" class="btn secondary" id="ecp-add-worker" style="width:100%">+ Adicionar trabalhador</button>
+        </div>
+        <div class="mobile-card"><div class="ecp-step"><i>6</i>Liberação pelo supervisor</div>
+          <label class="ecp-term"><input type="checkbox" name="termo" required><span>Declaro que verifiquei as condições do espaço confinado, que as medidas de controle foram implementadas e que a equipe foi informada dos riscos e dos procedimentos de emergência e resgate.</span></label>
+          ${ecSignatureBox('ecp-sig-sup','✍️ Assinatura do supervisor de entrada *')}
+          <button class="btn" type="submit" style="width:100%;padding:14px;font-size:16px">✅ Assinar e emitir PET</button>
+        </div>
+      </form>
+    </div></div>`;
+    const bindPdf=root=>root.querySelectorAll('[data-ecp-pdf]').forEach(b=>b.addEventListener('click',()=>ecPrintPetReport((state.pets||[]).find(p=>p.id===b.dataset.ecpPdf))));
+    bindPdf(app);
+    app.querySelector('#ec-portal-logout').addEventListener('click',()=>{sessionStorage.removeItem('sst-ec-supervisor-session');renderEcPetPortal()});
+    app.querySelector('#ecp-space-sel').addEventListener('change',e=>{app.querySelector('#ecp-space-box').innerHTML=ecSpaceMobileDetails(ecById(e.target.value));const r=app.querySelector('#ecp-recent');r.innerHTML=recentHtml(e.target.value);bindPdf(r)});
+    EC_GAS.forEach(g=>{const box=app.querySelector(`[data-gas="${g.k}"]`),inp=box.querySelector('input');inp.addEventListener('input',()=>{const v=ecNum(inp.value);box.classList.toggle('bad',v!=null&&!g.ok(v))})});
+    const sigVigia=setupSignatureCanvas(app.querySelector('#ecp-sig-vigia'),app.querySelector('#ecp-sig-vigia-clear'));
+    const sigSup=setupSignatureCanvas(app.querySelector('#ecp-sig-sup'),app.querySelector('#ecp-sig-sup-clear'));
+    const workers=[];let wSeq=0;
+    const renumber=()=>workers.forEach((w,i)=>{w.el.querySelector('.ecp-worker-num').textContent=`👷 Trabalhador ${i+1}`;w.el.querySelector('[data-rm]').style.visibility=workers.length>1?'visible':'hidden'});
+    const addWorker=()=>{const id=`ecp-sig-w${++wSeq}`,el=document.createElement('div');el.className='ecp-worker';el.innerHTML=`<div class="ecp-worker-head"><span class="ecp-worker-num"></span><button type="button" class="action-link danger-link" data-rm>🗑️ Remover</button></div><div class="field"><label>Nome completo *</label><input list="ecp-emp-list" data-nome placeholder="Digite ou selecione" autocomplete="off"></div><div class="field"><label>Função</label><input data-funcao placeholder="Ex.: Caldeireiro, Soldador"></div>${ecSignatureBox(id,'✍️ Assinatura do trabalhador *')}`;app.querySelector('#ecp-workers').appendChild(el);const w={el,sig:setupSignatureCanvas(el.querySelector('#'+id),el.querySelector('#'+id+'-clear')),canvas:el.querySelector('#'+id)};const nome=el.querySelector('[data-nome]'),fun=el.querySelector('[data-funcao]');nome.addEventListener('change',()=>{const e=emps.find(x=>normalizeText(x.nome)===normalizeText(nome.value));if(e&&!fun.value)fun.value=e.cargo||''});el.querySelector('[data-rm]').addEventListener('click',()=>{if(workers.length<=1)return;workers.splice(workers.indexOf(w),1);el.remove();renumber()});workers.push(w);renumber()};
+    app.querySelector('#ecp-add-worker').addEventListener('click',addWorker);addWorker();
+    app.querySelector('#ec-portal-pet-form').addEventListener('submit',async e=>{
+      e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
+      const team=workers.map(w=>({nome:w.el.querySelector('[data-nome]').value.trim(),funcao:w.el.querySelector('[data-funcao]').value.trim(),w}));
+      if(team.some(t=>!t.nome)){alert('Informe o nome de todos os trabalhadores autorizados.');return}
+      if(team.some(t=>!t.w.sig.isSigned())){alert('Todos os trabalhadores autorizados precisam assinar a PET.');return}
+      if(!sigVigia.isSigned()){alert('O vigia precisa assinar a PET.');return}
+      if(!sigSup.isSigned()){alert('Faça a assinatura do supervisor antes de emitir a PET.');return}
+      const bad=EC_GAS.filter(g=>{const v=ecNum(d['med_'+g.k]);return v==null||!g.ok(v)});
+      if(bad.length){alert('Atmosfera NÃO conforme: '+bad.map(g=>g.label).join(', ')+'.\nA entrada não pode ser liberada. Corrija as condições (ventilação, purga, isolamento) e refaça a medição.');return}
+      const checklist=EC_PET_CHECKLIST.map((item,i)=>({item,resposta:d['chk_'+i]}));
+      if(checklist.some(c=>c.resposta==='Não')&&!confirm('Há itens da lista de verificação marcados como "Não". Confirma que as condições estão seguras para emitir a PET?'))return;
+      const button=e.target.querySelector('button[type="submit"]');button.disabled=true;button.textContent='Salvando PET...';
+      const stamp=new Date().toISOString(),ec=ecById(d.ecId);
+      const pet={id:uid('pet'),status:'Ativa',ecId:d.ecId,dataEmissao:d.dataEmissao,horaInicio:d.horaInicio,validadeHoras:d.validadeHoras,trabalhoExecutar:d.trabalhoExecutar,controles:d.controles||'',vigiaId:d.vigiaId,
+        trabalhadores:team.map(t=>t.nome).join(', '),
+        trabalhadoresAssinaturas:team.map(t=>({nome:t.nome,funcao:t.funcao,employeeId:emps.find(x=>normalizeText(x.nome)===normalizeText(t.nome))?.id||'',signature:ecCompactSignature(t.w.canvas),signedAt:stamp})),
+        vigiaSignature:ecCompactSignature(app.querySelector('#ecp-sig-vigia')),vigiaSignedAt:stamp,
+        medicoes:{o2:d.med_o2,lel:d.med_lel,co:d.med_co,h2s:d.med_h2s,detector:d.med_detector||'',hora:d.med_hora||''},checklist,
+        espacoSnapshot:ecSnapshot(ec),
+        supervisorId:emp.id,supervisorAuthorizationId:supervisor.id,supervisorSignature:ecCompactSignature(app.querySelector('#ecp-sig-sup')),signedAt:stamp,issuedFromPortal:true};
+      let saved;
+      try{if(!window.firestoreCreatePortalPet)throw new Error('Conexão com o banco indisponível.');saved=await window.firestoreCreatePortalPet(pet);state.pets=saved.pets;}
+      catch(error){console.error('Falha ao registrar PET:',error);alert('Não foi possível registrar a PET no sistema. Nenhuma confirmação foi emitida. Erro: '+String(error?.code||error?.message||'conexão indisponível'));button.disabled=false;button.textContent='✅ Assinar e emitir PET';return}
+      const savedPet=(state.pets||[]).find(x=>x.id===pet.id)||{...pet,numeroPet:saved.numeroPet};
+      app.innerHTML=`${ECP_CSS}<div class="brigade-mobile"><div class="brigade-mobile-shell"><div class="mobile-card" style="text-align:center"><div style="font-size:46px">✅</div><h2>PET emitida</h2><p style="font-size:20px"><strong>${empEsc(saved.numeroPet)}</strong></p><p>${empEsc(ec?.tag||'')} · ${empEsc(ec?.nome||'')}</p><p class="sub">Assinada pelo supervisor, vigia e ${team.length} trabalhador(es). Registro gravado no sistema.</p><button class="btn" id="ec-pet-pdf" style="width:100%;margin-bottom:8px">📄 Gerar PDF da PET</button><button class="btn secondary" id="ec-new-pet" style="width:100%">Emitir outra PET</button></div></div></div>`;
+      app.querySelector('#ec-pet-pdf').addEventListener('click',()=>ecPrintPetReport(savedPet));
+      app.querySelector('#ec-new-pet').addEventListener('click',renderEcPetPortal);
+    });
+  }
+
   function openEcModalV2(id=""){const current=(state.confinedSpaces||[]).find(x=>x.id===id)||{};openModal(`<h2>${id?'✏️ Editar':'🏭 Cadastrar'} Espaço Confinado</h2><form id="ec-form-v2"><div class="grid-2"><div class="field"><label>TAG / Código *</label><input required name="tag" value="${empEsc(current.tag||'')}"></div><div class="field"><label>Nome do espaço *</label><input required name="nome" value="${empEsc(current.nome||'')}"></div><div class="field"><label>Localização *</label><input required name="localizacao" value="${empEsc(current.localizacao||'')}"></div><div class="field"><label>Volume / Dimensões</label><input name="dimensoes" value="${empEsc(current.dimensoes||'')}"></div></div><div class="field"><label>Aberturas de entrada e saída</label><input name="aberturas" value="${empEsc(current.aberturas||'')}"></div><div class="field"><label>⚠️ Riscos atmosféricos e físicos</label><textarea name="riscos">${empEsc(current.riscos||'')}</textarea></div><div class="field"><label>🔒 Isolamento / LOTO</label><textarea name="isolamento">${empEsc(current.isolamento||'')}</textarea></div><div class="field"><label>💨 Ventilação requerida</label><textarea name="ventilacao">${empEsc(current.ventilacao||'')}</textarea></div><div class="field"><label>🛟 Equipamentos de medição e resgate</label><textarea name="equipamentos">${empEsc(current.equipamentos||'')}</textarea></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">💾 Salvar</button></div></form>`,ov=>ov.querySelector('#ec-form-v2').addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));if((state.confinedSpaces||[]).some(x=>x.id!==id&&normalizeText(x.tag)===normalizeText(d.tag))){alert('Já existe um espaço com esta TAG.');return}if(id)Object.assign(current,d,{updatedAt:new Date().toISOString()});else state.confinedSpaces.push({id:uid('ec'),...d,createdAt:new Date().toISOString()});await saveState();closeModal();render()}))}
   openEcModal=openEcModalV2;
 
@@ -12969,6 +13337,8 @@ function renderPcmsoDash(root){
     root.querySelector("#pet-status")?.addEventListener("change",e=>{root.dataset.petStatus=e.currentTarget.value;refreshEcPets()});
     root.querySelector("#pet-clear")?.addEventListener("click",()=>{delete root.dataset.petSearch;delete root.dataset.petSpace;delete root.dataset.petStatus;refreshEcPets()});
     root.querySelectorAll("[data-ec-qr]").forEach(b=>b.addEventListener("click",e=>showEcQrModal(e.currentTarget.dataset.ecQr)));
+    root.querySelectorAll("[data-ec-sheet]").forEach(b=>b.addEventListener("click",e=>openEcInventoryPdfModal([e.currentTarget.dataset.ecSheet],"",true)));
+    root.querySelector("#btn-ec-inventory-pdf")?.addEventListener("click",()=>{const rows=ecFilteredSpaces(root),f=[root.dataset.ecSearch&&`pesquisa "${root.dataset.ecSearch}"`,root.dataset.ecLocation&&`localização "${root.dataset.ecLocation}"`].filter(Boolean).join(' · ');openEcInventoryPdfModal(rows.map(x=>x.id),f)});
     root.querySelectorAll("[data-edit-ec]").forEach(b=>b.addEventListener("click",e=>openEcModal(e.currentTarget.dataset.editEc)));
     root.querySelector("#btn-new-ec-supervisor")?.addEventListener("click",()=>openEcSupervisorModal());
     const refreshEcSup=()=>{renderEcSupervisors(root);attachMainListeners(root)};
@@ -13450,7 +13820,7 @@ function renderPcmsoDash(root){
 
     root.querySelectorAll("[data-close-pet]").forEach(b => b.addEventListener("click", async e => {
       const p = state.pets.find(x => x.id === e.target.dataset.closePet);
-      if(p) { p.status = "Encerrada"; await saveState(); render(); }
+      if(p) { p.status = "Encerrada"; p.closedAt = new Date().toISOString(); p.closedBy = currentUser?.name || ""; await saveState(); render(); }
     }));
 
     root.querySelectorAll("[data-del-pgr]").forEach(b => b.addEventListener("click", async e => {
