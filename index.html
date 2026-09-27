@@ -2189,6 +2189,70 @@ nav button .nav-label{line-height:1.25}
 .brigade-mobile-filters{display:grid;grid-template-columns:1fr;gap:10px;align-items:end}.brigade-mobile-filters label{display:block;margin-bottom:5px;font-size:12px;font-weight:700;color:var(--ink-dim)}
 @media(max-width:1050px){.inspection-filter-grid{grid-template-columns:1fr 1fr 1fr}.inspection-filter-grid .btn{grid-column:1/-1}.inspection-check-row{grid-template-columns:1fr 160px}.inspection-check-row input{grid-column:1/-1}}
 @media(max-width:700px){.brigade-grid,.inspection-filter-grid,.inspection-check-row,.qr-card,.brigade-mobile-filters{grid-template-columns:1fr}.inspection-filter-grid .btn,.inspection-check-row input{grid-column:auto}.qr-card img{margin:auto}.brigade-mobile .mobile-equip{align-items:stretch;flex-direction:column}}
+
+/* ===== Inspeção de emergência · otimizada para celular ===== */
+.fire-insp-modal{max-width:680px}
+.fire-insp-modal .fi-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.fire-insp-modal .fi-head h3{margin:0;color:var(--ink)}
+.fire-insp-modal .inspection-plan-head{color:var(--ink)}
+.fi-close{all:unset;cursor:pointer;width:36px;height:36px;display:grid;place-items:center;border-radius:50%;background:var(--panel-2);color:var(--ink-dim);font-size:16px}
+.fi-meta{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fi-progress{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:4px 0 8px;font-size:13px;color:var(--ink-dim)}
+.fi-progress strong{color:var(--ink)}
+.fi-all{all:unset;cursor:pointer;padding:8px 12px;border-radius:999px;border:1px solid var(--green);color:var(--green);font-size:13px;font-weight:700}
+.fi-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-left:4px solid var(--line);border-radius:10px;background:var(--panel-2);transition:border-color .15s}
+.fi-row:has(input[value="Aprovado"]:checked){border-left-color:var(--green)}
+.fi-row:has(input[value="Reprovado"]:checked){border-left-color:var(--red);background:color-mix(in srgb,var(--red) 8%,var(--panel-2))}
+.fi-row.missing{border-color:var(--amber);border-left-color:var(--amber);animation:fiShake .3s}
+@keyframes fiShake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.fi-label{color:var(--ink);display:flex;gap:10px;align-items:flex-start;font-size:14px;font-weight:600;line-height:1.35}
+.fi-num{flex:0 0 24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--panel);border:1px solid var(--line);font-size:12px;color:var(--ink-dim)}
+.fi-toggle{display:grid;grid-template-columns:1fr 1fr;gap:6px;min-width:250px}
+.fi-opt{margin:0;cursor:pointer;display:block}
+.fi-opt input{position:absolute;opacity:0;pointer-events:none}
+.fi-opt span{display:flex;align-items:center;justify-content:center;min-height:44px;padding:0 10px;border-radius:8px;border:1.5px solid var(--line);background:var(--panel);font-size:14px;font-weight:700;color:var(--ink-dim);user-select:none;-webkit-tap-highlight-color:transparent}
+.fi-opt.ok input:checked+span{background:var(--green);border-color:var(--green);color:#fff}
+.fi-opt.bad input:checked+span{background:var(--red);border-color:var(--red);color:#fff}
+.fi-opt input:focus-visible+span{outline:2px solid var(--yellow);outline-offset:2px}
+.fi-section-title{font-size:12px;font-weight:600;color:var(--ink-dim);margin:14px 0 6px}
+.fi-photo{margin-bottom:14px}
+.fi-photo-empty{all:unset;box-sizing:border-box;cursor:pointer;width:100%;display:flex;flex-direction:column;align-items:center;gap:4px;padding:22px 14px;border:2px dashed var(--line);border-radius:12px;background:var(--panel-2);text-align:center;color:var(--ink)}
+.fi-photo-empty:focus-visible{outline:2px solid var(--yellow)}
+.fi-photo-empty small{color:var(--ink-dim)}
+.fi-cam{font-size:34px;line-height:1}
+.fi-photo-preview{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--panel-2)}
+.fi-photo-preview img{display:block;width:100%;max-height:360px;object-fit:contain;background:#000}
+.fi-photo-bar{color:var(--ink);display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;font-size:13px;flex-wrap:wrap}
+.fi-photo-bar div{display:flex;gap:6px}
+.fi-photo-bar .btn{padding:6px 10px;min-height:36px}
+.fi-actions{align-items:center}
+.fi-result{margin-right:auto;font-size:13px;font-weight:700;color:var(--ink-dim)}
+.fi-result.ok{color:var(--green)}.fi-result.bad{color:var(--red)}
+.fi-portal-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.fi-portal-head h2{margin:0 0 4px;font-size:19px}
+.brigade-mobile .fi-equip{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--green);border-radius:12px;padding:14px 16px;margin-bottom:10px;color:var(--ink)}
+.brigade-mobile .fi-equip.warn{border-left-color:var(--amber)}.brigade-mobile .fi-equip.bad{border-left-color:var(--red)}
+.brigade-mobile .fi-equip:focus-visible{outline:2px solid var(--yellow)}
+.fi-equip-main{min-width:0;flex:1}
+.fi-equip-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fi-equip-top strong{font-size:16px}
+.fi-equip-type{font-weight:600;margin:3px 0 2px}
+.fi-equip-go{flex:0 0 auto;background:var(--yellow);color:var(--yellow-ink);font-weight:700;font-size:14px;padding:10px 14px;border-radius:8px}
+@media(max-width:700px){
+  .fire-insp-modal{padding-bottom:0}
+  .fi-meta{grid-template-columns:1fr 1fr;gap:8px}
+  .fi-meta .field{margin-bottom:10px}
+  .fi-row{grid-template-columns:1fr;gap:8px}
+  .fi-toggle{min-width:0}
+  .fi-opt span{min-height:48px;font-size:15px}
+  .fi-actions{position:sticky;bottom:0;background:var(--panel);margin:0;padding:10px 0 calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .fi-actions .fi-result{grid-column:1/-1;text-align:center;margin:0}
+  .fi-actions .btn{box-sizing:border-box;width:100%;justify-content:center;min-height:48px}
+  .brigade-mobile .fi-equip{flex-direction:column;align-items:stretch}
+  .fi-equip-go{text-align:center;padding:12px}
+}
+@media(max-width:380px){.fi-meta{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.fi-row.missing{animation:none}}
 </style>
 
 <style>
@@ -6953,7 +7017,7 @@ function renderPcmsoDash(root){
     const selectedGroup=sessionStorage.getItem("sst-brig-group")||"";
     const groups=[...new Set((state.fireEquip||[]).map(fireEquipGroup))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
     const equipments=(state.fireEquip||[]).filter(eq=>!selectedGroup||fireEquipGroup(eq)===selectedGroup);
-    app.innerHTML=`<div class="brigade-mobile"><div class="brigade-mobile-shell"><div class="mobile-card"><h2>🧯 Inspeção de Equipamentos</h2><div class="sub">Brigadista: <strong>${empEsc(emp.nome)}</strong></div><button class="btn secondary" id="brig-logout">Sair</button></div><div class="mobile-card"><div class="panel-head"><h3>🗂️ Escolher grupo</h3><span>${equipments.length} de ${(state.fireEquip||[]).length}</span></div><div class="brigade-mobile-filters"><div><label>Grupo de equipamentos</label><select id="brig-equip-group"><option value="">Todos os grupos</option>${groups.map(group=>`<option value="${empEsc(group)}" ${selectedGroup===group?'selected':''}>${FIRE_GROUP_ICONS[group]||'📦'} ${empEsc(group)}</option>`).join('')}</select></div></div></div>${equipments.map(eq=>`<div class="mobile-card mobile-equip"><div><strong>${empEsc(eq.identificador)} · ${empEsc(eq.tipo)}</strong><div class="sub">${FIRE_GROUP_ICONS[fireEquipGroup(eq)]||'📦'} ${empEsc(fireEquipGroup(eq))}<br>📍 ${empEsc(eq.localizacao||"—")} · Próxima: ${fmtDate(getNextInspectionDate(eq))}</div></div><button class="btn" data-brig-inspect="${eq.id}">📋 Inspecionar</button></div>`).join("")||'<div class="mobile-card empty">Nenhum equipamento encontrado neste grupo.</div>'}</div></div>`;
+    app.innerHTML=`<div class="brigade-mobile"><div class="brigade-mobile-shell"><div class="mobile-card fi-portal-head"><div><h2>🧯 Inspeção de equipamentos</h2><div class="sub">👷 ${empEsc(emp.nome)}</div></div><button class="btn secondary" id="brig-logout">Sair</button></div><div class="mobile-card"><div class="panel-head"><h3>🗂️ Escolher grupo</h3><span>${equipments.length} de ${(state.fireEquip||[]).length}</span></div><div class="brigade-mobile-filters"><div><label>Grupo de equipamentos</label><select id="brig-equip-group"><option value="">Todos os grupos</option>${groups.map(group=>`<option value="${empEsc(group)}" ${selectedGroup===group?'selected':''}>${FIRE_GROUP_ICONS[group]||'📦'} ${empEsc(group)}</option>`).join('')}</select></div></div></div>${equipments.map(eq=>{const st=inspectionStatus(eq),stTxt=st==='bad'?'Atrasada':st==='warn'?'Próxima':'Em dia';return `<button type="button" class="mobile-card mobile-equip fi-equip ${st}" data-brig-inspect="${eq.id}"><div class="fi-equip-main"><div class="fi-equip-top"><strong>${empEsc(eq.identificador)}</strong><span class="status-pill ${st}"><span class="dot"></span>${stTxt}</span></div><div class="fi-equip-type">${FIRE_GROUP_ICONS[fireEquipGroup(eq)]||'📦'} ${empEsc(eq.tipo)}</div><div class="sub">📍 ${empEsc(eq.localizacao||"—")} · Próxima: ${fmtDate(getNextInspectionDate(eq))}</div></div><span class="fi-equip-go">Inspecionar ›</span></button>`}).join("")||'<div class="mobile-card empty">Nenhum equipamento encontrado neste grupo.</div>'}</div></div>`;
     app.querySelector("#brig-logout").addEventListener("click",()=>{brigadistaSession=null;sessionStorage.removeItem("sst-brigadista-session");renderBrigadistaPortal()});
     app.querySelector("#brig-equip-group")?.addEventListener("change",e=>{sessionStorage.setItem("sst-brig-group",e.currentTarget.value);renderBrigadistaPortal()});
     app.querySelectorAll("[data-brig-inspect]").forEach(btn=>btn.addEventListener("click",()=>openFireInspectionPlanModal(btn.dataset.brigInspect,null,brigadistaSession.brigadistaId)));
@@ -7007,7 +7071,7 @@ function renderPcmsoDash(root){
     state.fireCorrectiveActions||=[];
     (inspection.checklist||[]).filter(item=>item.resultado==="Reprovado").forEach(item=>{
       const existing=state.fireCorrectiveActions.find(a=>a.inspectionId===inspection.id&&a.checklistItem===item.item);
-      const source={equipId:eq.id,inspectionId:inspection.id,checklistItem:item.item,descricao:item.observacao||`Corrigir reprovação: ${item.item}`,brigadistaId:inspection.brigadistaId||"",brigadistaEmployeeId:inspection.brigadistaEmployeeId||"",brigadista:inspection.inspetor||"",dataOrigem:inspection.dataInspecao,prazo:existing?.prazo||addDays(inspection.dataInspecao,7),updatedAt:new Date().toISOString()};
+      const source={equipId:eq.id,inspectionId:inspection.id,checklistItem:item.item,descricao:item.observacao||(inspection.observacoes?`${item.item}: ${inspection.observacoes}`:`Corrigir reprovação: ${item.item}`),brigadistaId:inspection.brigadistaId||"",brigadistaEmployeeId:inspection.brigadistaEmployeeId||"",brigadista:inspection.inspetor||"",dataOrigem:inspection.dataInspecao,prazo:existing?.prazo||addDays(inspection.dataInspecao,7),updatedAt:new Date().toISOString()};
       if(existing) Object.assign(existing,source);
       else state.fireCorrectiveActions.push({id:uid("fireaction"),...source,responsavel:"",providencia:"",status:"Pendente",observacoes:"",autoCreated:true,createdAt:new Date().toISOString()});
     });
@@ -7161,7 +7225,7 @@ function renderPcmsoDash(root){
                 <td><strong>${insp.tipoChecagem||'Plano de inspeção'}</strong><br><small>${checks.length?`${checks.length} itens · ✅ ${approved} · ⚠️ ${attention} · ❌ ${failed}`:'Registro anterior sem checklist detalhado'}</small></td>
                 <td><strong>${empEsc(insp.inspetor||'—')}</strong>${insp.brigadistaEmployeeId?'<br><small>Brigadista cadastrado</small>':''}</td>
                 <td><span class="status-pill ${insp.resultado==='Aprovado'?'ok':insp.resultado==='Atenção'?'warn':'bad'}"><span class="dot"></span>${insp.resultado}</span></td>
-                <td>${insp.observacoes || "—"}</td>
+                <td>${insp.observacoes || "—"}${insp.foto?`<br><button class="action-link" data-view-fire-photo="${insp.id}">📷 Ver foto</button>`:""}</td>
                 ${checkPermission("Administrador") ? `<td><div class="fire-actions"><button class="action-link" data-edit-fire-insp="${insp.id}">✏️ Editar</button><button class="action-link danger-link" data-del-fire-insp="${insp.id}">🗑️ Remover</button></div></td>` : ''}
               </tr>`;
             }).join("")}
@@ -12514,6 +12578,44 @@ function renderPcmsoDash(root){
     return FIRE_INSPECTION_PLANS[fireEquipGroup(eq)]||FIRE_INSPECTION_PLANS["Outros Equipamentos"];
   }
 
+  // Carimba data/hora e identificação do equipamento na foto e comprime (JPEG).
+  function fireStampPhoto(file,eq){
+    return new Promise((resolve,reject)=>{
+      const url=URL.createObjectURL(file),img=new Image();
+      img.onload=()=>{
+        try{
+          const max=1280,scale=Math.min(1,max/Math.max(img.naturalWidth,img.naturalHeight));
+          const w=Math.round(img.naturalWidth*scale),h=Math.round(img.naturalHeight*scale);
+          const c=document.createElement('canvas');c.width=w;c.height=h;
+          const ctx=c.getContext('2d');ctx.drawImage(img,0,0,w,h);
+          const taken=new Date();
+          const stamp=taken.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+          const fs=Math.max(16,Math.round(w/34)),pad=Math.round(fs*.6),barH=fs*2+pad*3;
+          ctx.fillStyle='rgba(0,0,0,.62)';ctx.fillRect(0,h-barH,w,barH);
+          ctx.fillStyle='#F5B700';ctx.fillRect(0,h-barH,Math.round(fs*.3),barH);
+          ctx.textBaseline='top';ctx.fillStyle='#fff';
+          ctx.font=`700 ${fs}px Inter, Arial, sans-serif`;
+          ctx.fillText(stamp.replace(',',' às'),pad*1.6,h-barH+pad);
+          ctx.font=`500 ${Math.round(fs*.85)}px Inter, Arial, sans-serif`;
+          ctx.fillText([eq?.identificador,eq?.tipo,eq?.localizacao].filter(Boolean).join(' · '),pad*1.6,h-barH+pad*2+fs);
+          URL.revokeObjectURL(url);
+          resolve({data:c.toDataURL('image/jpeg',.72),takenAt:taken.toISOString(),label:stamp.replace(',',' às')});
+        }catch(err){URL.revokeObjectURL(url);reject(err);}
+      };
+      img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('Imagem inválida'));};
+      img.src=url;
+    });
+  }
+  function fireShowInspectionPhoto(inspectionId){
+    const insp=(state.fireInspections||[]).find(x=>x.id===inspectionId);if(!insp?.foto)return;
+    const eq=fireEquipById(insp.equipId);
+    openModal(`<h3>📷 Foto da inspeção</h3><div class="sub" style="margin-bottom:10px">${empEsc(eq?.identificador||'')} · ${empEsc(eq?.localizacao||'')}${insp.fotoDataHora?` · tirada em ${empEsc(new Date(insp.fotoDataHora).toLocaleString('pt-BR'))}`:''}</div><img src="${insp.foto}" alt="Foto da inspeção" style="width:100%;border-radius:8px;display:block"><div class="modal-actions"><button type="button" class="btn secondary" onclick="window.closeModal()">Fechar</button></div>`);
+  }
+  if(!window.__fireInspPhotoBound){
+    window.__fireInspPhotoBound=true;
+    document.addEventListener('click',e=>{const b=e.target.closest?.('[data-view-fire-photo]');if(b){e.preventDefault();fireShowInspectionPhoto(b.dataset.viewFirePhoto);}});
+  }
+
   function openFireInspectionPlanModal(targetEquipId=null,inspectionId=null,forcedBrigadistaId=null){
     if(state.fireEquip.length===0){alert("Cadastre ao menos um equipamento de emergência antes.");return;}
     const current=inspectionId?(state.fireInspections||[]).find(x=>x.id===inspectionId):null;
@@ -12521,27 +12623,63 @@ function renderPcmsoDash(root){
     const activeBrigadistas=(state.fireBrigadistas||[]).filter(b=>b.ativo!==false&&fireBrigadistaEmployee(b));
     const selectedBrigadistaId=forcedBrigadistaId||current?.brigadistaId||"";
     if(!activeBrigadistas.length){alert("Cadastre e ative ao menos um brigadista antes de registrar a inspeção.");return;}
-    openModal(`<h3>${current?'✏️ Editar':'📋 Registrar'} Inspeção de Emergência</h3><form id="fire-plan-form">
+    let photo=current?.foto?{data:current.foto,takenAt:current.fotoDataHora||"",label:current.fotoDataHora?new Date(current.fotoDataHora).toLocaleString('pt-BR').replace(',',' às'):""}:null;
+    openModal(`<div class="fi-head"><h3>${current?'✏️ Editar':'📋 Registrar'} inspeção</h3><button type="button" class="fi-close" onclick="window.closeModal()" aria-label="Fechar">✕</button></div><form id="fire-plan-form" novalidate>
       <div class="field"><label>Equipamento</label><select required name="equipId" id="fire-plan-equip">${state.fireEquip.map(eq=>`<option value="${eq.id}" ${initialEquipId===eq.id?'selected':''}>${eq.identificador} · ${eq.tipo}${eq.agenteExtintor?' '+eq.agenteExtintor:''} · ${eq.localizacao}</option>`).join('')}</select></div>
-      <div class="field-row"><div class="field"><label>Data da Inspeção</label><input type="date" required name="dataInspecao" value="${current?.dataInspecao||new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Brigadista responsável</label><select required name="brigadistaId" ${forcedBrigadistaId?'disabled':''}>${activeBrigadistas.map(b=>{const e=fireBrigadistaEmployee(b);return `<option value="${b.id}" ${selectedBrigadistaId===b.id?'selected':''}>${empEsc(e.nome)} · ${empEsc(e.matricula||'—')}</option>`}).join('')}</select>${forcedBrigadistaId?`<input type="hidden" name="brigadistaId" value="${forcedBrigadistaId}">`:''}</div></div>
-      <div id="fire-plan-info"></div><div id="fire-plan-checklist" class="inspection-checklist"></div>
-      <div class="field"><label>Observações gerais / ações necessárias</label><textarea name="observacoes" rows="3" placeholder="Descreva recomendações, prazos ou manutenção necessária.">${empEsc(current?.observacoes||'')}</textarea></div>
-      <div class="modal-actions"><button type="button" class="btn secondary" onclick="window.closeModal()">Cancelar</button><button type="submit" class="btn">💾 ${current?'Salvar Alterações':'Salvar Inspeção'}</button></div></form>`,ov=>{
+      <div class="fi-meta"><div class="field"><label>Data da inspeção</label><input type="date" required name="dataInspecao" value="${current?.dataInspecao||new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Brigadista responsável</label><select required name="brigadistaId" ${forcedBrigadistaId?'disabled':''}>${activeBrigadistas.map(b=>{const e=fireBrigadistaEmployee(b);return `<option value="${b.id}" ${selectedBrigadistaId===b.id?'selected':''}>${empEsc(e.nome)} · ${empEsc(e.matricula||'—')}</option>`}).join('')}</select>${forcedBrigadistaId?`<input type="hidden" name="brigadistaId" value="${forcedBrigadistaId}">`:''}</div></div>
+      <div id="fire-plan-info"></div>
+      <div class="fi-progress"><div><strong id="fi-count">0 de 0</strong> itens verificados</div><button type="button" class="fi-all" id="fi-approve-all">✓ Aprovar todos</button></div>
+      <div id="fire-plan-checklist" class="inspection-checklist"></div>
+      <div class="fi-section-title">📷 Foto do equipamento</div>
+      <div class="fi-photo" id="fi-photo"></div>
+      <input type="file" id="fi-photo-input" accept="image/*" capture="environment" hidden>
+      <div class="field"><label>Observações gerais</label><textarea name="observacoes" rows="3" placeholder="Descreva problemas encontrados, recomendações ou manutenção necessária.">${empEsc(current?.observacoes||'')}</textarea></div>
+      <div class="modal-actions fi-actions"><div class="fi-result" id="fi-result"></div><button type="button" class="btn secondary" onclick="window.closeModal()">Cancelar</button><button type="submit" class="btn">💾 ${current?'Salvar alterações':'Salvar inspeção'}</button></div></form>`,ov=>{
+      ov.querySelector('.modal')?.classList.add('fire-insp-modal');
       const equipSel=ov.querySelector("#fire-plan-equip"),info=ov.querySelector("#fire-plan-info"),box=ov.querySelector("#fire-plan-checklist");
+      const photoBox=ov.querySelector('#fi-photo'),photoInput=ov.querySelector('#fi-photo-input');
+      const updateProgress=()=>{
+        const rows=[...box.querySelectorAll('.fi-row')],done=rows.filter(r=>r.querySelector('input:checked')).length,failed=box.querySelectorAll('input[value="Reprovado"]:checked').length;
+        ov.querySelector('#fi-count').textContent=`${done} de ${rows.length}`;
+        const res=ov.querySelector('#fi-result');
+        if(done<rows.length){res.className='fi-result';res.textContent=`Faltam ${rows.length-done}`;}
+        else if(failed){res.className='fi-result bad';res.textContent=`❌ Reprovado (${failed})`;}
+        else{res.className='fi-result ok';res.textContent='✅ Aprovado';}
+      };
       const renderChecklist=()=>{
         const eq=fireEquipById(equipSel.value), items=fireInspectionItems(eq), saved=(current&&current.equipId===eq?.id)?(current.checklist||[]):[];
-        info.innerHTML=`<div class="inspection-plan-head"><strong>${FIRE_GROUP_ICONS[fireEquipGroup(eq)]||'📦'} Plano: ${empEsc(fireEquipGroup(eq))}</strong><div class="sub" style="margin-top:4px">${eq?.tipo==='Extintor'?'Cada componente do extintor recebe um resultado individual.':'Checklist definido conforme as características deste grupo.'}</div></div>`;
-        box.innerHTML=items.map((item,i)=>{const old=saved.find(x=>x.item===item)||saved[i]||{};return `<div class="inspection-check-row"><div class="check-label">${i+1}. ${empEsc(item)}</div><select name="check_result_${i}" required><option value="Aprovado" ${old.resultado==='Aprovado'?'selected':''}>✅ Aprovado</option><option value="Atenção" ${old.resultado==='Atenção'?'selected':''}>⚠️ Atenção</option><option value="Reprovado" ${old.resultado==='Reprovado'?'selected':''}>❌ Reprovado</option></select><input name="check_obs_${i}" value="${empEsc(old.observacao||'')}" placeholder="Observação deste item"></div>`;}).join('');
+        info.innerHTML=`<div class="inspection-plan-head"><strong>${FIRE_GROUP_ICONS[fireEquipGroup(eq)]||'📦'} Plano: ${empEsc(fireEquipGroup(eq))}</strong><div class="sub" style="margin-top:4px">Marque cada item como aprovado ou reprovado.</div></div>`;
+        box.innerHTML=items.map((item,i)=>{const old=saved.find(x=>x.item===item)||saved[i]||{};const v=old.resultado;return `<div class="fi-row" data-i="${i}"><div class="fi-label"><span class="fi-num">${i+1}</span>${empEsc(item)}</div><div class="fi-toggle" role="radiogroup" aria-label="${empEsc(item)}"><label class="fi-opt ok"><input type="radio" name="check_result_${i}" value="Aprovado" ${v==='Aprovado'?'checked':''}><span>✓ Aprovado</span></label><label class="fi-opt bad"><input type="radio" name="check_result_${i}" value="Reprovado" ${v==='Reprovado'?'checked':''}><span>✕ Reprovado</span></label></div></div>`;}).join('');
         box.dataset.items=JSON.stringify(items);
+        updateProgress();
       };
-      equipSel.addEventListener("change",renderChecklist);renderChecklist();
+      const renderPhoto=()=>{
+        photoBox.innerHTML=photo?`<div class="fi-photo-preview"><img src="${photo.data}" alt="Foto do equipamento"><div class="fi-photo-bar"><span>🕒 ${empEsc(photo.label||'')}</span><div><button type="button" class="btn secondary" data-fi-retake>🔄 Refazer</button><button type="button" class="btn secondary" data-fi-remove>🗑️</button></div></div></div>`:`<button type="button" class="fi-photo-empty" data-fi-retake><span class="fi-cam">📷</span><strong>Tirar foto do equipamento</strong><small>A data e a hora ficam gravadas na imagem</small></button>`;
+      };
+      photoBox.addEventListener('click',e=>{
+        if(e.target.closest('[data-fi-retake]')){photoInput.value='';photoInput.click();}
+        else if(e.target.closest('[data-fi-remove]')){photo=null;renderPhoto();}
+      });
+      photoInput.addEventListener('change',async()=>{
+        const f=photoInput.files?.[0];if(!f)return;
+        photoBox.innerHTML='<div class="fi-photo-empty"><span class="fi-cam">⏳</span><strong>Processando foto…</strong></div>';
+        try{photo=await fireStampPhoto(f,fireEquipById(equipSel.value));}catch(err){alert('Não foi possível ler a foto. Tente novamente.');}
+        renderPhoto();
+      });
+      box.addEventListener('change',e=>{if(e.target.matches('input[type=radio]')){e.target.closest('.fi-row')?.classList.remove('missing');updateProgress();}});
+      ov.querySelector('#fi-approve-all').addEventListener('click',()=>{box.querySelectorAll('.fi-row').forEach(r=>{if(!r.querySelector('input:checked'))r.querySelector('input[value="Aprovado"]').checked=true;r.classList.remove('missing');});updateProgress();});
+      equipSel.addEventListener("change",renderChecklist);renderChecklist();renderPhoto();
       ov.querySelector("#fire-plan-form").addEventListener("submit",async e=>{
         e.preventDefault();const fd=new FormData(e.target),data=Object.fromEntries(fd),items=JSON.parse(box.dataset.items||"[]");
-        const checklist=items.map((item,i)=>({item,resultado:data[`check_result_${i}`],observacao:String(data[`check_obs_${i}`]||"").trim()}));
-        const resultado=checklist.some(x=>x.resultado==="Reprovado")?"Reprovado":checklist.some(x=>x.resultado==="Atenção")?"Atenção":"Aprovado";
+        const missing=[...box.querySelectorAll('.fi-row')].filter(r=>!r.querySelector('input:checked'));
+        if(missing.length){missing.forEach(r=>r.classList.add('missing'));missing[0].scrollIntoView({behavior:'smooth',block:'center'});return;}
+        if(!data.dataInspecao){alert("Informe a data da inspeção.");return;}
+        const checklist=items.map((item,i)=>({item,resultado:data[`check_result_${i}`]}));
+        const resultado=checklist.some(x=>x.resultado==="Reprovado")?"Reprovado":"Aprovado";
         const eq=fireEquipById(data.equipId),brig=(state.fireBrigadistas||[]).find(x=>x.id===data.brigadistaId),brigEmp=fireBrigadistaEmployee(brig);
         if(!brig||!brigEmp){alert("Selecione um brigadista válido.");return;}
-        const record={equipId:data.equipId,dataInspecao:data.dataInspecao,brigadistaId:brig.id,brigadistaEmployeeId:brigEmp.id,inspetor:brigEmp.nome,observacoes:data.observacoes||"",checklist,resultado,tipoChecagem:`Plano · ${fireEquipGroup(eq)}`,proximaInspecao:addMonths(data.dataInspecao,eq?.periodicidadeInspMeses||1),updatedAt:new Date().toISOString()};
+        const btn=e.target.querySelector('button[type="submit"]');btn.disabled=true;btn.textContent='Salvando…';
+        const record={equipId:data.equipId,dataInspecao:data.dataInspecao,brigadistaId:brig.id,brigadistaEmployeeId:brigEmp.id,inspetor:brigEmp.nome,observacoes:data.observacoes||"",checklist,resultado,foto:photo?.data||"",fotoDataHora:photo?.takenAt||"",tipoChecagem:`Plano · ${fireEquipGroup(eq)}`,proximaInspecao:addMonths(data.dataInspecao,eq?.periodicidadeInspMeses||1),updatedAt:new Date().toISOString()};
         const previousEquipId=current?.equipId||"";
         let savedInspection;
         if(current){Object.assign(current,record);savedInspection=current;}else{savedInspection={id:uid("insp"),...record};state.fireInspections.push(savedInspection);}
