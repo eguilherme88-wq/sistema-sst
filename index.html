@@ -2437,6 +2437,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     fireCorrectiveActions: [],
     pgrRisks: [],
     pgrGhes: [],
+    pgrIssuer: null,
     nr15Assessments: [],
     nr15Professionals: [],
     confinedSpaces: [],
@@ -2524,6 +2525,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     pgr: [
       { id: "pgr-dash", name: "📊 Dashboard PGR" },
       { id: "pgr-list", name: "⚠️ Inventário de Riscos" },
+      { id: "pgr-issuer", name: "👷 Responsável pelo PGR" },
       { id: "pgr-ghe", name: "👥 Cadastro de GHE" },
       { id: "pgr-hazards", name: "☣️ Cadastro de Perigos" },
       { id: "pgr-fds", name: "🧪 Agentes Químicos (FDS)" }
@@ -3030,7 +3032,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     }
   }
 
-  const DEFAULT_STATE_SHAPE = {usersDb:[], employees:[],items:[],deliveries:[],stockMovements:[],pcmso:[],fireEquip:[],fireInspections:[],fireBrigadistas:[],fireCorrectiveActions:[],pgrRisks:[],pgrGhes:[],nr15Assessments:[],nr15Professionals:[],confinedSpaces:[],pets:[],ecSupervisors:[],ecPortalPublicUrl:"",fdsList:[],fdsPortalPublicUrl:"",trainings:[],courseCatalog:[],roleMatrix:[],roleTrainingCompliance:[],annualTrainingPlan:[],cipaMembers:[],cipaElections:[],cipaMeetings:[],cipaActions:[],tercEmpresas:[],tercFuncionarios:[],tercIntegracoes:[],tercTiposDocumento:[],tercDocumentos:[],modulePermissions:{master:[],usuario:[]},userSpecificPermissions:{},roleActionPermissions:{},roleSubitemPermissions:{Master:{}},companyLogo:null,systemLogo:null,portariaLicenca:null};
+  const DEFAULT_STATE_SHAPE = {usersDb:[], employees:[],items:[],deliveries:[],stockMovements:[],pcmso:[],fireEquip:[],fireInspections:[],fireBrigadistas:[],fireCorrectiveActions:[],pgrRisks:[],pgrGhes:[],pgrIssuer:null,nr15Assessments:[],nr15Professionals:[],confinedSpaces:[],pets:[],ecSupervisors:[],ecPortalPublicUrl:"",fdsList:[],fdsPortalPublicUrl:"",trainings:[],courseCatalog:[],roleMatrix:[],roleTrainingCompliance:[],annualTrainingPlan:[],cipaMembers:[],cipaElections:[],cipaMeetings:[],cipaActions:[],tercEmpresas:[],tercFuncionarios:[],tercIntegracoes:[],tercTiposDocumento:[],tercDocumentos:[],modulePermissions:{master:[],usuario:[]},userSpecificPermissions:{},roleActionPermissions:{},roleSubitemPermissions:{Master:{}},companyLogo:null,systemLogo:null,portariaLicenca:null};
 
   // Aplica migrações/valores-padrão em uma base carregada (de qualquer origem)
   // para manter compatibilidade com estados salvos por versões anteriores.
@@ -3043,6 +3045,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     if(!Array.isArray(state.fireBrigadistas)) state.fireBrigadistas=[];
     if(!Array.isArray(state.fireCorrectiveActions)) state.fireCorrectiveActions=[];
     if(!Array.isArray(state.pgrGhes)) state.pgrGhes=[];
+    if(!state.pgrIssuer || typeof state.pgrIssuer!=="object" || Array.isArray(state.pgrIssuer)) state.pgrIssuer=null;
     if(!Array.isArray(state.nr15Assessments)) state.nr15Assessments=[];
     if(!Array.isArray(state.nr15Professionals)) state.nr15Professionals=[];
     if(!Array.isArray(state.ecSupervisors)) state.ecSupervisors=[];
@@ -5555,6 +5558,33 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     `;
   }
 
+  function renderPgrIssuer(root){
+    const p=state.pgrIssuer||{};
+    const canEdit=checkPermission("Master");
+    root.innerHTML=`<div class="page-head"><div><h2>👷 Responsável pela emissão do PGR</h2><div class="sub">Cadastre os dados de quem emite o Programa de Gerenciamento de Riscos.</div></div></div>
+      <div class="panel" style="padding:20px;max-width:850px">
+      ${canEdit?`<form id="pgr-issuer-form"><div class="grid-2">
+        <div class="field"><label>Nome completo *</label><input name="nome" required value="${empEsc(p.nome||'')}"></div>
+        <div class="field"><label>Função / qualificação *</label><input name="funcao" required value="${empEsc(p.funcao||'')}"></div>
+        <div class="field"><label>Conselho profissional</label><input name="conselho" value="${empEsc(p.conselho||'')}" placeholder="Ex.: CREA"></div>
+        <div class="field"><label>Número do registro</label><input name="registro" value="${empEsc(p.registro||'')}"></div>
+        <div class="field"><label>E-mail</label><input type="email" name="email" value="${empEsc(p.email||'')}"></div>
+        <div class="field"><label>Telefone</label><input type="tel" name="telefone" value="${empEsc(p.telefone||'')}"></div>
+      </div><button class="btn" type="submit">💾 Salvar responsável</button></form>`:
+      (p.nome?`<p><strong>Nome:</strong> ${empEsc(p.nome)}</p><p><strong>Função:</strong> ${empEsc(p.funcao||'—')}</p><p><strong>Conselho / Registro:</strong> ${empEsc([p.conselho,p.registro].filter(Boolean).join(' ')||'—')}</p><p><strong>Contato:</strong> ${empEsc([p.email,p.telefone].filter(Boolean).join(' · ')||'—')}</p>`:'<div class="empty-state">Nenhum responsável cadastrado.</div>')}
+      </div>`;
+    root.querySelector('#pgr-issuer-form')?.addEventListener('submit',async e=>{
+      e.preventDefault();
+      if(!checkPermission("Master")) return;
+      const data=Object.fromEntries(new FormData(e.currentTarget));
+      state.pgrIssuer=Object.fromEntries(Object.entries(data).map(([k,v])=>[k,String(v).trim()]));
+      const ok=await saveState();
+      renderPgrIssuer(root);
+      if(ok!==false) alert('Responsável pelo PGR salvo.');
+      else alert('Não foi possível confirmar o salvamento. Verifique a conexão.');
+    });
+  }
+
   function renderPgrDash(root){
     const search=root.dataset.pgrDashSearch||"",setor=root.dataset.pgrDashSetor||"",tipo=root.dataset.pgrDashTipo||"",nivel=root.dataset.pgrDashNivel||"",q=normalizeText(search);
     const setores=[...new Set((state.pgrRisks||[]).map(r=>r.setor).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
@@ -5572,6 +5602,10 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         </div>
       </div>
 
+      <div class="panel" style="padding:14px 18px;margin-bottom:16px">
+        <strong>👷 Responsável pela emissão do PGR</strong>
+        <div style="margin-top:6px">${state.pgrIssuer?.nome?`${empEsc(state.pgrIssuer.nome)} · ${empEsc(state.pgrIssuer.funcao||'—')}${state.pgrIssuer.conselho||state.pgrIssuer.registro?` · ${empEsc([state.pgrIssuer.conselho,state.pgrIssuer.registro].filter(Boolean).join(' '))}`:''}`:'Ainda não cadastrado'}</div>
+      </div>
       <div class="pgr-dashboard-cards">
         <div class="stat-card pgr-kpi high"><div class="pgr-kpi-icon">🚨</div><div><div class="num" style="color:var(${riscosAltos>0?'--red':'--green'})">${riscosAltos}</div><div class="label">Riscos de Nível Alto</div><small>Prioridade imediata</small></div></div>
         <div class="stat-card pgr-kpi medium"><div class="pgr-kpi-icon">⚠️</div><div><div class="num" style="color:var(${riscosMedios>0?'--amber':'--ink'})">${riscosMedios}</div><div class="label">Riscos de Nível Médio</div><small>Requerem acompanhamento</small></div></div>
@@ -13237,6 +13271,7 @@ function renderPcmsoDash(root){
     } else if(currentModule === "pgr"){
       if(currentTab === "pgr-dash") renderPgrDash(main);
       else if(currentTab === "pgr-list") renderPgrList(main);
+      else if(currentTab === "pgr-issuer") renderPgrIssuer(main);
       else if(currentTab === "pgr-ghe") renderPgrGhe(main);
       else if(currentTab === "pgr-hazards") renderPgrHazards(main);
       else if(currentTab === "pgr-fds") renderFdsPgrLink(main);
