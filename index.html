@@ -2191,6 +2191,12 @@ nav button .nav-label{line-height:1.25}
 @media(max-width:700px){.brigade-grid,.inspection-filter-grid,.inspection-check-row,.qr-card,.brigade-mobile-filters{grid-template-columns:1fr}.inspection-filter-grid .btn,.inspection-check-row input{grid-column:auto}.qr-card img{margin:auto}.brigade-mobile .mobile-equip{align-items:stretch;flex-direction:column}}
 
 /* ===== Inspeção de emergência · otimizada para celular ===== */
+.fire-report-modal{max-width:860px}
+.fire-report-modal .fi-head h3{margin:0;color:var(--ink)}
+.fire-report-modal .fi-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.fire-report-modal .modal-actions .btn{box-sizing:border-box}
+.fi-report-btn{padding:6px 10px;font-size:12px;white-space:nowrap;min-height:0}
+
 .fire-insp-modal{max-width:680px}
 .fire-insp-modal .fi-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
 .fire-insp-modal .fi-head h3{margin:0;color:var(--ink)}
@@ -7213,7 +7219,7 @@ function renderPcmsoDash(root){
       <div class="panel">
         ${filtered.length === 0 ? `<div class="empty">🔎 Nenhuma inspeção encontrada.</div>` : `
         <table>
-          <thead><tr><th>📅 Data</th><th>🧯 Equipamento / Grupo</th><th>📋 Plano e itens</th><th>👷 Inspetor</th><th>✅ Resultado</th><th>📝 Observações</th>${checkPermission("Administrador")?'<th>⚙️ Ações</th>':''}</tr></thead>
+          <thead><tr><th>📅 Data</th><th>🧯 Equipamento / Grupo</th><th>📋 Plano e itens</th><th>👷 Inspetor</th><th>✅ Resultado</th><th>📝 Observações</th><th>⚙️ Ações</th></tr></thead>
           <tbody>
             ${filtered.slice().sort((a,b)=>String(b.dataInspecao).localeCompare(String(a.dataInspecao))).map(insp=>{
               const eq = fireEquipById(insp.equipId);
@@ -7226,7 +7232,7 @@ function renderPcmsoDash(root){
                 <td><strong>${empEsc(insp.inspetor||'—')}</strong>${insp.brigadistaEmployeeId?'<br><small>Brigadista cadastrado</small>':''}</td>
                 <td><span class="status-pill ${insp.resultado==='Aprovado'?'ok':insp.resultado==='Atenção'?'warn':'bad'}"><span class="dot"></span>${insp.resultado}</span></td>
                 <td>${insp.observacoes || "—"}${insp.foto?`<br><button class="action-link" data-view-fire-photo="${insp.id}">📷 Ver foto</button>`:""}</td>
-                ${checkPermission("Administrador") ? `<td><div class="fire-actions"><button class="action-link" data-edit-fire-insp="${insp.id}">✏️ Editar</button><button class="action-link danger-link" data-del-fire-insp="${insp.id}">🗑️ Remover</button></div></td>` : ''}
+                <td><div class="fire-actions"><button class="btn fi-report-btn" data-fire-insp-report="${insp.id}">📄 Ver relatório</button>${checkPermission("Administrador") ? `<button class="action-link" data-edit-fire-insp="${insp.id}">✏️ Editar</button><button class="action-link danger-link" data-del-fire-insp="${insp.id}">🗑️ Remover</button>` : ''}</div></td>
               </tr>`;
             }).join("")}
           </tbody>
@@ -12614,6 +12620,69 @@ function renderPcmsoDash(root){
   if(!window.__fireInspPhotoBound){
     window.__fireInspPhotoBound=true;
     document.addEventListener('click',e=>{const b=e.target.closest?.('[data-view-fire-photo]');if(b){e.preventDefault();fireShowInspectionPhoto(b.dataset.viewFirePhoto);}});
+  }
+
+
+  // ===== Relatório completo de uma inspeção de equipamento de emergência =====
+  function fireInspectionReportBody(insp){
+    const eq=fireEquipById(insp.equipId),emp=(state.employees||[]).find(e=>e.id===insp.brigadistaEmployeeId);
+    const checks=insp.checklist||[],ok=checks.filter(x=>x.resultado==='Aprovado').length,bad=checks.filter(x=>x.resultado==='Reprovado').length,att=checks.filter(x=>x.resultado==='Atenção').length;
+    const actions=(state.fireCorrectiveActions||[]).filter(a=>a.inspectionId===insp.id);
+    const res=insp.resultado||'—',cls=res==='Aprovado'?'ok':res==='Atenção'?'warn':'bad';
+    const row=(k,v)=>`<div class="fr-kv"><span>${k}</span><strong>${v||'—'}</strong></div>`;
+    const pill=r=>`<span class="fr-pill ${r==='Aprovado'?'ok':r==='Atenção'?'warn':'bad'}">${r==='Aprovado'?'✓ Aprovado':r==='Reprovado'?'✕ Reprovado':empEsc(r||'—')}</span>`;
+    return `<div class="fr-doc">
+      <div class="fr-top">${state.companyLogo?`<img src="${state.companyLogo}" alt="Logomarca da empresa">`:''}<div><h1>Relatório de inspeção</h1><div class="fr-sub">Equipamento de emergência · NR-23</div></div><div class="fr-id">Nº ${empEsc(String(insp.id||'').slice(-8).toUpperCase())}<br>${fmtDate(insp.dataInspecao)}</div></div>
+      <div class="fr-result ${cls}"><div><span>Resultado da inspeção</span><strong>${res==='Aprovado'?'✓':res==='Reprovado'?'✕':'!'} ${empEsc(res)}</strong></div><div class="fr-counts">${checks.length} itens · <b class="ok">${ok} aprovados</b> · <b class="bad">${bad} reprovados</b>${att?` · <b class="warn">${att} atenção</b>`:''}</div></div>
+      <h2>Equipamento</h2>
+      <div class="fr-grid">${row('Identificação',empEsc(eq?.identificador))}${row('Tipo',empEsc([eq?.tipo,eq?.agenteExtintor].filter(Boolean).join(' · ')))}${row('Grupo',empEsc(eq?fireEquipGroup(eq):''))}${row('Localização',empEsc(eq?.localizacao))}${row('Periodicidade',eq?.periodicidadeInspMeses?`${eq.periodicidadeInspMeses} ${Number(eq.periodicidadeInspMeses)===1?'mês':'meses'}`:'')}${row('Próxima inspeção',fmtDate(insp.proximaInspecao))}</div>
+      <h2>Inspeção</h2>
+      <div class="fr-grid">${row('Data',fmtDate(insp.dataInspecao))}${row('Brigadista',empEsc(insp.inspetor))}${row('Matrícula',empEsc(emp?.matricula))}${row('Plano aplicado',empEsc(insp.tipoChecagem||'Plano de inspeção'))}${row('Registrado em',insp.updatedAt?empEsc(new Date(insp.updatedAt).toLocaleString('pt-BR')):'')}</div>
+      <h2>Checklist</h2>
+      ${checks.length?`<table class="fr-table fr-check"><thead><tr><th style="width:32px">#</th><th>Item verificado</th><th style="width:120px">Resultado</th></tr></thead><tbody>${checks.map((c,i)=>`<tr class="${c.resultado==='Reprovado'?'is-bad':''}"><td>${i+1}</td><td>${empEsc(c.item)}${c.observacao?`<div class="fr-note">${empEsc(c.observacao)}</div>`:''}</td><td>${pill(c.resultado)}</td></tr>`).join('')}</tbody></table>`:'<p class="fr-empty">Registro anterior sem checklist detalhado.</p>'}
+      <h2>Observações gerais</h2>
+      <div class="fr-box">${insp.observacoes?empEsc(insp.observacoes).replace(/\n/g,'<br>'):'<span class="fr-empty">Nenhuma observação registrada.</span>'}</div>
+      ${actions.length?`<h2>Ações corretivas geradas</h2><table class="fr-table"><thead><tr><th>Item</th><th>Prazo</th><th>Responsável</th><th>Situação</th></tr></thead><tbody>${actions.map(a=>`<tr><td>${empEsc(a.checklistItem)}${a.providencia?`<div class="fr-note">${empEsc(a.providencia)}</div>`:''}</td><td>${fmtDate(a.prazo)}</td><td>${empEsc(a.responsavel||'Não definido')}</td><td>${empEsc(a.status||'—')}</td></tr>`).join('')}</tbody></table>`:''}
+      <h2>Registro fotográfico</h2>
+      ${insp.foto?`<figure class="fr-photo"><img src="${insp.foto}" alt="Foto do equipamento inspecionado"><figcaption>📷 Foto tirada em ${insp.fotoDataHora?empEsc(new Date(insp.fotoDataHora).toLocaleString('pt-BR')):'data não registrada'}</figcaption></figure>`:'<div class="fr-box"><span class="fr-empty">Nenhuma foto anexada a esta inspeção.</span></div>'}
+    </div>`;
+  }
+  const FIRE_REPORT_CSS=`.fr-doc{background:#fff;color:#1d232a;font:14px/1.45 Inter,Arial,sans-serif;padding:24px;border-radius:8px}
+.fr-doc *{box-sizing:border-box}.fr-top{display:flex;align-items:center;gap:14px;border-bottom:3px solid #F5B700;padding-bottom:12px}
+.fr-top img{max-height:56px;max-width:180px;width:auto;object-fit:contain}.fr-top h1{font-size:20px;margin:0}.fr-sub{color:#5b6570;font-size:12px}.fr-id{margin-left:auto;text-align:right;font-size:12px;color:#5b6570;font-weight:700}
+.fr-result{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0 6px;padding:12px 16px;border-radius:8px;border-left:6px solid}
+.fr-result span{display:block;font-size:12px;color:#5b6570}.fr-result strong{font-size:20px}
+.fr-result.ok{background:#e9f5ed;border-color:#2E7D32}.fr-result.ok strong{color:#2E7D32}
+.fr-result.bad{background:#fdecea;border-color:#C62828}.fr-result.bad strong{color:#C62828}
+.fr-result.warn{background:#fff4e0;border-color:#D97706}.fr-result.warn strong{color:#B45309}
+.fr-counts{font-size:13px}.fr-counts .ok{color:#2E7D32}.fr-counts .bad{color:#C62828}.fr-counts .warn{color:#B45309}
+.fr-doc h2{font-size:14px;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #dfe3e8;color:#1d232a}
+.fr-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.fr-kv{background:#f4f6f8;border-radius:6px;padding:8px 10px}.fr-kv span{display:block;font-size:11px;color:#5b6570}.fr-kv strong{font-size:13px;overflow-wrap:anywhere}
+.fr-doc table.fr-table{width:100%;min-width:0;table-layout:auto;border-collapse:collapse;border-spacing:0;font-size:13px}.fr-doc .fr-table th,.fr-doc .fr-table td{border:0;border-bottom:1px solid #e6e9ed;width:auto;white-space:normal}.fr-doc .fr-table th{text-align:left;background:#f4f6f8;padding:7px 8px;font-size:12px;color:#5b6570;font-family:inherit;letter-spacing:0}
+.fr-doc .fr-table td{padding:7px 8px;vertical-align:top;color:#1d232a}.fr-doc .fr-check td:first-child{width:32px;color:#5b6570}.fr-doc .fr-table tr.is-bad td{background:#fff5f4}
+.fr-pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}.fr-pill.ok{background:#e9f5ed;color:#2E7D32}.fr-pill.bad{background:#fdecea;color:#C62828}.fr-pill.warn{background:#fff4e0;color:#B45309}
+.fr-note{font-size:12px;color:#5b6570;margin-top:2px}.fr-box{background:#f4f6f8;border-radius:6px;padding:10px 12px}.fr-empty{color:#8a939c;font-style:italic}
+.fr-photo{margin:0;text-align:center}.fr-photo img{max-width:100%;max-height:420px;border-radius:6px;border:1px solid #dfe3e8}.fr-photo figcaption{font-size:12px;color:#5b6570;margin-top:4px}
+@media(max-width:640px){.fr-doc{padding:14px}.fr-grid{grid-template-columns:1fr 1fr}.fr-top h1{font-size:17px}}
+@media print{.fr-doc{padding:0;border-radius:0}.fr-table tr,.fr-photo{break-inside:avoid}}`;
+  function printFireInspectionReport(insp){
+    const eq=fireEquipById(insp.equipId),w=window.open('','_blank');
+    if(!w){alert('O navegador bloqueou a janela do relatório. Permita pop-ups e tente novamente.');return;}
+    w.document.open();
+    w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Inspeção ${empEsc(eq?.identificador||'')} · ${fmtDate(insp.dataInspecao)}</title><style>body{margin:0;padding:20px;background:#fff}@page{margin:14mm}${FIRE_REPORT_CSS}</style></head><body>${fireInspectionReportBody(insp)}<script>(function(){var imgs=[].slice.call(document.images),n=imgs.length,c=0;function go(){setTimeout(function(){window.print()},300)}if(!n)return go();imgs.forEach(function(i){if(i.complete){if(++c===n)go()}else{i.onload=i.onerror=function(){if(++c===n)go()}}})})();<\/script></body></html>`);
+    w.document.close();
+  }
+  function openFireInspectionReport(inspectionId){
+    const insp=(state.fireInspections||[]).find(x=>x.id===inspectionId);if(!insp)return;
+    openModal(`<style>${FIRE_REPORT_CSS}</style><div class="fi-head"><h3>📄 Relatório da inspeção</h3><button type="button" class="fi-close" onclick="window.closeModal()" aria-label="Fechar">✕</button></div>${fireInspectionReportBody(insp)}<div class="modal-actions"><button type="button" class="btn secondary" onclick="window.closeModal()">Fechar</button><button type="button" class="btn" id="fr-print">🖨️ Imprimir / Salvar PDF</button></div>`,ov=>{
+      ov.querySelector('.modal')?.classList.add('fire-report-modal');
+      ov.querySelector('#fr-print').addEventListener('click',()=>printFireInspectionReport(insp));
+    });
+  }
+  if(!window.__fireInspReportBound){
+    window.__fireInspReportBound=true;
+    document.addEventListener('click',e=>{const b=e.target.closest?.('[data-fire-insp-report]');if(b){e.preventDefault();openFireInspectionReport(b.dataset.fireInspReport);}});
   }
 
   function openFireInspectionPlanModal(targetEquipId=null,inspectionId=null,forcedBrigadistaId=null){
