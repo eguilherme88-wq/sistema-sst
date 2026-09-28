@@ -4237,7 +4237,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
       ${podeEditar ? `
       <div class="panel" style="max-width:760px;">
         <div class="panel-head"><h3>🧪 Liberação e período de teste</h3></div>
-        <form id="portaria-lic-form" style="padding:18px;display:flex;flex-direction:column;gap:14px;">
+        <form id="portaria-lic-form" novalidate style="padding:18px;display:flex;flex-direction:column;gap:14px;">
           <div class="field"><label>Situação do sistema</label>
             <select name="status" id="portaria-lic-status">
               <option value="desativado" ${l.status==="desativado"?"selected":""}>⛔ Desativado</option>
@@ -4255,7 +4255,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
       </div>` : `<div class="panel" style="max-width:760px;"><div style="padding:18px;" class="sub">🔒 Somente o Administrador do sistema pode alterar a liberação ou o período de teste.</div></div>`}`;
     if(!podeEditar) return;
     const sel = root.querySelector("#portaria-lic-status"), boxTeste = root.querySelector("#portaria-lic-teste");
-    const sync = () => { boxTeste.style.display = sel.value === "teste" ? "" : "none"; }; sync();
+    const sync = () => { const t = sel.value === "teste"; boxTeste.style.display = t ? "" : "none"; boxTeste.querySelectorAll("input").forEach(i => i.disabled = !t); }; sync();
     sel.addEventListener("change", sync);
     root.querySelector("#portaria-lic-form").addEventListener("submit", async ev => {
       ev.preventDefault();
