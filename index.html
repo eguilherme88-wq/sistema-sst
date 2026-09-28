@@ -5275,7 +5275,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
                   return `
                   <tr>
                     <td><strong>${String(p.mes).padStart(2,'0')}</strong></td>
-                    <td><strong>${p.treinamento}</strong>${p.norma?`<br><span style="font-size:11px;color:var(--ink-dim);">${p.norma}</span>`:''}${periodText ? `<br><span style="font-size:11px;color:var(--amber);">${periodText}</span>` : ''}</td>
+                    <td><strong>${p.treinamento}</strong>${p.norma?`<br><span style="font-size:11px;color:var(--ink-dim);">${p.norma}</span>`:''}${periodText ? `<br><span style="font-size:11px;color:var(--amber);">${periodText}</span>` : ''}${status==='Realizado' && p.dataRealizacao ? `<br><span style="font-size:11px;color:var(--ink-dim);">Realizado em ${fmtDate(p.dataRealizacao)}</span>` : ''}</td>
                     <td>${p.publico || '—'}</td>
                     <td>
                       <button type="button" class="action-link" data-manage-annual-participants="${p.id}" title="${participantLocked?'Visualizar participantes':'Ver, acrescentar ou excluir funcionários'}">
@@ -13880,13 +13880,36 @@ function renderPcmsoDash(root){
         return;
       }
 
+      // Data de realização: guardada para que os sistemas integrados (ex.: PPR e
+      // PCA) calculem a reciclagem a partir do dia em que o treinamento ocorreu.
+      let dataRealizacaoInformada = null;
+      if(newStatus === 'Realizado'){
+        const agendadas = getAnnualPlanDates(plan);
+        const hojeIso = new Date().toISOString().slice(0,10);
+        const sugestao = plan.dataRealizacao || agendadas[agendadas.length-1] || hojeIso;
+        const [sy,sm,sd] = sugestao.split('-');
+        const resp = prompt('Data de realização do treinamento (dd/mm/aaaa):', `${sd}/${sm}/${sy}`);
+        if(resp === null){ render(); return; }
+        const m = String(resp).trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        const iso = m ? `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}` : '';
+        const dt = iso ? new Date(iso+'T00:00:00') : null;
+        if(!dt || isNaN(dt) || dt.getDate() !== Number(m[1])){ alert('Data inválida. Use o formato dd/mm/aaaa.'); render(); return; }
+        if(iso > hojeIso){ alert('A data de realização não pode ser futura.'); render(); return; }
+        dataRealizacaoInformada = iso;
+      }
+
       plan.status = newStatus;
       if(newStatus === 'Realizado' && currentUser?.role === 'Usuario') {
         plan.realizadoBloqueado = true;
         plan.realizadoPor = currentUser.id;
         plan.realizadoEm = new Date().toISOString();
       }
-      if(newStatus !== 'Agendado'){
+      if(newStatus === 'Realizado'){
+        plan.dataRealizacao = dataRealizacaoInformada;
+      }else{
+        delete plan.dataRealizacao;
+      }
+      if(newStatus !== 'Agendado' && newStatus !== 'Realizado'){
         delete plan.dataInicio;
         delete plan.dataFim;
         delete plan.datasRealizacao;
