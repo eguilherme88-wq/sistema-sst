@@ -2654,6 +2654,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
       { id: "terc-docs", name: "📄 Documentação & Vencimentos" }
     ],
     geral: [
+      { id: "geral-empresa", name: "🏭 Cadastro da Empresa" },
       { id: "employees", name: "👥 Funcionários" },
       { id: "employee-dossier", name: "📁 Dossiê do Funcionário" },
       { id: "geral-setores", name: "🏢 Cadastro de Setores" },
@@ -3118,6 +3119,10 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     if(!state.pgrIssuer || typeof state.pgrIssuer!=="object" || Array.isArray(state.pgrIssuer)) state.pgrIssuer=null;
     if(!Array.isArray(state.nr15Assessments)) state.nr15Assessments=[];
     if(!Array.isArray(state.nr15Professionals)) state.nr15Professionals=[];
+    if(!state.nr15ReportMeta||typeof state.nr15ReportMeta!=="object"||Array.isArray(state.nr15ReportMeta)) state.nr15ReportMeta={};
+    if(!state.nr15Company||typeof state.nr15Company!=="object"||Array.isArray(state.nr15Company)) state.nr15Company={};
+    if(!state.company||typeof state.company!=="object"||Array.isArray(state.company)) state.company={};
+    if(!state.company.razaoSocial&&state.nr15Company.razaoSocial){const o=state.nr15Company,cu=String(o.cidade||"").split("/");state.company={razaoSocial:o.razaoSocial||"",cnpj:o.cnpj||"",logradouro:o.endereco||"",cnaeCodigo:String(o.cnae||"").split(" — ")[0]||"",cnaeDescricao:String(o.cnae||"").split(" — ").slice(1).join(" — "),grauRisco:o.grauRisco||"",jornada:o.jornada||"",cidade:(cu[0]||"").trim(),uf:(cu[1]||"").trim().toUpperCase(),updatedAt:new Date().toISOString(),updatedBy:"Migrado do laudo NR-15"};}
     if(!Array.isArray(state.ecSupervisors)) state.ecSupervisors=[];
     if(typeof state.ecPortalPublicUrl!=="string") state.ecPortalPublicUrl="";
     if(!Array.isArray(state.fdsList)) state.fdsList=[];
@@ -7284,10 +7289,133 @@ function renderPcmsoDash(root){
   // Logomarca) para ser usada no cabeçalho de qualquer relatório/PDF do
   // sistema. Retorna string vazia se nenhuma logomarca foi cadastrada.
   function reportLogoImgTag(maxHeight){
-    if(!state.companyLogo) return '';
     const h = maxHeight || 84;
-    return `<img src="${state.companyLogo}" alt="Logomarca da empresa" style="display:block;max-height:${h}px;max-width:${Math.round(h*3.2)}px;object-fit:contain;margin-bottom:10px;">`;
+    const img = state.companyLogo ? `<img src="${state.companyLogo}" alt="Logomarca da empresa" style="display:block;max-height:${h}px;max-width:${Math.round(h*3.2)}px;object-fit:contain;margin-bottom:10px;">` : '';
+    return img + companyReportBlock();
   }
+  // ===================== Geral · Cadastro da Empresa (usado por todos os módulos) =====================
+  const UF_LIST=["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
+  function companyData(){return state.company&&typeof state.company==="object"&&!Array.isArray(state.company)?state.company:{}}
+  function companyHasData(){return !!String(companyData().razaoSocial||"").trim()}
+  function companyCityUf(c=companyData()){return [c.cidade,c.uf].filter(Boolean).join("/")}
+  function companyAddress(c=companyData()){
+    const l1=[c.logradouro,c.numero].filter(Boolean).join(", ")+(c.complemento?` — ${c.complemento}`:"");
+    return [l1,c.bairro,companyCityUf(c),c.cep?`CEP ${c.cep}`:""].filter(x=>String(x||"").trim()).join(" · ");
+  }
+  function companyCnae(c=companyData()){return [c.cnaeCodigo,c.cnaeDescricao].filter(Boolean).join(" — ")}
+  function companyIdLine(c=companyData()){return [c.cnpj?`CNPJ ${c.cnpj}`:"",companyAddress(c)].filter(Boolean).join(" · ")}
+  // Bloco de identificação usado nos cabeçalhos dos relatórios (abaixo da logomarca).
+  function companyReportBlock(){
+    if(!companyHasData()) return "";
+    const c=companyData(),E=empEsc;
+    const l2=[c.cnpj?`CNPJ ${E(c.cnpj)}`:"",c.cnaeCodigo?`CNAE ${E(c.cnaeCodigo)}`:"",c.grauRisco?`Grau de risco ${E(c.grauRisco)}`:""].filter(Boolean).join(" · ");
+    return `<div class="sst-company-id" style="font-family:Arial,Helvetica,sans-serif;font-size:10.5px;line-height:1.4;color:#444;margin:0 0 12px;border-left:3px solid #1f9d55;padding:2px 0 2px 8px"><b style="font-size:12px;color:#111">${E(c.razaoSocial)}</b>${c.nomeFantasia?` <span style="color:#666">(${E(c.nomeFantasia)})</span>`:""}${l2?`<br>${l2}`:""}${companyAddress(c)?`<br>${E(companyAddress(c))}`:""}</div>`;
+  }
+  // Linha curta (uma linha) para cabeçalhos compactos.
+  function companyTopLine(){
+    if(!companyHasData()) return "";
+    const c=companyData();
+    return `<div style="font:700 9.5px Arial,Helvetica,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#555;margin-bottom:3px">${empEsc(c.razaoSocial)}${c.cnpj?` · CNPJ ${empEsc(c.cnpj)}`:""}</div>`;
+  }
+  function cnpjDigits(v){return String(v||"").replace(/\D/g,"")}
+  function cnpjFormat(v){const d=cnpjDigits(v).slice(0,14);return d.replace(/^(\d{2})(\d)/,"$1.$2").replace(/^(\d{2})\.(\d{3})(\d)/,"$1.$2.$3").replace(/\.(\d{3})(\d)/,".$1/$2").replace(/(\d{4})(\d)/,"$1-$2")}
+  function cnpjValid(v){
+    const d=cnpjDigits(v);if(d.length!==14||/^(\d)\1+$/.test(d))return false;
+    const calc=n=>{let s=0,p=n-7;for(let i=0;i<n;i++){s+=Number(d[i])*p--;if(p<2)p=9}const r=s%11;return r<2?0:11-r};
+    return calc(12)===Number(d[12])&&calc(13)===Number(d[13]);
+  }
+  function cepFormat(v){const d=String(v||"").replace(/\D/g,"").slice(0,8);return d.length>5?`${d.slice(0,5)}-${d.slice(5)}`:d}
+  function goToCompanyRegister(){currentModule="geral";currentTab="geral-empresa";renderShell()}
+
+  function renderGeneralCompany(root){
+    const c=companyData(),canEdit=checkPermission("Master"),E=empEsc,dis=canEdit?"":"disabled";
+    const v=k=>E(c[k]||"");
+    const nEmp=(state.employees||[]).length,nSet=new Set((state.employees||[]).map(e=>e.setor).filter(Boolean)).size;
+    const filled=["razaoSocial","cnpj","cnaeCodigo","grauRisco","logradouro","cidade","uf","responsavelNome"].filter(k=>String(c[k]||"").trim()).length;
+    const inp=(k,label,extra="",ph="")=>`<div class="field"><label>${label}</label><input name="${k}" value="${v(k)}" placeholder="${ph}" ${extra} ${dis}></div>`;
+    root.innerHTML=`<div class="page-head"><div><h2>🏭 Cadastro da Empresa</h2><div class="sub">Dados do estabelecimento usados automaticamente nos laudos, relatórios, fichas e documentos de todos os módulos.</div></div>${c.updatedAt?`<div class="sub" style="text-align:right">Atualizado em ${fmtDateTime(c.updatedAt)}${c.updatedBy?`<br>por ${E(c.updatedBy)}`:""}</div>`:""}</div>
+      <div class="annual-kpis emp-kpis" style="grid-template-columns:repeat(4,minmax(0,1fr));margin-bottom:14px">
+        <div class="annual-kpi"><div class="annual-kpi-icon ${companyHasData()?"green":"amber"}">🏭</div><div><div class="num">${Math.round(filled/8*100)}%</div><div class="label">Cadastro preenchido</div></div></div>
+        <div class="annual-kpi"><div class="annual-kpi-icon blue">👥</div><div><div class="num">${nEmp}</div><div class="label">Empregados (Funcionários)</div></div></div>
+        <div class="annual-kpi"><div class="annual-kpi-icon purple">🏢</div><div><div class="num">${nSet}</div><div class="label">Setores com pessoas</div></div></div>
+        <div class="annual-kpi"><div class="annual-kpi-icon ${c.grauRisco?"red":"amber"}">⚠️</div><div><div class="num">${E(c.grauRisco||"—")}</div><div class="label">Grau de risco (NR-4)</div></div></div>
+      </div>
+      ${!companyHasData()?`<div class="pgr-hint warn" style="margin-bottom:14px">⚠️ Empresa ainda não cadastrada. Enquanto isso, os laudos e relatórios saem sem a identificação do estabelecimento.</div>`:""}
+      ${!canEdit?`<div class="pgr-hint" style="margin-bottom:14px">🔒 Somente Administrador e Master podem alterar o cadastro da empresa.</div>`:""}
+      <form id="company-form">
+        <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🪪 Identificação</h3><span>Dados do CNPJ</span></div><div style="padding:16px 18px">
+          <div class="field-row">${inp("razaoSocial","Razão social *","required")}${inp("nomeFantasia","Nome fantasia")}</div>
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px">
+            ${inp("cnpj","CNPJ *",'required id="company-cnpj" inputmode="numeric"',"00.000.000/0000-00")}
+            ${inp("inscricaoEstadual","Inscrição estadual")}
+            ${inp("dataAbertura","Data de abertura",'type="date"')}
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 2fr 1fr;gap:12px">
+            ${inp("cnaeCodigo","CNAE principal","","00.00-0-00")}
+            ${inp("cnaeDescricao","Descrição da atividade principal")}
+            <div class="field"><label>Grau de risco (NR-4)</label><select name="grauRisco" ${dis}>${["","1","2","3","4"].map(x=>`<option value="${x}" ${String(c.grauRisco||"")===x?"selected":""}>${x||"Selecione"}</option>`).join("")}</select></div>
+          </div>
+        </div></div>
+        <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>📍 Endereço</h3>${canEdit?'<button type="button" class="btn secondary" id="company-cep-btn" style="padding:6px 12px">🔎 Buscar CEP</button>':""}</div><div style="padding:16px 18px">
+          <div style="display:grid;grid-template-columns:1fr 2.4fr .8fr;gap:12px">
+            ${inp("cep","CEP",'id="company-cep" inputmode="numeric"',"00000-000")}
+            ${inp("logradouro","Logradouro")}
+            ${inp("numero","Número")}
+          </div>
+          <div style="display:grid;grid-template-columns:1.2fr 1.2fr 1.4fr .6fr;gap:12px">
+            ${inp("complemento","Complemento")}
+            ${inp("bairro","Bairro")}
+            ${inp("cidade","Cidade")}
+            <div class="field"><label>UF</label><select name="uf" ${dis}><option value=""></option>${UF_LIST.map(u=>`<option ${c.uf===u?"selected":""}>${u}</option>`).join("")}</select></div>
+          </div>
+          <div id="company-cep-status" style="font-size:12px;color:var(--ink-dim)"></div>
+        </div></div>
+        <div class="field-row" style="gap:14px;align-items:start">
+          <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>☎️ Contato</h3></div><div style="padding:16px 18px">
+            ${inp("telefone","Telefone",'type="tel"')}${inp("email","E-mail",'type="email"')}${inp("site","Site")}
+          </div></div>
+          <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>👔 Responsável legal</h3></div><div style="padding:16px 18px">
+            ${inp("responsavelNome","Nome")}${inp("responsavelCargo","Cargo / função","","Ex.: Diretor, Sócio-administrador")}${inp("responsavelEmail","E-mail",'type="email"')}
+          </div></div>
+        </div>
+        <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>⏱️ Operação</h3></div><div style="padding:16px 18px">
+          <div class="field-row">${inp("jornada","Jornada de trabalho","","Ex.: seg. a sex., 07h00–17h00 (44 h semanais)")}${inp("turnos","Turnos","","Ex.: turno único / 2 turnos")}</div>
+          <div class="field"><label>Observações</label><textarea name="observacoes" rows="2" ${dis}>${v("observacoes")}</textarea></div>
+        </div></div>
+        <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔗 Onde estes dados são usados</h3></div><div style="padding:14px 18px;font-size:13px;line-height:1.6">
+          Laudo de Insalubridade (NR-15) · Laudo e fichas de Espaço Confinado (NR-33) · Relatórios de inspeção de Incêndio (NR-23) · Documentos da CIPA (NR-5) · Relatório anual do PCMSO (NR-7) · Ficha de entrega de EPI (NR-6) · Fichas de integração e relatórios de treinamentos · Relações de FDS (NR-26).
+          <div style="margin-top:8px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">${state.companyLogo?`<img src="${state.companyLogo}" alt="Logomarca" style="max-height:44px;max-width:160px;object-fit:contain;background:#fff;padding:4px;border-radius:6px">`:'<span class="pill warn">● Sem logomarca de relatórios</span>'}<span style="color:var(--ink-dim)">A logomarca é alterada em <b>Administração · Logomarca</b>.</span></div>
+          ${companyHasData()?`<div style="margin-top:12px"><div style="font-size:11px;color:var(--ink-dim);margin-bottom:4px">Prévia do cabeçalho nos relatórios:</div><div style="background:#fff;border-radius:8px;padding:12px 14px;max-width:620px">${companyReportBlock()}</div></div>`:""}
+        </div></div>
+        ${canEdit?`<div style="display:flex;justify-content:flex-end;gap:10px;margin-bottom:10px"><button class="btn" type="submit">💾 Salvar cadastro da empresa</button></div>`:""}
+      </form>`;
+    if(!canEdit) return;
+    const f=root.querySelector("#company-form"),cnpj=root.querySelector("#company-cnpj"),cep=root.querySelector("#company-cep"),st=root.querySelector("#company-cep-status");
+    cnpj.addEventListener("input",()=>{cnpj.value=cnpjFormat(cnpj.value)});
+    cep.addEventListener("input",()=>{cep.value=cepFormat(cep.value)});
+    root.querySelector("#company-cep-btn").addEventListener("click",async()=>{
+      const d=cep.value.replace(/\D/g,"");if(d.length!==8){st.textContent="Informe um CEP com 8 dígitos.";return}
+      st.textContent="Consultando CEP…";
+      try{
+        const r=await fetch(`https://viacep.com.br/ws/${d}/json/`);const j=await r.json();
+        if(j.erro){st.textContent="CEP não encontrado.";return}
+        const set=(n,val)=>{const el=f.elements[n];if(el&&val)el.value=val};
+        set("logradouro",j.logradouro);set("bairro",j.bairro);set("cidade",j.localidade);set("uf",j.uf);
+        st.textContent="Endereço preenchido a partir do CEP. Confira e informe o número.";f.elements.numero?.focus();
+      }catch(e){st.textContent="Não foi possível consultar o CEP agora. Preencha o endereço manualmente."}
+    });
+    f.addEventListener("submit",async e=>{
+      e.preventDefault();
+      if(!checkPermission("Master"))return;
+      const d=Object.fromEntries(Object.entries(Object.fromEntries(new FormData(f))).map(([k,val])=>[k,String(val).trim()]));
+      if(d.cnpj&&!cnpjValid(d.cnpj)&&!confirm("O CNPJ informado não passou na verificação dos dígitos. Deseja salvar mesmo assim?"))return;
+      state.company={...companyData(),...d,updatedAt:new Date().toISOString(),updatedBy:currentUser?.name||""};
+      const ok=await saveState();
+      renderGeneralCompany(root);
+      alert(ok===false?"Não foi possível confirmar o salvamento. Verifique a conexão.":"Cadastro da empresa salvo. Os dados já valem para todos os módulos.");
+    });
+  }
+
   function empIcon(text, table, fallback){
     const t = empPlain(text);
     const hit = table.find(([re]) => re.test(t));
@@ -12632,7 +12760,7 @@ function renderPcmsoDash(root){
     const row=(k,v)=>`<div class="fr-kv"><span>${k}</span><strong>${v||'—'}</strong></div>`;
     const pill=r=>`<span class="fr-pill ${r==='Aprovado'?'ok':r==='Atenção'?'warn':'bad'}">${r==='Aprovado'?'✓ Aprovado':r==='Reprovado'?'✕ Reprovado':empEsc(r||'—')}</span>`;
     return `<div class="fr-doc">
-      <div class="fr-top">${state.companyLogo?`<img src="${state.companyLogo}" alt="Logomarca da empresa">`:''}<div><h1>Relatório de inspeção</h1><div class="fr-sub">Equipamento de emergência · NR-23</div></div><div class="fr-id">Nº ${empEsc(String(insp.id||'').slice(-8).toUpperCase())}<br>${fmtDate(insp.dataInspecao)}</div></div>
+      <div class="fr-top">${state.companyLogo?`<img src="${state.companyLogo}" alt="Logomarca da empresa">`:''}<div>${companyTopLine()}<h1>Relatório de inspeção</h1><div class="fr-sub">Equipamento de emergência · NR-23</div></div><div class="fr-id">Nº ${empEsc(String(insp.id||'').slice(-8).toUpperCase())}<br>${fmtDate(insp.dataInspecao)}</div></div>
       <div class="fr-result ${cls}"><div><span>Resultado da inspeção</span><strong>${res==='Aprovado'?'✓':res==='Reprovado'?'✕':'!'} ${empEsc(res)}</strong></div><div class="fr-counts">${checks.length} itens · <b class="ok">${ok} aprovados</b> · <b class="bad">${bad} reprovados</b>${att?` · <b class="warn">${att} atenção</b>`:''}</div></div>
       <h2>Equipamento</h2>
       <div class="fr-grid">${row('Identificação',empEsc(eq?.identificador))}${row('Tipo',empEsc([eq?.tipo,eq?.agenteExtintor].filter(Boolean).join(' · ')))}${row('Grupo',empEsc(eq?fireEquipGroup(eq):''))}${row('Localização',empEsc(eq?.localizacao))}${row('Periodicidade',eq?.periodicidadeInspMeses?`${eq.periodicidadeInspMeses} ${Number(eq.periodicidadeInspMeses)===1?'mês':'meses'}`:'')}${row('Próxima inspeção',fmtDate(insp.proximaInspecao))}</div>
@@ -12929,7 +13057,7 @@ function renderPcmsoDash(root){
     w.document.open();w.document.write(ecReportDoc(title,body,true));w.document.close();
   }
   function ecDocHeader({title,subtitle,code,rev,date,extra=''}){
-    return `<header class="dh"><div class="dh-logo"><img src="${state.companyLogo||FIXED_SYSTEM_LOGO}" alt="Logo"></div><div class="dh-title"><div class="dh-kicker">SEGURANÇA E SAÚDE NO TRABALHO · NR-33</div><h1>${title}</h1><div class="dh-sub">${subtitle}</div></div><table class="dh-meta"><tr><th>Documento</th><td>${empEsc(code)}</td></tr><tr><th>Revisão</th><td>${empEsc(rev)}</td></tr><tr><th>Emissão</th><td>${empEsc(date)}</td></tr>${extra}</table></header><div class="stripe"></div>`;
+    return `<header class="dh"><div class="dh-logo"><img src="${state.companyLogo||FIXED_SYSTEM_LOGO}" alt="Logo"></div><div class="dh-title">${companyTopLine()}<div class="dh-kicker">SEGURANÇA E SAÚDE NO TRABALHO · NR-33</div><h1>${title}</h1><div class="dh-sub">${subtitle}</div></div><table class="dh-meta"><tr><th>Documento</th><td>${empEsc(code)}</td></tr><tr><th>Revisão</th><td>${empEsc(rev)}</td></tr><tr><th>Emissão</th><td>${empEsc(date)}</td></tr>${extra}</table></header><div class="stripe"></div>`;
   }
   function ecSec(n,title){return `<h2 class="sec"><span class="n">${n}</span>${title}</h2>`}
 
@@ -13223,13 +13351,13 @@ function renderPcmsoDash(root){
   function nr15StatusPill(v){const cls=v==="Vigente"?"ok":v==="Revisão necessária"?"bad":"warn";return `<span class="pill ${cls}">● ${empEsc(v||"Em elaboração")}</span>`}
   function nr15Filtered(root){const search=root.dataset.nr15Search||"",ghe=root.dataset.nr15Ghe||"",result=root.dataset.nr15Result||"",status=root.dataset.nr15Status||"",q=normalizeText(search);return(state.nr15Assessments||[]).filter(a=>{const g=nr15Ghe(a),ag=nr15PgrHazard(a),p=nr15Professional(a);return(!q||normalizeText([a.reportNumber,g?.codigo,g?.nome,g?.setor,ag?.nome,p?.nome,a.professional].join(" ")).includes(q))&&(!ghe||a.gheId===ghe)&&(!result||a.result===result)&&(!status||a.status===status)})}
   function nr15Filters(root,count){const ghes=(state.pgrGhes||[]).filter(g=>g.ativo!==false);return `<div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${count} registro${count===1?'':'s'}</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="nr15-search" type="search" value="${empEsc(root.dataset.nr15Search||'')}" placeholder="GHE, setor, agente, laudo ou responsável"></div><div class="field"><label>GHE</label><select id="nr15-ghe"><option value="">Todos</option>${ghes.map(g=>`<option value="${g.id}" ${root.dataset.nr15Ghe===g.id?'selected':''}>${empEsc(g.codigo)} · ${empEsc(g.nome)}</option>`).join('')}</select></div><div class="field"><label>Resultado</label><select id="nr15-result"><option value="">Todos</option>${['Aguardando avaliação','Não caracterizada','Insalubridade caracterizada'].map(x=>`<option ${root.dataset.nr15Result===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Situação</label><select id="nr15-status"><option value="">Todas</option>${['Em elaboração','Vigente','Revisão necessária','Encerrado'].map(x=>`<option ${root.dataset.nr15Status===x?'selected':''}>${x}</option>`).join('')}</select></div><button class="btn secondary" id="nr15-clear">Limpar</button></div></div>`}
-  function nr15Table(rows,actions=true){if(!rows.length)return `<div class="empty-state">Nenhuma avaliação encontrada.</div>`;return `<div style="overflow:auto"><table><thead><tr><th>GHE / Setor</th><th>Agente do PGR / Anexo</th><th>Avaliação</th><th>Resultado / Grau</th><th>Laudo / Responsável</th><th>Revisão</th>${actions?'<th>Ações</th>':''}</tr></thead><tbody>${rows.map(a=>{const g=nr15Ghe(a),h=nr15PgrHazard(a),an=nr15Agent(a.agentCode),p=nr15Professional(a);return `<tr><td><strong>${empEsc(g?.codigo||'GHE removido')}</strong><br><span>${empEsc(g?.nome||'—')} · ${empEsc(g?.setor||'—')}</span></td><td><strong>${empEsc(h?.nome||'Agente do PGR não localizado')}</strong><br><span class="ca-tag">${empEsc(h?.tipo||'—')} · Anexo ${empEsc(an.code)}</span></td><td>${empEsc(a.evaluationType||an.method)}<br><small>${a.measurementValue?`${empEsc(a.measurementValue)} ${empEsc(a.unit||'')}`:'Sem medição informada'}${a.toleranceLimit?` · LT ${empEsc(a.toleranceLimit)} ${empEsc(a.unit||'')}`:''}</small></td><td>${nr15ResultPill(a.result)}<br><small>${empEsc(a.degree||'Não aplicável')}</small></td><td><strong>${empEsc(a.reportNumber||'Sem número')}</strong><br><small>${empEsc(p?.nome||a.professional||'Responsável não informado')}${(p?.registro||a.professionalRegistration)?` · ${empEsc(p?.registro||a.professionalRegistration)}`:''}</small></td><td>${fmtDate(a.nextReview)}<br>${nr15StatusPill(a.status)}</td>${actions?`<td class="row-actions"><button class="action-link" data-view-nr15="${a.id}">📄 Ver</button><button class="action-link" data-edit-nr15="${a.id}">✏️ Editar</button><button class="action-link" data-del-nr15="${a.id}">Remover</button></td>`:''}</tr>`}).join('')}</tbody></table></div>`}
+  function nr15Table(rows,actions=true){if(!rows.length)return `<div class="empty-state">Nenhuma avaliação encontrada.</div>`;return `<div style="overflow:auto"><table><thead><tr><th>GHE / Setor</th><th>Agente do PGR / Anexo</th><th>Avaliação</th><th>Resultado / Grau</th><th>Laudo / Responsável</th><th>Revisão</th>${actions?'<th>Ações</th>':''}</tr></thead><tbody>${rows.map(a=>{const g=nr15Ghe(a),h=nr15PgrHazard(a),an=nr15Agent(a.agentCode),p=nr15Professional(a);return `<tr><td><strong>${empEsc(g?.codigo||'GHE removido')}</strong><br><span>${empEsc(g?.nome||'—')} · ${empEsc(g?.setor||'—')}</span></td><td><strong>${empEsc(h?.nome||'Agente do PGR não localizado')}</strong><br><span class="ca-tag">${empEsc(h?.tipo||'—')} · Anexo ${empEsc(an.code)}</span></td><td>${empEsc(a.evaluationType||an.method)}<br><small>${a.measurementValue?`${empEsc(a.measurementValue)} ${empEsc(a.unit||'')}`:'Sem medição informada'}${a.toleranceLimit?` · LT ${empEsc(a.toleranceLimit)} ${empEsc(a.unit||'')}`:''}</small></td><td>${nr15ResultPill(a.result)}<br><small>${empEsc(a.degree||'Não aplicável')}</small></td><td><strong>${empEsc(a.reportNumber||'Sem número')}</strong><br><small>${empEsc(p?.nome||a.professional||'Responsável não informado')}${(p?.registro||a.professionalRegistration)?` · ${empEsc(p?.registro||a.professionalRegistration)}`:''}${p?`<br>${nr15ProfVigPill(p)}`:''}</small></td><td>${fmtDate(a.nextReview)}<br>${nr15StatusPill(a.status)}</td>${actions?`<td class="row-actions"><button class="action-link" data-view-nr15="${a.id}">📄 Ver</button><button class="action-link" data-pdf-nr15="${a.id}">🖨️ PDF</button><button class="action-link" data-edit-nr15="${a.id}">✏️ Editar</button><button class="action-link" data-del-nr15="${a.id}">Remover</button></td>`:''}</tr>`}).join('')}</tbody></table></div>`}
   function renderNr15Dash(root){const rows=nr15Filtered(root),characterized=rows.filter(a=>a.result==='Insalubridade caracterizada').length,pending=rows.filter(a=>a.result==='Aguardando avaliação').length,review=rows.filter(a=>a.status==='Revisão necessária'||(a.nextReview&&daysUntil(a.nextReview)<=30)).length,people=new Set(rows.flatMap(a=>{const g=nr15Ghe(a);return g?pgrGheEmployees(g).map(e=>e.id):[]})).size;root.innerHTML=`<div class="page-head"><div><h2>☣️ NR-15 · Painel de Insalubridade</h2><div class="sub">Gestão das avaliações de exposição por GHE, agentes, laudos e revisões.</div></div><button class="btn" id="btn-new-nr15">+ Nova Avaliação</button></div><div class="pgr-dashboard-cards"><div class="stat-card pgr-kpi mapped"><div class="pgr-kpi-icon">🧪</div><div><div class="num">${rows.length}</div><div class="label">Avaliações</div><small>Conforme os filtros</small></div></div><div class="stat-card pgr-kpi high"><div class="pgr-kpi-icon">⚠️</div><div><div class="num" style="color:var(--red)">${characterized}</div><div class="label">Caracterizadas</div><small>Com conclusão registrada</small></div></div><div class="stat-card pgr-kpi medium"><div class="pgr-kpi-icon">⏳</div><div><div class="num">${pending}</div><div class="label">Pendentes</div><small>Aguardando avaliação</small></div></div><div class="stat-card pgr-kpi people"><div class="pgr-kpi-icon">👥</div><div><div class="num">${people}</div><div class="label">Trabalhadores</div><small>Vinculados aos GHEs</small></div></div></div>${nr15Filters(root,rows.length)}<div class="panel"><div class="panel-head"><h3>📌 Avaliações prioritárias</h3><span>${review} revisão${review===1?'':'ões'} próxima${review===1?'':'s'}</span></div>${nr15Table(rows.slice(0,10))}</div>`}
   function renderNr15Assessments(root){const rows=nr15Filtered(root);root.innerHTML=`<div class="page-head"><div><h2>🧪 Avaliações de Insalubridade</h2><div class="sub">Registro técnico por GHE e agente previsto nos anexos da NR-15.</div></div><button class="btn" id="btn-new-nr15">+ Nova Avaliação</button></div>${nr15Filters(root,rows.length)}<div class="panel">${nr15Table(rows)}</div>`}
   function renderNr15Agents(root){ensurePgrHazards();const q=normalizeText(root.dataset.nr15AgentSearch||''),type=root.dataset.nr15AgentType||'',rows=(state.pgrHazards||[]).filter(h=>(!q||normalizeText([h.nome,h.tipo,h.descricao].join(' ')).includes(q))&&(!type||h.tipo===type));root.innerHTML=`<div class="page-head"><div><h2>☣️ Agentes vinculados ao PGR</h2><div class="sub">Os agentes usados no NR-15 vêm exclusivamente do Cadastro de Perigos do PGR.</div></div><button class="btn" id="btn-go-pgr-hazards">Abrir Cadastro de Perigos</button></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Pesquisa</h3><span>${rows.length} agente${rows.length===1?'':'s'}</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="nr15-agent-search" value="${empEsc(root.dataset.nr15AgentSearch||'')}" placeholder="Agente, tipo ou descrição"></div><div class="field"><label>Tipo</label><select id="nr15-agent-type"><option value="">Todos</option>${PGR_TIPOS.map(x=>`<option ${type===x?'selected':''}>${x}</option>`).join('')}</select></div><button class="btn secondary" id="nr15-agent-clear">Limpar</button></div></div><div class="panel">${rows.length?`<table><thead><tr><th>Agente do PGR</th><th>Tipo</th><th>Descrição</th><th>GHEs vinculados</th></tr></thead><tbody>${rows.map(h=>`<tr><td><strong>${empEsc(h.nome)}</strong></td><td><span class="ca-tag">${empEsc(h.tipo)}</span></td><td>${empEsc(h.descricao||'—')}</td><td>${(state.pgrGhes||[]).filter(g=>(g.hazardIds||[]).includes(h.id)).length}</td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">Nenhum agente cadastrado no PGR.</div>`}<div class="note" style="margin:14px">Cadastre e vincule os agentes aos GHEs no módulo PGR. O enquadramento no anexo da NR-15 é informado durante a avaliação técnica.</div></div>`}
-  function renderNr15Professionals(root){const q=normalizeText(root.dataset.nr15ProfSearch||''),rows=(state.nr15Professionals||[]).filter(p=>!q||normalizeText([p.nome,p.profissao,p.conselho,p.registro,p.email,p.telefone].join(' ')).includes(q));root.innerHTML=`<div class="page-head"><div><h2>👷 Responsáveis Técnicos</h2><div class="sub">Profissionais habilitados disponíveis para seleção nas avaliações e laudos NR-15.</div></div><button class="btn" id="btn-new-nr15-prof">+ Cadastrar Responsável</button></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Pesquisa</h3><span>${rows.length} profissional${rows.length===1?'':'is'}</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="nr15-prof-search" value="${empEsc(root.dataset.nr15ProfSearch||'')}" placeholder="Nome, profissão, conselho ou registro"></div><button class="btn secondary" id="nr15-prof-clear">Limpar</button></div></div><div class="panel">${rows.length?`<table><thead><tr><th>Responsável</th><th>Profissão</th><th>Conselho / Registro</th><th>Contato</th><th>Situação</th><th>Ações</th></tr></thead><tbody>${rows.map(p=>`<tr><td><strong>${empEsc(p.nome)}</strong></td><td>${empEsc(p.profissao||'—')}</td><td>${empEsc(p.conselho||'—')} · ${empEsc(p.registro||'—')}</td><td>${empEsc(p.email||'—')}<br><small>${empEsc(p.telefone||'')}</small></td><td>${nr15StatusPill(p.ativo===false?'Inativo':'Vigente')}</td><td class="row-actions"><button class="action-link" data-edit-nr15-prof="${p.id}">✏️ Editar</button><button class="action-link" data-del-nr15-prof="${p.id}">Remover</button></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">Nenhum responsável técnico cadastrado.</div>`}</div>`}
-  function openNr15ProfessionalModal(id=""){const p=(state.nr15Professionals||[]).find(x=>x.id===id)||{};openModal(`<h2>${id?'Editar':'Cadastrar'} Responsável Técnico</h2><form id="nr15-prof-form"><div class="grid-2"><div class="field"><label>Nome completo *</label><input name="nome" required value="${empEsc(p.nome||'')}"></div><div class="field"><label>Profissão / habilitação *</label><input name="profissao" required value="${empEsc(p.profissao||'')}" placeholder="Ex.: Engenheiro de Segurança do Trabalho"></div><div class="field"><label>Conselho profissional *</label><input name="conselho" required value="${empEsc(p.conselho||'')}" placeholder="Ex.: CREA"></div><div class="field"><label>Número do registro *</label><input name="registro" required value="${empEsc(p.registro||'')}"></div><div class="field"><label>E-mail</label><input type="email" name="email" value="${empEsc(p.email||'')}"></div><div class="field"><label>Telefone</label><input name="telefone" value="${empEsc(p.telefone||'')}"></div><div class="field"><label>Situação</label><select name="ativo"><option value="true" ${p.ativo!==false?'selected':''}>Ativo</option><option value="false" ${p.ativo===false?'selected':''}>Inativo</option></select></div></div><div class="field"><label>Observações</label><textarea name="observacoes">${empEsc(p.observacoes||'')}</textarea></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn" type="submit">💾 Salvar</button></div></form>`,ov=>ov.querySelector('#nr15-prof-form').addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));d.ativo=d.ativo==='true';d.updatedAt=new Date().toISOString();if(id)Object.assign(p,d);else(state.nr15Professionals||=[]).push({id:uid('nr15prof'),...d,createdAt:new Date().toISOString()});await saveState();closeModal();render()}))}
-  function renderNr15Reports(root){const rows=nr15Filtered(root);root.innerHTML=`<div class="page-head"><div><h2>📄 Laudos e Revisões</h2><div class="sub">Controle de documentos, responsáveis técnicos, vigência e próximas revisões.</div></div><button class="btn" id="btn-new-nr15">+ Novo Registro</button></div>${nr15Filters(root,rows.length)}<div class="panel">${nr15Table(rows)}</div>`}
+  function renderNr15Professionals(root){const q=normalizeText(root.dataset.nr15ProfSearch||''),rows=(state.nr15Professionals||[]).filter(p=>!q||normalizeText([p.nome,p.profissao,p.conselho,p.registro,p.email,p.telefone,p.anoVigencia].join(' ')).includes(q));root.innerHTML=`<div class="page-head"><div><h2>👷 Responsáveis Técnicos</h2><div class="sub">Profissionais habilitados disponíveis para seleção nas avaliações e laudos NR-15.</div></div><button class="btn" id="btn-new-nr15-prof">+ Cadastrar Responsável</button></div><div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Pesquisa</h3><span>${rows.length} profissional${rows.length===1?'':'is'}</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="nr15-prof-search" value="${empEsc(root.dataset.nr15ProfSearch||'')}" placeholder="Nome, profissão, conselho ou registro"></div><button class="btn secondary" id="nr15-prof-clear">Limpar</button></div></div><div class="panel">${rows.length?`<table><thead><tr><th>Responsável</th><th>Profissão</th><th>Conselho / Registro</th><th>Vigência</th><th>Contato</th><th>Situação</th><th>Ações</th></tr></thead><tbody>${rows.map(p=>`<tr><td><strong>${empEsc(p.nome)}</strong></td><td>${empEsc(p.profissao||'—')}</td><td>${empEsc(p.conselho||'—')} · ${empEsc(p.registro||'—')}</td><td><strong>${empEsc(p.anoVigencia||'—')}</strong></td><td>${empEsc(p.email||'—')}<br><small>${empEsc(p.telefone||'')}</small></td><td>${nr15ProfVigPill(p)}</td><td class="row-actions"><button class="action-link" data-edit-nr15-prof="${p.id}">✏️ Editar</button><button class="action-link" data-del-nr15-prof="${p.id}">Remover</button></td></tr>`).join('')}</tbody></table>`:`<div class="empty-state">Nenhum responsável técnico cadastrado.</div>`}</div>`}
+  function openNr15ProfessionalModal(id=""){const p=(state.nr15Professionals||[]).find(x=>x.id===id)||{};openModal(`<h2>${id?'Editar':'Cadastrar'} Responsável Técnico</h2><form id="nr15-prof-form"><div class="grid-2"><div class="field"><label>Nome completo *</label><input name="nome" required value="${empEsc(p.nome||'')}"></div><div class="field"><label>Profissão / habilitação *</label><input name="profissao" required value="${empEsc(p.profissao||'')}" placeholder="Ex.: Engenheiro de Segurança do Trabalho"></div><div class="field"><label>Conselho profissional *</label><input name="conselho" required value="${empEsc(p.conselho||'')}" placeholder="Ex.: CREA"></div><div class="field"><label>Número do registro *</label><input name="registro" required value="${empEsc(p.registro||'')}"></div><div class="field"><label>Ano de vigência do registro *</label><input type="number" name="anoVigencia" required min="1990" max="2100" step="1" value="${empEsc(p.anoVigencia||new Date().getFullYear())}"><small>Exercício em que o registro no conselho está regular (anuidade quitada).</small></div><div class="field"><label>E-mail</label><input type="email" name="email" value="${empEsc(p.email||'')}"></div><div class="field"><label>Telefone</label><input name="telefone" value="${empEsc(p.telefone||'')}"></div><div class="field"><label>Situação</label><select name="ativo"><option value="true" ${p.ativo!==false?'selected':''}>Ativo</option><option value="false" ${p.ativo===false?'selected':''}>Inativo</option></select></div></div><div class="field"><label>Observações</label><textarea name="observacoes">${empEsc(p.observacoes||'')}</textarea></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn" type="submit">💾 Salvar</button></div></form>`,ov=>ov.querySelector('#nr15-prof-form').addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target));d.ativo=d.ativo==='true';d.anoVigencia=Number(d.anoVigencia)||null;d.updatedAt=new Date().toISOString();if(id)Object.assign(p,d);else(state.nr15Professionals||=[]).push({id:uid('nr15prof'),...d,createdAt:new Date().toISOString()});await saveState();closeModal();render()}))}
+  function renderNr15Reports(root){const rows=nr15Filtered(root);root.innerHTML=`<div class="page-head"><div><h2>📄 Laudos e Revisões</h2><div class="sub">Controle de documentos, responsáveis técnicos, vigência e próximas revisões.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn secondary" id="btn-nr15-report-pdf">🖨️ Gerar laudo completo (PDF)</button><button class="btn" id="btn-new-nr15">+ Novo Registro</button></div></div>${nr15Filters(root,rows.length)}<div class="panel">${nr15Table(rows)}</div>`}
   function openNr15Modal(id=""){const current=(state.nr15Assessments||[]).find(x=>x.id===id)||{},ghes=(state.pgrGhes||[]).filter(g=>g.ativo!==false),today=new Date().toISOString().slice(0,10);openModal(`<h2>${id?'Editar':'Nova'} Avaliação NR-15</h2><form id="nr15-form"><div class="grid-2"><div class="field"><label>GHE *</label><select name="gheId" required><option value="">Selecione</option>${ghes.map(g=>`<option value="${g.id}" ${current.gheId===g.id?'selected':''}>${empEsc(g.codigo)} · ${empEsc(g.nome)} · ${empEsc(g.setor)}</option>`).join('')}</select></div><div class="field"><label>Agente / Anexo *</label><select name="agentCode" required><option value="">Selecione</option>${NR15_AGENTS.map(a=>`<option value="${a.code}" ${current.agentCode===a.code?'selected':''}>Anexo ${a.code} · ${empEsc(a.name)}</option>`).join('')}</select></div><div class="field"><label>Tipo de avaliação</label><select name="evaluationType">${['Quantitativa','Qualitativa','Conforme norma específica'].map(x=>`<option ${current.evaluationType===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Frequência / jornada de exposição</label><input name="exposureFrequency" value="${empEsc(current.exposureFrequency||'')}" placeholder="Ex.: habitual, 8 h/dia"></div><div class="field"><label>Valor medido</label><input name="measurementValue" value="${empEsc(current.measurementValue||'')}" placeholder="Valor da avaliação"></div><div class="field"><label>Unidade</label><input name="unit" value="${empEsc(current.unit||'')}" placeholder="Ex.: dB(A), °C, m/s², ppm"></div><div class="field"><label>Limite de tolerância aplicado</label><input name="toleranceLimit" value="${empEsc(current.toleranceLimit||'')}" placeholder="Conforme anexo e condição"></div><div class="field"><label>Metodologia / equipamento</label><input name="methodology" value="${empEsc(current.methodology||'')}" placeholder="Método, aparelho e calibração"></div><div class="field"><label>Resultado técnico *</label><select name="result">${['Aguardando avaliação','Não caracterizada','Insalubridade caracterizada'].map(x=>`<option ${current.result===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Grau</label><select name="degree">${['Não aplicável','Mínimo (10%)','Médio (20%)','Máximo (40%)'].map(x=>`<option ${current.degree===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Data da avaliação</label><input type="date" name="evaluationDate" value="${current.evaluationDate||today}"></div><div class="field"><label>Próxima revisão</label><input type="date" name="nextReview" value="${current.nextReview||''}"></div><div class="field"><label>Número do laudo</label><input name="reportNumber" value="${empEsc(current.reportNumber||'')}" placeholder="Ex.: LTI-2026/001"></div><div class="field"><label>Situação do laudo</label><select name="status">${['Em elaboração','Vigente','Revisão necessária','Encerrado'].map(x=>`<option ${current.status===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Responsável técnico *</label><input name="professional" required value="${empEsc(current.professional||'')}" placeholder="Nome do profissional habilitado"></div><div class="field"><label>Registro profissional</label><input name="professionalRegistration" value="${empEsc(current.professionalRegistration||'')}" placeholder="Conselho e número"></div></div><div class="field"><label>Medidas de controle coletivo / administrativas</label><textarea name="collectiveControls" placeholder="Descreva as medidas existentes e recomendadas">${empEsc(current.collectiveControls||'')}</textarea></div><div class="field"><label>EPIs e controles individuais</label><textarea name="epiControls" placeholder="EPIs, CA, treinamento, uso e verificação de eficácia">${empEsc(current.epiControls||'')}</textarea></div><div class="field"><label>Observações e conclusão</label><textarea name="observations">${empEsc(current.observations||'')}</textarea></div><div class="note">O sistema organiza os dados; a caracterização e o grau dependem da análise do profissional legalmente habilitado.</div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn" type="submit">💾 Salvar Avaliação</button></div></form>`,ov=>ov.querySelector('#nr15-form').addEventListener('submit',async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));const rec={...data,updatedAt:new Date().toISOString()};if(id)Object.assign(current,rec);else(state.nr15Assessments||=[]).push({id:uid('nr15'),...rec,createdAt:new Date().toISOString()});await saveState();closeModal();render()}))}
   function openNr15Details(id){const a=(state.nr15Assessments||[]).find(x=>x.id===id);if(!a)return;const g=nr15Ghe(a),ag=nr15Agent(a.agentCode),people=g?pgrGheEmployees(g):[];openModal(`<h2>📄 ${empEsc(a.reportNumber||'Registro de avaliação NR-15')}</h2><div class="panel" style="padding:16px"><h3>${empEsc(g?.codigo||'—')} · ${empEsc(g?.nome||'GHE não localizado')}</h3><p><strong>Setor:</strong> ${empEsc(g?.setor||'—')} &nbsp; <strong>Trabalhadores vinculados:</strong> ${people.length}</p><p><strong>Agente:</strong> Anexo ${empEsc(ag.code)} · ${empEsc(ag.name)} (${empEsc(ag.type)})</p><p><strong>Avaliação:</strong> ${empEsc(a.evaluationType||ag.method)} · ${empEsc(a.measurementValue||'sem valor informado')} ${empEsc(a.unit||'')} ${a.toleranceLimit?`· LT ${empEsc(a.toleranceLimit)} ${empEsc(a.unit||'')}`:''}</p><p><strong>Resultado:</strong> ${empEsc(a.result||'—')} · <strong>Grau:</strong> ${empEsc(a.degree||'—')}</p><p><strong>Data:</strong> ${fmtDate(a.evaluationDate)} · <strong>Revisão:</strong> ${fmtDate(a.nextReview)} · <strong>Situação:</strong> ${empEsc(a.status||'—')}</p><p><strong>Responsável:</strong> ${empEsc(a.professional||'—')} ${a.professionalRegistration?`· ${empEsc(a.professionalRegistration)}`:''}</p><hr><p><strong>Medidas coletivas/administrativas:</strong><br>${empEsc(a.collectiveControls||'—')}</p><p><strong>EPIs/controles individuais:</strong><br>${empEsc(a.epiControls||'—')}</p><p><strong>Observações e conclusão:</strong><br>${empEsc(a.observations||'—')}</p></div><div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Fechar</button><button class="btn" onclick="window.print()">🖨️ Imprimir</button></div>`)}
 
@@ -13243,18 +13371,338 @@ function renderPcmsoDash(root){
       <div class="field"><label>Tipo de avaliação</label><select name="evaluationType">${['Quantitativa','Qualitativa','Conforme norma específica'].map(x=>`<option ${current.evaluationType===x?'selected':''}>${x}</option>`).join('')}</select></div>
       <div class="field"><label>Frequência / jornada de exposição</label><input name="exposureFrequency" value="${empEsc(current.exposureFrequency||'')}" placeholder="Ex.: habitual, 8 h/dia"></div><div class="field"><label>Valor medido</label><input name="measurementValue" value="${empEsc(current.measurementValue||'')}"></div><div class="field"><label>Unidade</label><input name="unit" value="${empEsc(current.unit||'')}" placeholder="Ex.: dB(A), °C, m/s², ppm"></div><div class="field"><label>Limite de tolerância aplicado</label><input name="toleranceLimit" value="${empEsc(current.toleranceLimit||'')}"></div>
       <div class="field"><label>Metodologia / equipamento</label><input name="methodology" value="${empEsc(current.methodology||'')}"></div><div class="field"><label>Resultado técnico *</label><select name="result">${['Aguardando avaliação','Não caracterizada','Insalubridade caracterizada'].map(x=>`<option ${current.result===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Grau</label><select name="degree">${['Não aplicável','Mínimo (10%)','Médio (20%)','Máximo (40%)'].map(x=>`<option ${current.degree===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Data da avaliação</label><input type="date" name="evaluationDate" value="${current.evaluationDate||today}"></div><div class="field"><label>Próxima revisão</label><input type="date" name="nextReview" value="${current.nextReview||''}"></div><div class="field"><label>Número do laudo</label><input name="reportNumber" value="${empEsc(current.reportNumber||'')}"></div><div class="field"><label>Situação do laudo</label><select name="status">${['Em elaboração','Vigente','Revisão necessária','Encerrado'].map(x=>`<option ${current.status===x?'selected':''}>${x}</option>`).join('')}</select></div>
-      <div class="field"><label>Responsável técnico cadastrado *</label><select name="professionalId" required><option value="">Selecione</option>${professionals.map(p=>`<option value="${p.id}" ${current.professionalId===p.id?'selected':''}>${empEsc(p.nome)} · ${empEsc(p.conselho)} ${empEsc(p.registro)}</option>`).join('')}</select>${professionals.length?'':'<small>Nenhum responsável ativo cadastrado.</small>'}</div><div class="field" style="align-self:end"><button type="button" class="btn secondary" id="btn-register-prof-from-assessment">+ Cadastrar responsável técnico</button></div>
+      <div class="field"><label>Responsável técnico cadastrado *</label><select name="professionalId" required><option value="">Selecione</option>${professionals.map(p=>`<option value="${p.id}" ${current.professionalId===p.id?'selected':''}>${empEsc(p.nome)} · ${empEsc(p.conselho)} ${empEsc(p.registro)} · vigência ${empEsc(p.anoVigencia||'não informada')}</option>`).join('')}</select>${professionals.length?'':'<small>Nenhum responsável ativo cadastrado.</small>'}</div><div class="field" style="align-self:end"><button type="button" class="btn secondary" id="btn-register-prof-from-assessment">+ Cadastrar responsável técnico</button></div>
     </div><div class="field"><label>Medidas de controle coletivo / administrativas</label><textarea name="collectiveControls">${empEsc(current.collectiveControls||'')}</textarea></div><div class="field"><label>EPIs e controles individuais</label><textarea name="epiControls">${empEsc(current.epiControls||'')}</textarea></div><div class="field"><label>Observações e conclusão</label><textarea name="observations">${empEsc(current.observations||'')}</textarea></div><div class="note">O agente é proveniente do PGR e precisa estar vinculado ao GHE selecionado.</div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn" type="submit">💾 Salvar Avaliação</button></div></form>`,ov=>{
       const gheSel=ov.querySelector('#nr15-form-ghe'),hazardSel=ov.querySelector('#nr15-form-hazard'),help=ov.querySelector('#nr15-hazard-help');
       const fillHazards=()=>{const rows=nr15HazardsForGhe(gheSel.value);hazardSel.innerHTML=`<option value="">${rows.length?'Selecione o agente':'Nenhum agente vinculado a este GHE'}</option>${rows.map(h=>`<option value="${h.id}" ${current.pgrHazardId===h.id?'selected':''}>${empEsc(h.nome)} · ${empEsc(h.tipo)}</option>`).join('')}`;help.textContent=rows.length?`${rows.length} agente(s) vinculados no PGR.`:'Vincule um agente ao GHE no Cadastro de GHE do PGR.'};
       gheSel.addEventListener('change',fillHazards);fillHazards();
       ov.querySelector('#btn-register-prof-from-assessment').addEventListener('click',()=>openNr15ProfessionalModal());
-      ov.querySelector('#nr15-form-v2').addEventListener('submit',async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target)),p=(state.nr15Professionals||[]).find(x=>x.id===data.professionalId);if(!p){alert('Selecione um responsável técnico cadastrado.');return;}data.professional=p.nome;data.professionalRegistration=`${p.conselho} ${p.registro}`.trim();data.updatedAt=new Date().toISOString();if(id)Object.assign(current,data);else(state.nr15Assessments||=[]).push({id:uid('nr15'),...data,createdAt:new Date().toISOString()});await saveState();closeModal();render()});
+      ov.querySelector('#nr15-form-v2').addEventListener('submit',async e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target)),p=(state.nr15Professionals||[]).find(x=>x.id===data.professionalId);if(!p){alert('Selecione um responsável técnico cadastrado.');return;}{const vy=Number(p.anoVigencia)||0,ey=Number(String(data.evaluationDate||'').slice(0,4))||new Date().getFullYear();if((!vy||vy<ey)&&!confirm(`O registro de ${p.nome} ${vy?`está com vigência em ${vy}`:'não possui ano de vigência informado'}, e a avaliação é de ${ey}.\n\nDeseja salvar mesmo assim?`))return;data.professionalVigencia=vy||'';}data.professional=p.nome;data.professionalRegistration=`${p.conselho} ${p.registro}`.trim();data.updatedAt=new Date().toISOString();if(id)Object.assign(current,data);else(state.nr15Assessments||=[]).push({id:uid('nr15'),...data,createdAt:new Date().toISOString()});await saveState();closeModal();render()});
     });
   }
   openNr15Modal=openNr15ModalV2;
-  function openNr15DetailsV2(id){const a=(state.nr15Assessments||[]).find(x=>x.id===id);if(!a)return;const g=nr15Ghe(a),h=nr15PgrHazard(a),an=nr15Agent(a.agentCode),p=nr15Professional(a),people=g?pgrGheEmployees(g):[];openModal(`<h2>📄 ${empEsc(a.reportNumber||'Registro de avaliação NR-15')}</h2><div class="panel" style="padding:16px"><h3>${empEsc(g?.codigo||'—')} · ${empEsc(g?.nome||'GHE não localizado')}</h3><p><strong>Setor:</strong> ${empEsc(g?.setor||'—')} &nbsp; <strong>Trabalhadores vinculados:</strong> ${people.length}</p><p><strong>Agente do PGR:</strong> ${empEsc(h?.nome||'—')} (${empEsc(h?.tipo||'—')})</p><p><strong>Enquadramento:</strong> Anexo ${empEsc(an.code)} · ${empEsc(an.name)}</p><p><strong>Avaliação:</strong> ${empEsc(a.evaluationType||an.method)} · ${empEsc(a.measurementValue||'sem valor informado')} ${empEsc(a.unit||'')} ${a.toleranceLimit?`· LT ${empEsc(a.toleranceLimit)} ${empEsc(a.unit||'')}`:''}</p><p><strong>Resultado:</strong> ${empEsc(a.result||'—')} · <strong>Grau:</strong> ${empEsc(a.degree||'—')}</p><p><strong>Data:</strong> ${fmtDate(a.evaluationDate)} · <strong>Revisão:</strong> ${fmtDate(a.nextReview)} · <strong>Situação:</strong> ${empEsc(a.status||'—')}</p><p><strong>Responsável técnico:</strong> ${empEsc(p?.nome||a.professional||'—')} · ${empEsc(p?`${p.conselho} ${p.registro}`:a.professionalRegistration||'—')}</p><hr><p><strong>Medidas coletivas/administrativas:</strong><br>${empEsc(a.collectiveControls||'—')}</p><p><strong>EPIs/controles individuais:</strong><br>${empEsc(a.epiControls||'—')}</p><p><strong>Observações e conclusão:</strong><br>${empEsc(a.observations||'—')}</p></div><div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Fechar</button><button class="btn" onclick="window.print()">🖨️ Imprimir</button></div>`)}
+  function openNr15DetailsV2(id){const a=(state.nr15Assessments||[]).find(x=>x.id===id);if(!a)return;const g=nr15Ghe(a),h=nr15PgrHazard(a),an=nr15Agent(a.agentCode),p=nr15Professional(a),people=g?pgrGheEmployees(g):[];openModal(`<h2>📄 ${empEsc(a.reportNumber||'Registro de avaliação NR-15')}</h2><div class="panel" style="padding:16px"><h3>${empEsc(g?.codigo||'—')} · ${empEsc(g?.nome||'GHE não localizado')}</h3><p><strong>Setor:</strong> ${empEsc(g?.setor||'—')} &nbsp; <strong>Trabalhadores vinculados:</strong> ${people.length}</p><p><strong>Agente do PGR:</strong> ${empEsc(h?.nome||'—')} (${empEsc(h?.tipo||'—')})</p><p><strong>Enquadramento:</strong> Anexo ${empEsc(an.code)} · ${empEsc(an.name)}</p><p><strong>Avaliação:</strong> ${empEsc(a.evaluationType||an.method)} · ${empEsc(a.measurementValue||'sem valor informado')} ${empEsc(a.unit||'')} ${a.toleranceLimit?`· LT ${empEsc(a.toleranceLimit)} ${empEsc(a.unit||'')}`:''}</p><p><strong>Resultado:</strong> ${empEsc(a.result||'—')} · <strong>Grau:</strong> ${empEsc(a.degree||'—')}</p><p><strong>Data:</strong> ${fmtDate(a.evaluationDate)} · <strong>Revisão:</strong> ${fmtDate(a.nextReview)} · <strong>Situação:</strong> ${empEsc(a.status||'—')}</p><p><strong>Responsável técnico:</strong> ${empEsc(p?.nome||a.professional||'—')} · ${empEsc(p?`${p.conselho} ${p.registro}`:a.professionalRegistration||'—')} ${p?nr15ProfVigPill(p):''}</p><hr><p><strong>Medidas coletivas/administrativas:</strong><br>${empEsc(a.collectiveControls||'—')}</p><p><strong>EPIs/controles individuais:</strong><br>${empEsc(a.epiControls||'—')}</p><p><strong>Observações e conclusão:</strong><br>${empEsc(a.observations||'—')}</p></div><div class="modal-actions"><button class="btn secondary" onclick="closeModal()">Fechar</button><button class="btn" id="nr15-detail-pdf">🖨️ Gerar laudo (PDF)</button></div>`,ov=>ov.querySelector('#nr15-detail-pdf').addEventListener('click',()=>{closeModal();openNr15ReportModal(a.reportNumber||'')}))}
   openNr15Details=openNr15DetailsV2;
+
+  // ===================== NR-15 · Vigência do RT e Laudo completo (PDF) =====================
+  function nr15CurYear(){return new Date().getFullYear()}
+  function nr15ProfVig(p,refYear){
+    refYear=Number(refYear)||nr15CurYear();
+    if(!p) return {cls:'warn',label:'RT não cadastrado',ok:false};
+    if(p.ativo===false) return {cls:'bad',label:'Inativo',ok:false};
+    const y=Number(p.anoVigencia)||0;
+    if(!y) return {cls:'warn',label:'Vigência não informada',ok:false};
+    if(y<refYear) return {cls:'bad',label:`Vencido · ${y}`,ok:false};
+    return {cls:'ok',label:`Vigente · ${y}`,ok:true};
+  }
+  function nr15ProfVigPill(p,refYear){const v=nr15ProfVig(p,refYear);return `<span class="pill ${v.cls}">● ${empEsc(v.label)}</span>`}
+  function nr15Num(v){const m=String(v??'').match(/-?\d+(?:[.,]\d+)?/);return m?parseFloat(m[0].replace(',','.')):NaN}
+  function nr15FmtNum(n){return Number.isFinite(n)?n.toLocaleString('pt-BR',{maximumFractionDigits:2}):'—'}
+  function nr15DegreePct(d){const m=String(d||'').match(/(\d+)\s*%/);return m?Number(m[1]):0}
+  function nr15Compare(a){
+    const v=nr15Num(a.measurementValue),lt=nr15Num(a.toleranceLimit);
+    if(!Number.isFinite(v)||!Number.isFinite(lt)||lt<=0) return null;
+    return {v,lt,pct:v/lt*100,above:v>lt};
+  }
+  function nr15Consistency(rows){
+    const out=[];
+    rows.forEach(a=>{
+      const g=nr15Ghe(a),h=nr15PgrHazard(a),c=nr15Compare(a),tag=`${g?.codigo||'GHE'} · ${h?.nome||'Agente'}`;
+      if(c&&a.result==='Insalubridade caracterizada'&&!c.above) out.push(`${tag}: valor medido (${nr15FmtNum(c.v)} ${a.unit||''}) está abaixo do LT (${nr15FmtNum(c.lt)}), mas o resultado registrado é "Insalubridade caracterizada".`);
+      if(c&&a.result==='Não caracterizada'&&c.above) out.push(`${tag}: valor medido acima do LT com resultado "Não caracterizada" — registre a justificativa (ex.: neutralização por EPI) nas observações.`);
+      if(a.result==='Insalubridade caracterizada'&&!nr15DegreePct(a.degree)) out.push(`${tag}: insalubridade caracterizada sem grau definido.`);
+      if(a.result!=='Insalubridade caracterizada'&&nr15DegreePct(a.degree)) out.push(`${tag}: grau "${a.degree}" informado, mas o resultado não é "Insalubridade caracterizada".`);
+      if(a.result==='Aguardando avaliação') out.push(`${tag}: avaliação ainda sem conclusão ("Aguardando avaliação").`);
+    });
+    return out;
+  }
+  const NR15_METHOD_TEXT={
+    "1":{ref:"NHO-01 (FUNDACENTRO)",txt:"Dosimetria de ruído com microfone na zona auditiva do trabalhador, cobrindo parcela representativa da jornada. Parâmetros do critério legal: nível de critério 85 dB(A), incremento de duplicação de dose q = 5, circuito de ponderação A e resposta lenta, comparando-se o nível médio (Lavg) ao limite de tolerância do Anexo 1."},
+    "2":{ref:"NHO-01 (FUNDACENTRO)",txt:"Medição de ruído de impacto em decibéis linear (pico) ou dB(C) em resposta rápida, próximo ao ouvido do trabalhador, com comparação aos limites do Anexo 2 (130 dB linear ou 120 dB(C))."},
+    "3":{ref:"NHO-06 (FUNDACENTRO)",txt:"Determinação do Índice de Bulbo Úmido Termômetro de Globo (IBUTG) médio ponderado no período de 60 minutos corridos mais desfavorável, com estimativa da taxa metabólica das atividades, comparando-se ao IBUTG máximo do Quadro 1 do Anexo 3."},
+    "5":{ref:"Normas da CNEN",txt:"Avaliação conforme os limites de dose e requisitos estabelecidos nas normas da Comissão Nacional de Energia Nuclear."},
+    "6":{ref:"NR-15, Anexo 6",txt:"Verificação dos requisitos técnicos e condições de trabalho sob pressões hiperbáricas previstos no Anexo 6."},
+    "7":{ref:"NR-15, Anexo 7",txt:"Avaliação qualitativa, por inspeção no local de trabalho, das operações com exposição a radiações não ionizantes sem a proteção adequada."},
+    "8":{ref:"NHO-09 e NHO-10 (FUNDACENTRO)",txt:"Avaliação da exposição à vibração em mãos e braços (aren) e de corpo inteiro (aren e VDVR), comparando-se aos limites de exposição do Anexo 8."},
+    "9":{ref:"NR-15, Anexo 9",txt:"Avaliação qualitativa das atividades executadas no interior de câmaras frigoríficas ou em locais com condições similares, sem a proteção adequada."},
+    "10":{ref:"NR-15, Anexo 10",txt:"Avaliação qualitativa das atividades executadas em locais alagados ou encharcados, com umidade excessiva capaz de produzir danos à saúde."},
+    "11":{ref:"Métodos NIOSH/OSHA · NHO-07",txt:"Amostragem ativa na zona respiratória do trabalhador, com bomba calibrada e meio de coleta adequado, e análise em laboratório, comparando-se as concentrações aos limites de tolerância do Quadro nº 1 do Anexo 11."},
+    "12":{ref:"NHO-08 (FUNDACENTRO)",txt:"Coleta de poeira na zona respiratória, com separação das frações de interesse quando aplicável, e comparação aos limites de tolerância do Anexo 12."},
+    "13":{ref:"NR-15, Anexo 13",txt:"Avaliação qualitativa, por inspeção no local de trabalho, das atividades e operações envolvendo os agentes químicos relacionados no Anexo 13."},
+    "13-A":{ref:"NR-15, Anexo 13-A",txt:"Avaliação conforme os requisitos específicos do Anexo 13-A para as atividades com benzeno, incluindo o Valor de Referência Tecnológico (VRT)."},
+    "14":{ref:"NR-15, Anexo 14",txt:"Avaliação qualitativa das atividades que envolvem contato permanente com agentes biológicos, conforme as situações descritas no Anexo 14."}
+  };
+  function nr15CompanyView(){const c=companyData();return {razaoSocial:c.razaoSocial||'',cnpj:c.cnpj||'',endereco:companyAddress(c),cnae:companyCnae(c),grauRisco:c.grauRisco||'',jornada:[c.jornada,c.turnos].filter(Boolean).join(' · '),cidade:companyCityUf(c)}}
+  function nr15ReportRows(reportNumber){return (state.nr15Assessments||[]).filter(a=>String(a.reportNumber||'').trim()===String(reportNumber||'').trim())}
+  function nr15ReportNumbers(){return [...new Set((state.nr15Assessments||[]).map(a=>String(a.reportNumber||'').trim()))].sort((a,b)=>b.localeCompare(a,'pt-BR'))}
+  function nr15ReportProfessional(rows){
+    const count={};rows.forEach(a=>{if(a.professionalId)count[a.professionalId]=(count[a.professionalId]||0)+1});
+    const id=Object.keys(count).sort((a,b)=>count[b]-count[a])[0];
+    return (state.nr15Professionals||[]).find(p=>p.id===id)||null;
+  }
+
+  function openNr15ReportModal(reportNumber){
+    const numbers=nr15ReportNumbers();
+    if(!numbers.length){alert('Cadastre ao menos uma avaliação para gerar o laudo.');return}
+    let sel=reportNumber!=null&&numbers.includes(String(reportNumber).trim())?String(reportNumber).trim():numbers[0];
+    const c=nr15CompanyView(),today=new Date().toISOString().slice(0,10);
+    const html=()=>{
+      const rows=nr15ReportRows(sel),m=(state.nr15ReportMeta||{})[sel]||{},p=nr15ReportProfessional(rows),emissao=m.dataEmissao||today,vig=nr15ProfVig(p,Number(emissao.slice(0,4))),issues=nr15Consistency(rows);
+      const dates=rows.map(a=>a.evaluationDate).filter(Boolean).sort();
+      const periodoAuto=dates.length?(dates[0]===dates[dates.length-1]?fmtDate(dates[0]):`${fmtDate(dates[0])} a ${fmtDate(dates[dates.length-1])}`):'';
+      return `<h2>🖨️ Gerar laudo completo (PDF)</h2>
+      <form id="nr15-report-form">
+        <div class="grid-2">
+          <div class="field"><label>Laudo *</label><select name="reportNumber" id="nr15-rep-num">${numbers.map(n=>`<option value="${empEsc(n)}" ${n===sel?'selected':''}>${empEsc(n||'(sem número)')} · ${nr15ReportRows(n).length} avaliação(ões)</option>`).join('')}</select></div>
+          <div class="field"><label>Responsável técnico</label><div style="padding:9px 0">${p?`<strong>${empEsc(p.nome)}</strong> · ${empEsc(p.conselho)} ${empEsc(p.registro)} &nbsp;${nr15ProfVigPill(p,Number(emissao.slice(0,4)))}`:'<span class="pill warn">● Nenhum RT vinculado</span>'}</div></div>
+        </div>
+        ${!vig.ok?`<div class="note" style="border-left:3px solid var(--red)"><strong>Atenção:</strong> o registro do responsável técnico não está vigente para o ano de emissão (${empEsc(emissao.slice(0,4))}). Atualize o ano de vigência em <em>Responsáveis Técnicos</em> antes de emitir.</div>`:''}
+        ${issues.length?`<div class="note" style="border-left:3px solid var(--amber,#e0a100)"><strong>Verificação de consistência (${issues.length}):</strong><ul style="margin:6px 0 0 18px">${issues.map(i=>`<li>${empEsc(i)}</li>`).join('')}</ul><small>O laudo pode ser gerado assim mesmo; recomenda-se revisar as avaliações indicadas.</small></div>`:''}
+        <h3 style="margin:14px 0 6px">Estabelecimento avaliado</h3>
+        ${companyHasData()?`<div class="panel" style="padding:12px 14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div><strong>${empEsc(c.razaoSocial)}</strong><br><small>${empEsc(companyIdLine()||'Endereço não informado')}</small><br><small>${empEsc(c.cnae||'CNAE não informado')}${c.grauRisco?` · Grau de risco ${empEsc(c.grauRisco)}`:''}</small></div><button type="button" class="btn secondary" id="nr15-go-company">✏️ Editar cadastro da empresa</button></div>`:`<div class="note" style="border-left:3px solid var(--red)"><strong>Empresa não cadastrada.</strong> Cadastre os dados do estabelecimento em <em>Geral / Pessoas · Cadastro da Empresa</em>; eles serão usados neste e nos demais documentos. <button type="button" class="btn secondary" id="nr15-go-company" style="margin-top:8px">🏭 Ir para o Cadastro da Empresa</button></div>`}
+        <h3 style="margin:14px 0 6px">Dados do documento</h3>
+        <div class="grid-2">
+          <div class="field"><label>Revisão</label><input name="revisao" value="${empEsc(m.revisao||'00')}"></div>
+          <div class="field"><label>Data de emissão</label><input type="date" name="dataEmissao" value="${empEsc(emissao)}"></div>
+          <div class="field"><label>Período das avaliações</label><input name="periodo" value="${empEsc(m.periodo||periodoAuto)}"></div>
+          <div class="field"><label>ART nº</label><input name="art" value="${empEsc(m.art||'')}"></div>
+          <div class="field"><label>Local de emissão</label><input name="local" value="${empEsc(m.local||companyCityUf()||'')}" placeholder="Ex.: Joinville/SC"></div>
+          <div class="field"><label>Descrição da revisão</label><input name="descRevisao" value="${empEsc(m.descRevisao||'Emissão inicial do laudo.')}"></div>
+        </div>
+        <div class="field"><label>Conclusão geral (opcional — se vazio, é gerada automaticamente)</label><textarea name="conclusao" rows="3">${empEsc(m.conclusao||'')}</textarea></div>
+        <div class="field"><label>Anexos do laudo (um por linha)</label><textarea name="anexos" rows="3">${empEsc(m.anexos||'Anotação de Responsabilidade Técnica (ART)\nCertificados de calibração dos instrumentos\nRelatórios de ensaio laboratorial (quando aplicável)\nRegistro fotográfico dos postos de trabalho')}</textarea></div>
+        <div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn" type="submit">🖨️ Gerar PDF</button></div>
+      </form>`;
+    };
+    const mount=ov=>{
+      ov.querySelector('#nr15-rep-num').addEventListener('change',e=>{sel=e.currentTarget.value;closeModal();openModal(html(),mount)});
+      ov.querySelector('#nr15-go-company')?.addEventListener('click',()=>{closeModal();goToCompanyRegister()});
+      ov.querySelector('#nr15-report-form').addEventListener('submit',async e=>{
+        e.preventDefault();const d=Object.fromEntries(new FormData(e.target));
+        if(!companyHasData()&&!confirm('A empresa ainda não foi cadastrada. Gerar o laudo sem a identificação do estabelecimento?'))return;
+        (state.nr15ReportMeta||={})[sel]={revisao:d.revisao.trim(),dataEmissao:d.dataEmissao,periodo:d.periodo.trim(),art:d.art.trim(),local:d.local.trim(),descRevisao:d.descRevisao.trim(),conclusao:d.conclusao,anexos:d.anexos,updatedAt:new Date().toISOString()};
+        const w=window.open('','_blank');
+        if(!w){alert('Permita a abertura de janelas (pop-ups) para gerar o PDF.');return}
+        w.document.open();w.document.write(nr15ReportDoc(sel));w.document.close();
+        closeModal();saveState();
+      });
+    };
+    openModal(html(),mount);
+  }
+
+  function nr15ReportDoc(reportNumber){
+    const E=empEsc,rows=nr15ReportRows(reportNumber),c=nr15CompanyView(),m=(state.nr15ReportMeta||{})[reportNumber]||{};
+    const p=nr15ReportProfessional(rows),emissao=m.dataEmissao||new Date().toISOString().slice(0,10),emYear=Number(emissao.slice(0,4)),vig=nr15ProfVig(p,emYear);
+    const docNo=reportNumber||'S/N',rev=m.revisao||'00';
+    const rtNome=p?.nome||rows[0]?.professional||'Responsável técnico não informado';
+    const rtReg=p?`${p.conselho||''} ${p.registro||''}`.trim():(rows[0]?.professionalRegistration||'—');
+    const rtProf=p?.profissao||'';
+    const rtVig=p?.anoVigencia?String(p.anoVigencia):'—';
+    const cssStr=s=>'"'+String(s??'').replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\n/g,' ')+'"';
+    const logo=state.companyLogo||FIXED_SYSTEM_LOGO;
+    const pill=(cls,t)=>`<span class="pill ${cls}">${E(t)}</span>`;
+    const resPill=r=>r==='Insalubridade caracterizada'?pill('bad','CARACTERIZADA'):r==='Não caracterizada'?pill('ok','NÃO CARACTERIZADA'):pill('warn','AGUARDANDO');
+    const vigPill=()=>vig.ok?pill('ok','VIGENTE'):pill('bad',vig.label.toUpperCase());
+    const sec=(n,t,cls='')=>`<h2 class="${cls}"><span class="n">${n}</span><span>${t}</span></h2>`;
+    const txt=v=>E(String(v||'').trim()||'—').replace(/\n/g,'<br>');
+    const fmtPeriodo=ds=>ds.length?(ds[0]===ds[ds.length-1]?fmtDate(ds[0]):`${fmtDate(ds[0])} a ${fmtDate(ds[ds.length-1])}`):'—';
+
+    // --- agrupamentos ---
+    const ghes=[],gheMap=new Map();
+    rows.forEach(a=>{const g=nr15Ghe(a);const k=a.gheId||'?';if(!gheMap.has(k)){const o={g,rows:[]};gheMap.set(k,o);ghes.push(o)}gheMap.get(k).rows.push(a)});
+    ghes.sort((x,y)=>String(x.g?.codigo||'').localeCompare(String(y.g?.codigo||''),'pt-BR',{numeric:true}));
+    const annexCodes=[...new Set(rows.map(a=>String(a.agentCode||'')))].filter(Boolean).sort((a,b)=>(parseFloat(a)-parseFloat(b))||a.localeCompare(b));
+    const allPeople=new Map();ghes.forEach(o=>{if(o.g)pgrGheEmployees(o.g).forEach(e=>allPeople.set(e.id,e))});
+    const conclusions=ghes.map(o=>{
+      const car=o.rows.filter(a=>a.result==='Insalubridade caracterizada').sort((a,b)=>nr15DegreePct(b.degree)-nr15DegreePct(a.degree));
+      const top=car[0];
+      return {o,top,pend:o.rows.some(a=>a.result==='Aguardando avaliação'),pct:top?nr15DegreePct(top.degree):0,people:o.g?pgrGheEmployees(o.g).length:0};
+    });
+    const gheIns=conclusions.filter(x=>x.top).length,peopleIns=new Set(conclusions.filter(x=>x.top).flatMap(x=>x.o.g?pgrGheEmployees(x.o.g).map(e=>e.id):[])).size;
+    const periodo=m.periodo||fmtPeriodo(rows.map(a=>a.evaluationDate).filter(Boolean).sort());
+    const nextRev=rows.map(a=>a.nextReview).filter(Boolean).sort()[0];
+    let seq=0;const aId=new Map();ghes.forEach(o=>o.rows.forEach(a=>aId.set(a.id,'AV-'+String(++seq).padStart(2,'0'))));
+
+    // --- gráfico: % do LT ---
+    const quant=ghes.flatMap(o=>o.rows).map(a=>({a,c:nr15Compare(a)})).filter(x=>x.c);
+    let chart='';
+    if(quant.length){
+      const W=640,H=206,x0=52,y0=18,y1=158,maxPct=Math.max(150,Math.min(300,Math.ceil(Math.max(...quant.map(q=>q.c.pct))/50)*50)),step=(W-x0-14)/quant.length,bw=Math.min(62,step*0.6);
+      const Y=v=>y1-(Math.min(v,maxPct)/maxPct)*(y1-y0);
+      let grid='';for(let v=0;v<=maxPct;v+=50){grid+=`<line x1="${x0}" y1="${Y(v)}" x2="${W-10}" y2="${Y(v)}" stroke="#e3e8ec"/><text x="${x0-6}" y="${Y(v)+3}" text-anchor="end" fill="#5b6b78">${v}%</text>`}
+      const bars=quant.map((q,i)=>{const cx=x0+step*i+step/2,y=Y(q.c.pct),h=y1-y,g=nr15Ghe(q.a),col=q.c.above?'#b3261e':'#0f2a3d',lab=Math.round(q.c.pct)+'%';return `<rect x="${cx-bw/2}" y="${y}" width="${bw}" height="${h}" fill="${col}"/>${h>18?`<text x="${cx}" y="${y+13}" text-anchor="middle" fill="#fff" font-weight="700">${lab}</text>`:`<text x="${cx}" y="${y-4}" text-anchor="middle" fill="#14212b" font-weight="700">${lab}</text>`}<text x="${cx}" y="${y1+13}" text-anchor="middle" fill="#14212b" font-size="9" font-weight="700">${E(aId.get(q.a.id))}</text><text x="${cx}" y="${y1+25}" text-anchor="middle" fill="#5b6b78" font-size="8">${E(g?.codigo||'')}</text>`}).join('');
+      chart=`<div class="chart"><svg viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="Arial,Helvetica,sans-serif" font-size="9.5">${grid}${bars}<line x1="${x0}" y1="${Y(100)}" x2="${W-10}" y2="${Y(100)}" stroke="#b3261e" stroke-width="1.6" stroke-dasharray="6 4"/><text x="${W-12}" y="${Y(100)-5}" text-anchor="end" fill="#b3261e" font-weight="700">Limite de tolerância (100%)</text></svg><div class="cap">Figura 1 — Resultados das avaliações quantitativas expressos em percentual do limite de tolerância aplicado.</div></div>`;
+    }
+
+    // --- capa ---
+    const cover=`<section class="cover"><div class="band"></div><div class="grid"></div><div class="inner">
+      <img class="logo" src="${logo}" alt="Logo">
+      <div class="doc-kind">Laudo técnico · NR-15</div>
+      <h1>Laudo Técnico de<br>Insalubridade</h1>
+      <div class="sub">Avaliação dos agentes físicos, químicos e biológicos e enquadramento nos Anexos da Norma Regulamentadora nº 15 — Atividades e Operações Insalubres.</div>
+      <div class="client"><div class="lbl">Estabelecimento avaliado</div><div class="name">${E(c.razaoSocial||'—')}</div><div class="addr">${[c.cnpj?`CNPJ ${E(c.cnpj)}`:'',E(c.endereco||'')].filter(Boolean).join(' · ')}</div></div>
+      <div class="stamp"><table>
+        <tr><td colspan="4" class="head">Quadro de identificação do documento</td></tr>
+        <tr><td style="width:30%"><span class="k">Documento nº</span><span class="v big mono">${E(docNo)}</span></td><td style="width:14%"><span class="k">Revisão</span><span class="v big mono">${E(rev)}</span></td><td style="width:28%"><span class="k">Data de emissão</span><span class="v">${fmtDate(emissao)}</span></td><td style="width:28%"><span class="k">Período das avaliações</span><span class="v">${E(periodo)}</span></td></tr>
+        <tr><td colspan="2"><span class="k">Responsável técnico</span><span class="v">${E(rtNome)}</span><br>${E(rtProf)}</td><td><span class="k">Conselho / Registro</span><span class="v mono">${E(rtReg)}</span><br>${vig.ok?pill('ok','REGISTRO VIGENTE · '+rtVig):pill('bad',vig.label.toUpperCase())}</td><td><span class="k">ART vinculada</span><span class="v mono">${E(m.art||'—')}</span><br>${rows.length} avaliação(ões) · ${ghes.length} GHE</td></tr>
+      </table></div></div></section>`;
+
+    // --- seções ---
+    const toc=['Identificação da empresa e do responsável técnico','Objetivo','Fundamentação legal e normativa','Metodologia de avaliação','Caracterização dos Grupos Homogêneos de Exposição','Resultados das avaliações','Análise individual das avaliações','Quadro conclusivo de insalubridade','Medidas de controle e recomendações','Encerramento e responsabilidade técnica'];
+    const s0=`<h2 class="first"><span>Sumário</span></h2><table class="toc">${toc.map((t,i)=>`<tr><td class="n">${String(i+1).padStart(2,'0')}</td><td>${t}</td></tr>`).join('')}${allPeople.size?'<tr><td class="n">A-I</td><td>Relação de trabalhadores por GHE</td></tr>':''}</table>
+      <h3>Controle de revisões</h3><table class="t"><tr><th style="width:10%">Rev.</th><th style="width:16%">Data</th><th>Descrição</th><th style="width:30%">Responsável</th></tr><tr><td class="c mono">${E(rev)}</td><td>${fmtDate(emissao)}</td><td>${E(m.descRevisao||'Emissão do laudo.')}</td><td>${E(rtNome)}</td></tr></table>`;
+    const s1=`${sec('01','Identificação')}<h3><span class="n">1.1</span>Empresa</h3><table class="kv">
+      <tr><td class="k">Razão social</td><td><b>${E(c.razaoSocial||'—')}</b></td></tr>
+      <tr><td class="k">CNPJ</td><td class="mono">${E(c.cnpj||'—')}</td></tr>
+      <tr><td class="k">CNAE / Grau de risco</td><td>${E(c.cnae||'—')}${c.grauRisco?` · Grau de risco <b>${E(c.grauRisco)}</b> (NR-4)`:''}</td></tr>
+      <tr><td class="k">Endereço</td><td>${E(c.endereco||'—')}</td></tr>
+      <tr><td class="k">Jornada de trabalho</td><td>${E(c.jornada||'—')}</td></tr>
+      <tr><td class="k">Trabalhadores nos GHE avaliados</td><td>${allPeople.size}</td></tr></table>
+      <div class="avoid"><h3><span class="n">1.2</span>Responsável técnico</h3><table class="kv">
+      <tr><td class="k">Nome</td><td><b>${E(rtNome)}</b></td></tr>
+      <tr><td class="k">Profissão / habilitação</td><td>${E(rtProf||'—')}</td></tr>
+      <tr><td class="k">Conselho / Registro</td><td class="mono">${E(rtReg)}</td></tr>
+      <tr><td class="k">Ano de vigência do registro</td><td><b>${E(rtVig)}</b> &nbsp;${vigPill()}</td></tr>
+      <tr><td class="k">ART</td><td class="mono">${E(m.art||'—')}</td></tr></table></div>`;
+    const s2=`${sec('02','Objetivo')}<p>O presente laudo tem por objetivo identificar, avaliar e caracterizar tecnicamente as condições de exposição dos trabalhadores aos agentes ambientais presentes nos postos de trabalho do estabelecimento, determinando a existência ou não de <b>insalubridade</b> e o respectivo <b>grau</b> (mínimo, médio ou máximo), nos termos dos arts. 189 a 197 da CLT e da Norma Regulamentadora nº 15, bem como subsidiar a gestão de riscos ocupacionais integrada ao PGR (NR-1) e ao PCMSO (NR-7).</p>`;
+    const extraRefs=annexCodes.map(k=>NR15_METHOD_TEXT[k]).filter(Boolean).map(x=>x.ref).filter((v,i,a)=>a.indexOf(v)===i&&!/^NR-15/.test(v));
+    const s3=`${sec('03','Fundamentação legal e normativa')}<table class="t"><tr><th style="width:34%">Referência</th><th>Aplicação neste laudo</th></tr>
+      <tr><td>CLT — arts. 189 a 197</td><td>Conceito de atividade insalubre, adicional e caracterização por perícia técnica.</td></tr>
+      <tr><td>NR-15 — Anexo(s) ${annexCodes.map(E).join(', ')||'—'}</td><td>Limites de tolerância, critérios de avaliação e graus de insalubridade aplicáveis.</td></tr>
+      <tr><td>NR-1 (GRO/PGR) · NR-6 · NR-9</td><td>Integração com o inventário de riscos, EPI e avaliação das exposições ocupacionais.</td></tr>
+      ${extraRefs.map(r=>`<tr><td>${E(r)}</td><td>Procedimento técnico de referência para a avaliação dos agentes.</td></tr>`).join('')}</table>`;
+    const methods=[...new Set(rows.map(a=>String(a.methodology||'').trim()).filter(Boolean))];
+    const s4=`${sec('04','Metodologia de avaliação')}<p>A avaliação compreendeu: (i) reconhecimento dos ambientes, processos, funções e rotinas de trabalho; (ii) definição dos Grupos Homogêneos de Exposição (GHE) a partir do PGR; (iii) avaliações qualitativas e/ou quantitativas representativas da exposição; e (iv) comparação dos resultados com os limites de tolerância e critérios da NR-15.</p>
+      ${annexCodes.map((k,i)=>{const an=nr15Agent(k),mt=NR15_METHOD_TEXT[k];return `<div class="avoid"><h3><span class="n">4.${i+1}</span>${E(an.name)} — Anexo ${E(k)}</h3><p>${E(mt?.txt||'Avaliação conforme os critérios do anexo aplicável.')}</p></div>`}).join('')}
+      ${methods.length?`<div class="avoid"><h3><span class="n">4.${annexCodes.length+1}</span>Instrumentação e procedimentos declarados</h3><table class="t"><tr><th style="width:12%">Item</th><th>Metodologia / equipamento / calibração</th></tr>${methods.map((x,i)=>`<tr><td class="mono">M-${String(i+1).padStart(2,'0')}</td><td>${E(x)}</td></tr>`).join('')}</table></div>`:''}`;
+    const s5=`${sec('05','Caracterização dos GHE','pb')}<table class="t"><tr><th style="width:11%">GHE</th><th style="width:15%">Setor</th><th style="width:22%">GHE / cargos</th><th class="c" style="width:7%">Nº</th><th>Descrição das atividades</th></tr>
+      ${ghes.map(o=>{const g=o.g,jobs=g?pgrGheJobs(g).map(j=>j.nome).join(', '):'';return `<tr><td class="mono"><b>${E(g?.codigo||'—')}</b></td><td>${E(g?.setor||'—')}</td><td><b>${E(g?.nome||'GHE não localizado')}</b>${jobs?`<br><small>${E(jobs)}</small>`:''}</td><td class="c">${g?pgrGheEmployees(g).length:0}</td><td><small>${E(g?pgrGheActivityDescription(g):'—')}</small></td></tr>`}).join('')}</table>`;
+    const s6=`${sec('06','Resultados das avaliações')}
+      ${annexCodes.map((k,i)=>{const an=nr15Agent(k),rs=ghes.flatMap(o=>o.rows).filter(a=>String(a.agentCode)===k);return `<div class="avoid"><h3><span class="n">6.${i+1}</span>${E(an.name)} — NR-15, Anexo ${E(k)}</h3><table class="t"><tr><th style="width:9%">Ref.</th><th>GHE / Agente do PGR</th><th style="width:13%">Avaliação</th><th class="num" style="width:13%">Resultado</th><th class="num" style="width:12%">LT</th><th class="num" style="width:8%">% LT</th><th class="c" style="width:17%">Situação</th></tr>
+        ${rs.map(a=>{const g=nr15Ghe(a),h=nr15PgrHazard(a),cmp=nr15Compare(a);return `<tr><td class="mono">${aId.get(a.id)}</td><td><b>${E(g?.codigo||'—')}</b> · ${E(g?.nome||'')}<br><small>${E(h?.nome||an.name)}${a.exposureFrequency?` · ${E(a.exposureFrequency)}`:''}</small></td><td>${E(a.evaluationType||an.method)}</td><td class="num">${a.measurementValue?`${E(a.measurementValue)} ${E(a.unit||'')}`:'—'}</td><td class="num">${a.toleranceLimit?`${E(a.toleranceLimit)} ${E(a.unit||'')}`:'—'}</td><td class="num">${cmp?Math.round(cmp.pct)+'%':'—'}</td><td class="c">${cmp?(cmp.above?pill('bad','ACIMA DO LT'):pill('ok','ABAIXO DO LT')):resPill(a.result)}</td></tr>`}).join('')}</table></div>`}).join('')}${chart}`;
+    const s7=`${sec('07','Análise individual das avaliações')}
+      ${ghes.flatMap(o=>o.rows).map(a=>{const g=nr15Ghe(a),h=nr15PgrHazard(a),an=nr15Agent(a.agentCode);return `<div class="card avoid"><div class="card-h"><span class="mono">${aId.get(a.id)}</span><b>${E(g?.codigo||'—')} · ${E(h?.nome||an.name)}</b><span class="r">Anexo ${E(an.code)} ${resPill(a.result)}</span></div><table class="kv">
+        <tr><td class="k">GHE / Setor</td><td>${E(g?.nome||'—')} · ${E(g?.setor||'—')}</td></tr>
+        <tr><td class="k">Enquadramento</td><td>Anexo ${E(an.code)} — ${E(an.name)} (${E(h?.tipo||an.type)})</td></tr>
+        <tr><td class="k">Tipo / frequência de exposição</td><td>${E(a.evaluationType||an.method)}${a.exposureFrequency?` · ${E(a.exposureFrequency)}`:''}</td></tr>
+        <tr><td class="k">Resultado medido / LT</td><td>${a.measurementValue?`<b>${E(a.measurementValue)} ${E(a.unit||'')}</b>`:'—'}${a.toleranceLimit?` · LT ${E(a.toleranceLimit)} ${E(a.unit||'')}`:''}</td></tr>
+        <tr><td class="k">Metodologia / equipamento</td><td>${txt(a.methodology)}</td></tr>
+        <tr><td class="k">Conclusão</td><td><b>${E(a.result||'—')}</b> · Grau: <b>${E(a.degree||'Não aplicável')}</b></td></tr>
+        <tr><td class="k">Medidas coletivas / administrativas</td><td>${txt(a.collectiveControls)}</td></tr>
+        <tr><td class="k">EPI e controles individuais</td><td>${txt(a.epiControls)}</td></tr>
+        <tr><td class="k">Observações</td><td>${txt(a.observations)}</td></tr>
+        <tr><td class="k">Data / próxima revisão</td><td>${fmtDate(a.evaluationDate)} · ${fmtDate(a.nextReview)}</td></tr></table></div>`}).join('')}`;
+    const s8=`${sec('08','Quadro conclusivo de insalubridade','pb')}
+      <div class="summary"><div><b>${ghes.length}</b><span>GHE avaliados</span></div><div><b>${rows.length}</b><span>Avaliações</span></div><div><b class="${gheIns?'red':''}">${gheIns}</b><span>GHE com insalubridade</span></div><div><b>${peopleIns}</b><span>Trabalhadores c/ adicional</span></div></div>
+      <table class="t"><tr><th style="width:26%">GHE</th><th>Agente determinante</th><th style="width:11%">Anexo</th><th class="c" style="width:17%">Insalubridade</th><th class="c" style="width:10%">Grau</th><th class="c" style="width:10%">Adicional</th></tr>
+      ${conclusions.map(x=>{const g=x.o.g,h=x.top?nr15PgrHazard(x.top):null;return `<tr><td><b>${E(g?.codigo||'—')}</b> · ${E(g?.nome||'')}<br><small>${x.people} trabalhador(es)</small></td><td>${x.top?`${E(h?.nome||nr15Agent(x.top.agentCode).name)}${x.top.measurementValue?` — ${E(x.top.measurementValue)} ${E(x.top.unit||'')}`:''}`:'—'}</td><td>${x.top?'Anexo '+E(x.top.agentCode):[...new Set(x.o.rows.map(a=>a.agentCode))].map(v=>'Anexo '+E(v)).join(', ')}</td><td class="c">${x.top?pill('bad','CARACTERIZADA'):x.pend?pill('warn','EM AVALIAÇÃO'):pill('ok','NÃO CARACTERIZADA')}</td><td class="c"><b>${x.top?E(String(x.top.degree).replace(/\s*\(.*\)/,'')):'—'}</b></td><td class="c mono"><b>${x.pct?x.pct+'%':'—'}</b></td></tr>`}).join('')}</table>
+      <div class="note amber"><b>Notas de enquadramento.</b> (a) Havendo mais de um fator de insalubridade, considera-se apenas o de grau mais elevado, vedada a percepção cumulativa (NR-15, item 15.3). (b) O percentual do adicional incide sobre a base de cálculo prevista no item 15.2 da NR-15, observadas a legislação, a jurisprudência e as convenções coletivas aplicáveis. (c) A eliminação ou neutralização da insalubridade (item 15.4) determina a cessação do adicional, mediante nova avaliação técnica.</div>`;
+    const recs=[];ghes.forEach(o=>o.rows.forEach(a=>{const g=nr15Ghe(a),h=nr15PgrHazard(a),hi=a.result==='Insalubridade caracterizada';if(String(a.collectiveControls||'').trim())recs.push([g?.codigo,h?.nome,'Coletiva / administrativa',a.collectiveControls,hi]);if(String(a.epiControls||'').trim())recs.push([g?.codigo,h?.nome,'Individual (EPI)',a.epiControls,hi])}));
+    const s9=`${sec('09','Medidas de controle e recomendações')}${recs.length?`<table class="t"><tr><th style="width:9%">Item</th><th style="width:22%">GHE / Agente</th><th style="width:15%">Tipo</th><th>Medida</th><th class="c" style="width:12%">Prioridade</th></tr>${recs.map((r,i)=>`<tr><td class="mono">R-${String(i+1).padStart(2,'0')}</td><td><b>${E(r[0]||'—')}</b><br><small>${E(r[1]||'')}</small></td><td>${E(r[2])}</td><td>${txt(r[3])}</td><td class="c">${r[4]?pill('bad','ALTA'):pill('warn','MÉDIA')}</td></tr>`).join('')}</table>`:'<p>Não foram registradas medidas de controle específicas nas avaliações.</p>'}
+      <div class="note">Recomenda-se revisar este laudo sempre que houver alteração de processo, layout, máquinas, produtos químicos ou jornada, integrando os resultados ao inventário de riscos do PGR.${nextRev?` Próxima revisão programada: <b>${fmtDate(nextRev)}</b>.`:''}</div>`;
+    const autoConc=gheIns?`Com base nas avaliações realizadas, foi caracterizada insalubridade em ${gheIns} de ${ghes.length} GHE avaliado(s), conforme o Quadro conclusivo (seção 08), abrangendo ${peopleIns} trabalhador(es). Nos demais GHE, não foram constatadas condições que caracterizem insalubridade nos termos da NR-15.`:`Com base nas avaliações realizadas, não foram constatadas, no(s) ${ghes.length} GHE avaliado(s), condições que caracterizem insalubridade nos termos da NR-15.`;
+    const anexos=String(m.anexos||'').split('\n').map(s=>s.trim()).filter(Boolean);
+    const s10=`${sec('10','Encerramento e responsabilidade técnica','pb')}<p>${E(String(m.conclusao||'').trim()||autoConc).replace(/\n/g,'<br>')}</p>
+      <p>Este laudo reflete as condições ambientais verificadas no período de ${E(periodo)}, nos ambientes, processos e jornadas descritos, e deve ser revisado sempre que houver alteração dessas condições. O documento é composto pelas folhas numeradas conforme rodapé e pelos anexos relacionados.</p>
+      <div class="rt-card"><div class="hd">Responsável técnico pela avaliação</div><table>
+        <tr><td style="width:38%"><span class="k">Nome</span><b>${E(rtNome)}</b></td><td style="width:34%"><span class="k">Profissão</span>${E(rtProf||'—')}</td><td><span class="k">Conselho / Registro</span><b class="mono">${E(rtReg)}</b></td></tr>
+        <tr><td><span class="k">Ano de vigência do registro</span><b>${E(rtVig)}</b> &nbsp;${vigPill()}</td><td><span class="k">ART</span><span class="mono">${E(m.art||'—')}</span></td><td><span class="k">Local e data</span>${E(m.local||'—')}, ${fmtDate(emissao)}</td></tr></table></div>
+      <div class="sign"><div class="box"><div class="line"></div><div class="nm">${E(rtNome)}</div>${E(rtProf)}<br><span class="mono">${E(rtReg)} · vigência ${E(rtVig)}</span></div><div class="box"><div class="line"></div><div class="nm">${E(c.razaoSocial||'Empresa')}</div>Representante legal<br><span class="mono">Ciência e recebimento</span></div></div>
+      ${anexos.length?`<div class="avoid"><h3 style="margin-top:9mm">Anexos</h3><table class="t"><tr><th style="width:12%">Anexo</th><th>Conteúdo</th></tr>${anexos.map((x,i)=>`<tr><td class="mono">${String.fromCharCode(65+i)}</td><td>${E(x)}</td></tr>`).join('')}</table></div>`:''}`;
+    const peopleAnnex=allPeople.size?`<h2 class="pb"><span class="n">A-I</span><span>Relação de trabalhadores por GHE</span></h2>${ghes.filter(o=>o.g).map(o=>{const ps=pgrGheEmployees(o.g);return ps.length?`<div class="avoid"><h3>${E(o.g.codigo)} · ${E(o.g.nome)}</h3><table class="t"><tr><th>Trabalhador</th><th style="width:18%">Matrícula</th><th style="width:30%">Cargo</th><th style="width:20%">Setor</th></tr>${ps.map(e=>`<tr><td>${E(e.nome)}</td><td class="mono">${E(e.matricula||'—')}</td><td>${E(e.cargo||e.funcao||'—')}</td><td>${E(e.setor||'—')}</td></tr>`).join('')}</table></div>`:''}).join('')}`:'';
+
+    const hdrL='LAUDO TÉCNICO DE INSALUBRIDADE — NR-15'+(c.razaoSocial?'  ·  '+c.razaoSocial:'');
+    const hdrR=`Doc. ${docNo} · Rev. ${rev} · ${fmtDate(emissao)}`;
+    const ftrL=`RT: ${rtNome} · ${rtReg} · Registro vigente ${rtVig}${m.art?' · ART '+m.art:''}`;
+    const pageCss=`@page{size:A4;margin:24mm 16mm 19mm 16mm;
+      @top-left{content:${cssStr(hdrL)};font:700 7.4pt Arial,Helvetica,sans-serif;color:#0f2a3d;vertical-align:bottom;padding-bottom:2.6mm;border-bottom:.8pt solid #0f2a3d}
+      @top-right{content:${cssStr(hdrR)};font:400 7.4pt 'Courier New',monospace;color:#0f2a3d;vertical-align:bottom;padding-bottom:2.6mm;border-bottom:.8pt solid #0f2a3d;white-space:nowrap}
+      @bottom-left{content:${cssStr(ftrL)};font:400 6.8pt Arial,Helvetica,sans-serif;color:#5b6b78;vertical-align:top;padding-top:2.4mm;border-top:.5pt solid #c9d3db}
+      @bottom-right{content:"Folha " counter(page) " de " counter(pages);font:700 7.4pt Arial,Helvetica,sans-serif;color:#0f2a3d;vertical-align:top;padding-top:2.4mm;border-top:.5pt solid #c9d3db;white-space:nowrap}}
+      @page :first{margin:0;@top-left{content:none;border:0}@top-right{content:none;border:0}@bottom-left{content:none;border:0}@bottom-right{content:none;border:0}}`;
+    const body=cover+s0+s1+s2+s3+s4+s5+s6+s7+s8+s9+s10+peopleAnnex;
+    const printer=`<script>(function(){var imgs=[].slice.call(document.images),n=imgs.length,c=0;function go(){setTimeout(function(){window.print()},400)}if(!n)return go();imgs.forEach(function(i){if(i.complete){if(++c>=n)go()}else{i.onload=i.onerror=function(){if(++c>=n)go()}}})})();<\/script>`;
+    return `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Laudo de Insalubridade ${E(docNo)} Rev. ${E(rev)}</title><style>${pageCss}${NR15_REPORT_CSS}</style></head><body><div class="toolbar"><button onclick="window.print()">🖨️ Imprimir / Salvar como PDF</button><span>No destino da impressão escolha <b>Salvar como PDF</b> e mantenha <b>Gráficos de plano de fundo</b> ativado.</span></div><main class="doc">${body}</main>${printer}</body></html>`;
+  }
+
+  const NR15_REPORT_CSS=`
+    :root{--ink:#14212b;--muted:#5b6b78;--line:#c9d3db;--soft:#eef2f5;--navy:#0f2a3d;--green:#1f9d55;--amber:#e0a100;--red:#b3261e;--ok:#1f7a45}
+    *{box-sizing:border-box}html,body{margin:0;padding:0}
+    body{font-family:Arial,Helvetica,"Liberation Sans",sans-serif;color:var(--ink);font-size:9.4pt;line-height:1.45;-webkit-print-color-adjust:exact;print-color-adjust:exact;background:#fff}
+    .mono{font-family:"Courier New","Liberation Mono",monospace}
+    .toolbar{position:sticky;top:0;z-index:5;display:flex;gap:14px;align-items:center;padding:10px 16px;background:#0f2a3d;color:#dfe7ee;font-size:12px}
+    .toolbar button{background:#f5b800;border:0;color:#111;font-weight:700;padding:8px 14px;border-radius:6px;cursor:pointer}
+    @media screen{body{background:#dfe4e8}.doc{width:210mm;margin:16px auto;background:#fff;padding:0 16mm 16mm;box-shadow:0 4px 24px rgba(0,0,0,.18)}.cover{margin:0 -16mm 12mm}}
+    @media print{.toolbar{display:none}}
+    .cover{width:210mm;height:296mm;position:relative;overflow:hidden;break-after:page;page-break-after:always;background:#fff}
+    .cover .band{position:absolute;left:0;top:0;bottom:0;width:14mm;background:var(--navy)}
+    .cover .band::after{content:"";position:absolute;left:14mm;top:0;bottom:0;width:2mm;background:var(--green)}
+    .cover .grid{position:absolute;right:0;top:0;width:125mm;height:125mm;opacity:.6;background-image:linear-gradient(#d5dde3 1px,transparent 1px),linear-gradient(90deg,#d5dde3 1px,transparent 1px);background-size:6mm 6mm;-webkit-mask-image:radial-gradient(circle at 100% 0%,#000 15%,transparent 70%);mask-image:radial-gradient(circle at 100% 0%,#000 15%,transparent 70%)}
+    .cover .inner{position:absolute;left:30mm;right:18mm;top:22mm;bottom:18mm}
+    .cover .logo{height:17mm;max-width:80mm;object-fit:contain}
+    .cover .doc-kind{margin-top:40mm;font-size:9pt;letter-spacing:3pt;color:var(--green);font-weight:700;text-transform:uppercase}
+    .cover h1{font-size:30pt;line-height:1.08;margin:4mm 0 3mm;color:var(--navy);font-weight:800;letter-spacing:-.5pt}
+    .cover .sub{font-size:11pt;color:var(--muted);max-width:140mm}
+    .cover .client{margin-top:15mm;border-left:3pt solid var(--amber);padding:1mm 0 1mm 5mm}
+    .cover .client .lbl{font-size:7.5pt;letter-spacing:1.5pt;color:var(--muted);text-transform:uppercase}
+    .cover .client .name{font-size:15pt;font-weight:700;color:var(--navy);margin-top:1mm}
+    .cover .client .addr{color:var(--muted);font-size:9.5pt}
+    .stamp{position:absolute;left:0;right:0;bottom:0;border:1.2pt solid var(--navy);font-size:8pt}
+    .stamp table{width:100%;border-collapse:collapse}
+    .stamp td{border:.6pt solid var(--navy);padding:1.6mm 2.4mm;vertical-align:top}
+    .stamp .k{display:block;font-size:6.3pt;letter-spacing:.8pt;text-transform:uppercase;color:var(--muted);margin-bottom:.6mm}
+    .stamp .v{font-weight:700;color:var(--navy);font-size:8.8pt}.stamp .big{font-size:12pt}
+    .stamp .head{background:var(--navy);color:#fff;font-weight:700;letter-spacing:1.5pt;font-size:7.5pt;text-transform:uppercase}
+    .pill{display:inline-block;padding:.3mm 2mm;border-radius:6pt;font-size:6.8pt;font-weight:700;letter-spacing:.4pt;white-space:nowrap}
+    .pill.ok{background:#e3f4ea;color:var(--ok)}.pill.warn{background:#fdf1d0;color:#8a6200}.pill.bad{background:#fbe4e2;color:var(--red)}
+    h2{font-size:12.5pt;color:var(--navy);margin:7mm 0 3mm;padding-bottom:1.5mm;border-bottom:1pt solid var(--navy);display:flex;gap:3mm;align-items:baseline;break-after:avoid;page-break-after:avoid}
+    h2.first{margin-top:0}
+    h2 .n{font-family:"Courier New",monospace;font-size:10pt;color:#fff;background:var(--navy);padding:.4mm 2mm}
+    h3{font-size:10pt;color:var(--navy);margin:5mm 0 2mm;break-after:avoid;page-break-after:avoid}
+    h3 .n{font-family:"Courier New",monospace;color:var(--green);margin-right:2mm}
+    p{margin:0 0 2.4mm;text-align:justify}
+    .pb{break-before:page;page-break-before:always}
+    .avoid{break-inside:avoid;page-break-inside:avoid}
+    table.t{width:100%;border-collapse:collapse;margin:1.5mm 0 3.5mm;font-size:8.4pt}
+    table.t th{background:var(--navy);color:#fff;text-align:left;font-weight:700;padding:1.6mm 2mm;font-size:7.3pt;letter-spacing:.3pt;text-transform:uppercase;border:.5pt solid var(--navy)}
+    table.t td{padding:1.5mm 2mm;border:.5pt solid var(--line);vertical-align:top}
+    table.t tr:nth-child(even) td{background:#f7f9fb}
+    table.t tr{break-inside:avoid;page-break-inside:avoid}
+    table.t .num{text-align:right;font-family:"Courier New",monospace;white-space:nowrap}
+    table.t .c{text-align:center}
+    small{font-size:7.8pt;color:var(--muted)}
+    table.kv{width:100%;border-collapse:collapse;font-size:8.6pt;margin:1mm 0 3mm}
+    table.kv td{border:.5pt solid var(--line);padding:1.5mm 2.4mm;vertical-align:top}
+    table.kv td.k{width:32%;background:var(--soft);color:var(--muted);font-size:7.4pt;text-transform:uppercase;letter-spacing:.5pt}
+    table.kv tr{break-inside:avoid;page-break-inside:avoid}
+    .toc{width:100%;border-collapse:collapse;font-size:9.4pt;margin-bottom:4mm}
+    .toc td{padding:1.2mm 0;border-bottom:.5pt dotted var(--line)}
+    .toc td.n{width:12mm;font-family:"Courier New",monospace;color:var(--green);font-weight:700}
+    .note{background:var(--soft);border-left:2.5pt solid var(--navy);padding:2.4mm 3.4mm;font-size:8.5pt;margin:2mm 0 3.5mm;break-inside:avoid;page-break-inside:avoid}
+    .note.amber{border-left-color:var(--amber);background:#fffaf0}
+    .chart{border:.5pt solid var(--line);padding:3mm;margin:1mm 0 4mm;break-inside:avoid;page-break-inside:avoid}
+    .chart .cap{font-size:7.8pt;color:var(--muted);margin-top:1.5mm}
+    .card{border:.6pt solid var(--navy);margin:0 0 4mm}
+    .card-h{display:flex;gap:3mm;align-items:center;background:var(--soft);padding:1.8mm 2.4mm;border-bottom:.6pt solid var(--navy);font-size:9pt;color:var(--navy)}
+    .card-h .mono{background:var(--navy);color:#fff;padding:.3mm 1.6mm;font-size:8pt}
+    .card-h .r{margin-left:auto;font-size:8pt;color:var(--muted);display:flex;gap:2mm;align-items:center}
+    .card table.kv{margin:0}.card table.kv tr:first-child td{border-top:0}
+    .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:2.5mm;margin:2mm 0 4mm;break-inside:avoid}
+    .summary div{border:.5pt solid var(--line);padding:2.5mm}
+    .summary b{display:block;font-size:17pt;color:var(--navy);line-height:1.1}.summary b.red{color:var(--red)}
+    .summary span{font-size:7.2pt;color:var(--muted);text-transform:uppercase;letter-spacing:.5pt}
+    .rt-card{border:1pt solid var(--navy);margin-top:4mm;break-inside:avoid;page-break-inside:avoid}
+    .rt-card .hd{background:var(--navy);color:#fff;padding:1.6mm 3mm;font-size:7.4pt;letter-spacing:1.4pt;font-weight:700;text-transform:uppercase}
+    .rt-card table{width:100%;border-collapse:collapse;font-size:8.6pt}
+    .rt-card td{padding:1.8mm 3mm;border-top:.5pt solid var(--line);border-right:.5pt solid var(--line);vertical-align:top}
+    .rt-card td:last-child{border-right:0}
+    .rt-card .k{display:block;font-size:6.5pt;color:var(--muted);text-transform:uppercase;letter-spacing:.8pt}
+    .sign{margin-top:12mm;display:grid;grid-template-columns:1fr 1fr;gap:10mm;break-inside:avoid;page-break-inside:avoid}
+    .sign .box{text-align:center;font-size:8.5pt}
+    .sign .line{border-top:.8pt solid var(--ink);margin:16mm 6mm 2mm}
+    .sign .nm{font-weight:700;font-size:9.4pt;color:var(--navy)}
+  `;
+
 
   const SYSTEM_VERSION = "2026.09";
   function openAboutSystem(){
@@ -13531,6 +13979,7 @@ function renderPcmsoDash(root){
       else if(currentTab === "terc-docs") renderTercDocumentos(main);
     } else if(currentModule === "geral"){
       if(currentTab === "employees") renderEmployees(main);
+      else if(currentTab === "geral-empresa") renderGeneralCompany(main);
       else if(currentTab === "employee-dossier") renderEmployeeDossier(main);
       else if(currentTab === "geral-setores") renderGeneralSectors(main);
       else if(currentTab === "geral-cargos") renderGeneralJobs(main);
@@ -13620,6 +14069,8 @@ function renderPcmsoDash(root){
     root.querySelector("#nr15-status")?.addEventListener("change",e=>{root.dataset.nr15Status=e.currentTarget.value;applyNr15Filters()});
     root.querySelector("#nr15-clear")?.addEventListener("click",()=>{delete root.dataset.nr15Search;delete root.dataset.nr15Ghe;delete root.dataset.nr15Result;delete root.dataset.nr15Status;applyNr15Filters()});
     root.querySelectorAll("[data-view-nr15]").forEach(b=>b.addEventListener("click",e=>openNr15Details(e.currentTarget.dataset.viewNr15)));
+    root.querySelectorAll("[data-pdf-nr15]").forEach(b=>b.addEventListener("click",e=>{const a=(state.nr15Assessments||[]).find(x=>x.id===e.currentTarget.dataset.pdfNr15);openNr15ReportModal(a?.reportNumber||"")}));
+    root.querySelector("#btn-nr15-report-pdf")?.addEventListener("click",()=>openNr15ReportModal());
     root.querySelectorAll("[data-edit-nr15]").forEach(b=>b.addEventListener("click",e=>openNr15Modal(e.currentTarget.dataset.editNr15)));
     root.querySelectorAll("[data-del-nr15]").forEach(b=>b.addEventListener("click",async e=>{const id=e.currentTarget.dataset.delNr15,a=(state.nr15Assessments||[]).find(x=>x.id===id);if(!a||!confirm('Remover esta avaliação NR-15?'))return;state.nr15Assessments=(state.nr15Assessments||[]).filter(x=>x.id!==id);await saveState();render()}));
     const applyNr15Agents=()=>{renderNr15Agents(root);attachMainListeners(root)};
@@ -14580,7 +15031,7 @@ function renderPcmsoDash(root){
     const url=fdsPortalUrl("",f.id),qr=fdsQrSrc(url,200);
     const box=(t,b,c="")=>b?`<div class="box ${c}"><h2>${t}</h2>${b}</div>`:"";
     fdsPrintWindow(`Ficha resumida · ${f.nomeComercial}`,`
-      <div class="head"><img class="logo" src="${fdsLogo()}" alt=""><div style="flex:1"><h1>${empEsc(f.nomeComercial)}</h1><div class="meta">${empEsc(f.fabricante||"")} · ${empEsc(f.codigo||"")} · FDS rev. ${empEsc(f.revisaoFds||"—")} de ${fmtDate(f.dataRevisaoFds)}</div><div style="margin-top:8px"><span class="sig">${empEsc(f.palavraAdvertencia==="Perigo"?"PERIGO":f.palavraAdvertencia==="Atenção"?"ATENÇÃO":"SEM CLASSIFICAÇÃO")}</span></div></div><div class="pictos">${(f.pictogramas||[]).map(c=>fdsGhsSvg(c,64)).join("")}</div>${fdsHommelSvg(f,90)}${qr?`<div class="qr"><img src="${qr}" alt="QR"><div class="meta">FDS completa</div></div>`:""}</div>
+      <div class="head"><img class="logo" src="${fdsLogo()}" alt=""><div style="flex:1">${companyTopLine()}<h1>${empEsc(f.nomeComercial)}</h1><div class="meta">${empEsc(f.fabricante||"")} · ${empEsc(f.codigo||"")} · FDS rev. ${empEsc(f.revisaoFds||"—")} de ${fmtDate(f.dataRevisaoFds)}</div><div style="margin-top:8px"><span class="sig">${empEsc(f.palavraAdvertencia==="Perigo"?"PERIGO":f.palavraAdvertencia==="Atenção"?"ATENÇÃO":"SEM CLASSIFICAÇÃO")}</span></div></div><div class="pictos">${(f.pictogramas||[]).map(c=>fdsGhsSvg(c,64)).join("")}</div>${fdsHommelSvg(f,90)}${qr?`<div class="qr"><img src="${qr}" alt="QR"><div class="meta">FDS completa</div></div>`:""}</div>
       <div class="grid">
         ${box("⚠️ Perigos",fdsPhraseList(f.frasesH))}
         ${box("🛡️ Precauções",fdsPhraseList(f.frasesP))}
@@ -14598,7 +15049,7 @@ function renderPcmsoDash(root){
     const list=fdsPublicList().filter(f=>!setor||(f.setores||[]).includes(setor));
     const url=fdsPortalUrl(setor),qr=fdsQrSrc(url,220);
     fdsPrintWindow(`FDS · ${setor||"Todos os setores"}`,`
-      <div class="head"><img class="logo" src="${fdsLogo()}" alt=""><div style="flex:1"><h1>Produtos químicos · ${empEsc(setor||"Todos os setores")}</h1><div class="meta">Relação de produtos e Fichas com Dados de Segurança disponíveis (NR-26 / ABNT NBR 14725). Emitido em ${new Date().toLocaleDateString("pt-BR")}.</div></div>${qr?`<div class="qr"><img src="${qr}" alt="QR"><div class="meta">Consulte as FDS</div></div>`:""}</div>
+      <div class="head"><img class="logo" src="${fdsLogo()}" alt=""><div style="flex:1">${companyTopLine()}<h1>Produtos químicos · ${empEsc(setor||"Todos os setores")}</h1><div class="meta">Relação de produtos e Fichas com Dados de Segurança disponíveis (NR-26 / ABNT NBR 14725). Emitido em ${new Date().toLocaleDateString("pt-BR")}.</div></div>${qr?`<div class="qr"><img src="${qr}" alt="QR"><div class="meta">Consulte as FDS</div></div>`:""}</div>
       <table><thead><tr><th>Produto</th><th>Perigos</th><th>Hommel</th><th>Advertência</th><th>EPI</th><th>Emergência</th><th>FDS</th></tr></thead><tbody>
       ${list.map(f=>`<tr><td><strong>${empEsc(f.nomeComercial)}</strong><br><span class="meta">${empEsc(f.fabricante||"")}</span></td><td><div class="pictos">${(f.pictogramas||[]).map(c=>fdsGhsSvg(c,34)).join("")}</div></td><td>${fdsHommelSvg(f,46)||"—"}</td><td>${empEsc(f.palavraAdvertencia||"—")}</td><td>${empEsc(fdsEpiText(f)||"—")}</td><td>${empEsc(f.telefoneEmergencia||"—")}</td><td>${empEsc(f.codigo||"")}<br><span class="meta">rev. ${fmtDate(f.dataRevisaoFds)}</span></td></tr>`).join("")||'<tr><td colspan="7">Nenhum produto publicado para este setor.</td></tr>'}
       </tbody></table>
