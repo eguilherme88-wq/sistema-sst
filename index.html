@@ -1011,6 +1011,17 @@ header.top-header.sst-header{display:block;padding:0;position:sticky;top:0;z-ind
 .sst-header .brand{justify-content:flex-start}
 .sst-header .brand-logo{height:54px;max-height:54px;max-width:220px}
 .sst-header .header-user-section{display:flex;align-items:center;gap:10px;margin-left:auto}
+.sst-trial-notice{flex:0 1 auto;min-width:0;margin:0 auto;display:flex;align-items:center;gap:10px;padding:7px 16px 7px 10px;border-radius:12px;border:1px solid var(--amber);background:#E08E321A;color:var(--ink)}
+.sst-trial-icon{display:grid;place-items:center;width:30px;height:30px;flex:0 0 30px;border-radius:50%;background:var(--amber);font-size:15px}
+.sst-trial-text{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.sst-trial-text strong{font-size:12.5px;color:var(--amber);white-space:nowrap}
+.sst-trial-date{font-size:11.5px;color:var(--ink-dim);white-space:nowrap}
+.sst-trial-short{display:none;font-size:12px;font-weight:700;color:var(--amber);white-space:nowrap}
+.sst-trial-notice.is-urgent{border-color:var(--red);background:#D6553D1A}
+.sst-trial-notice.is-urgent .sst-trial-icon{background:var(--red)}
+.sst-trial-notice.is-urgent strong,.sst-trial-notice.is-urgent .sst-trial-short{color:var(--red)}
+@media(max-width:1100px){.sst-trial-date{display:none}}
+@media(max-width:900px){.sst-trial-notice{padding:4px 10px 4px 4px;gap:6px}.sst-trial-text{display:none}.sst-trial-short{display:inline}.sst-trial-icon{width:26px;height:26px;flex-basis:26px;font-size:13px}}
 .sst-header .user-badge{display:flex;align-items:center;gap:10px;padding:5px 12px 5px 5px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);min-height:0}
 .sst-header .user-avatar{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--yellow);color:var(--yellow-ink);font-weight:800;font-size:12px;letter-spacing:.02em;flex:0 0 32px}
 .sst-header .user-badge strong{display:block;font-size:12.5px;line-height:1.2;white-space:nowrap}
@@ -3946,6 +3957,22 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     const m=masterCriadorEmTeste(u), proprio=u.trialExpires||null, herdado=m?m.trialExpires:null;
     if(proprio&&herdado) return proprio<herdado?proprio:herdado;
     return proprio||herdado||null;
+  }
+  // Aviso no cabeçalho para quem está em período de teste.
+  function trialHeaderNotice(){
+    if(!currentUser) return "";
+    const u=(state.usersDb||[]).find(x=>x.id===currentUser.id);
+    const ate=u?trialEfetivo(u):(currentUser.trialExpires||null);
+    if(!ate) return "";
+    const d=daysUntil(ate);
+    if(d<0) return "";
+    const urgente=d<=7;
+    const resta=d===0?"termina hoje":d===1?"falta 1 dia":`faltam ${d} dias`;
+    return `<div class="sst-trial-notice${urgente?" is-urgent":""}" role="status" title="Seu acesso em período de teste vai até ${fmtDate(ate)}. Para continuar usando o sistema depois dessa data, fale com o administrador.">
+      <span class="sst-trial-icon" aria-hidden="true">⏳</span>
+      <span class="sst-trial-text"><strong>Você está em período de teste</strong><span class="sst-trial-date">Acesso até ${fmtDate(ate)} · ${resta}</span></span>
+      <span class="sst-trial-short">Teste · ${d===0?"hoje":d+"d"}</span>
+    </div>`;
   }
   function openUserModal(){
     const isMaster = currentUser.role === "Master";
@@ -14018,6 +14045,7 @@ function renderPcmsoDash(root){
           <div class="brand">
             <img class="brand-logo" src="${FIXED_SYSTEM_LOGO}" alt="Partner · sistema modular de SST">
           </div>
+          ${trialHeaderNotice()}
           <div class="header-user-section">
             <button class="sst-about-btn" id="btn-about" title="Sobre o sistema e direitos reservados">ℹ️ <span>Sobre</span></button>
             <div class="user-badge">
