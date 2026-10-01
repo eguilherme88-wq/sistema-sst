@@ -2747,11 +2747,12 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     const found = usersList.find(u => u.username.toLowerCase() === userInp && u.pass === passInp);
 
     if(found) {
-      if(found.trialExpires) {
+      const vencTeste = trialEfetivo(found);
+      if(vencTeste) {
         const today = new Date().toISOString().slice(0, 10);
-        if(today > found.trialExpires) {
+        if(today > vencTeste) {
           errDiv.style.display = "block";
-          errDiv.innerText = "Acesso negado: O seu período de teste expirou em " + fmtDate(found.trialExpires) + ". Contate o administrador.";
+          errDiv.innerText = "Acesso negado: O seu período de teste expirou em " + fmtDate(vencTeste) + ". Contate o administrador.";
           return;
         }
       }
@@ -2761,7 +2762,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         username: found.username, 
         role: found.role, 
         name: found.name, 
-        trialExpires: found.trialExpires,
+        trialExpires: vencTeste,
         mustChangePassword: found.mustChangePassword || false,
         employeeId: found.employeeId || null
       };
@@ -3777,7 +3778,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
                 <td><code>${u.username}</code></td>
                 <td><span class="role-badge role-${String(u.role).toLowerCase()}">${roleIcon(u.role)} ${roleLabel(u.role)}</span></td>
                 <td>${u.employeeId ? employeeName(u.employeeId) : '<span class="muted">—</span>'}</td>
-                <td>${u.trialExpires ? `<span class="status-pill ${daysUntil(u.trialExpires)<0?'bad':'warn'}"><span class="dot"></span>Até ${fmtDate(u.trialExpires)}</span>` : '<span class="muted">Indeterminado</span>'}</td>
+                <td>${trialEfetivo(u) ? `<span class="status-pill ${daysUntil(trialEfetivo(u))<0?'bad':'warn'}"><span class="dot"></span>Até ${fmtDate(trialEfetivo(u))}</span>${masterCriadorEmTeste(u)&&trialEfetivo(u)===masterCriadorEmTeste(u).trialExpires?`<br><small class="muted">Herdado do Master ${empEsc(masterCriadorEmTeste(u)?.name||'')}</small>`:''}` : '<span class="muted">Indeterminado</span>'}</td>
                 <td><code class="password-chip">${u.pass}</code></td>
                 <td class="row-actions user-actions">
                   <button class="action-link" data-edit-user="${u.id}">✏️ Editar</button>
@@ -3884,9 +3885,13 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         if(duplicate){ alert('Já existe outro usuário cadastrado com este login.'); return; }
         user.name=data.name.trim(); user.username=newUsername; user.role=data.role; user.employeeId=data.employeeId||null; user.mustChangePassword=!!data.mustChangePassword;
         if(isAdmin){
+          const anterior=user.trialExpires||null;
           if(data.trialDate) user.trialExpires=data.trialDate;
           else if(data.trialDays) user.trialExpires=addDays(new Date().toISOString().slice(0,10),Number(data.trialDays));
           else user.trialExpires=null;
+          if(user.role==="Master"&&anterior!==user.trialExpires){
+            (state.usersDb||[]).forEach(x=>{ if(x.createdBy===user.id&&x.id!==user.id&&(x.trialExpires||null)===anterior) x.trialExpires=user.trialExpires; });
+          }
         }
         await saveState(); window.closeModal(); render();
       });
@@ -3929,8 +3934,20 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     });
   }
 
+  // Período de teste herdado: usuários cadastrados por um Master em período de
+  // teste ficam limitados à mesma data de vencimento do Master.
+  function masterCriadorEmTeste(u){
+    if(!u||!u.createdBy) return null;
+    const criador=(state.usersDb||[]).find(x=>x.id===u.createdBy);
+    return criador&&criador.role==="Master"&&criador.trialExpires?criador:null;
+  }
+  function trialEfetivo(u){
+    if(!u) return null;
+    const m=masterCriadorEmTeste(u), proprio=u.trialExpires||null, herdado=m?m.trialExpires:null;
+    if(proprio&&herdado) return proprio<herdado?proprio:herdado;
+    return proprio||herdado||null;
+  }
   function openUserModal(){
-    document.body.classList.add("cipa-terminal-mode");
     const isMaster = currentUser.role === "Master";
     const isAdmin = currentUser.role === "Administrador";
 
@@ -4015,6 +4032,10 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         }
 
         let trialExpires = null;
+        if(isMaster) {
+          const eu = (state.usersDb||[]).find(u => u.id === currentUser.id);
+          trialExpires = eu?.trialExpires || null;
+        }
         if(isAdmin) {
           if(formData.trialDays) {
             trialExpires = addDays(new Date().toISOString().slice(0, 10), Number(formData.trialDays));
@@ -13951,6 +13972,7 @@ function renderPcmsoDash(root){
       </div>`,ov=>ov.querySelector(".modal").classList.add("sst-about-modal"));
   }
   function renderShell(){
+    document.body.classList.remove("cipa-terminal-mode");
     if(!currentUser) {
       stopCipaPoll();
       renderLoginOverlay();
