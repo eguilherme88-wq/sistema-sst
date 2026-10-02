@@ -2280,6 +2280,22 @@ nav button .nav-label{line-height:1.25}
 .sst-header .sst-fs-btn[hidden]{display:none}
 @media(max-width:900px){.sst-header .sst-fs-btn{width:44px;height:44px}}
 </style>
+<style id="placa-portal-css">
+/* Placa da CIPA · aba da portaria (index.html#placa-cipa) */
+.placa-portal{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;background:#14171a;color:#e5e7eb;font-family:var(--font-body);padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+.placa-portal-barra{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid rgba(255,255,255,.08)}
+.placa-portal-info{display:flex;flex-direction:column;gap:2px;font-size:13px}
+.placa-portal-info strong{font-size:15px}
+.placa-portal-info span{color:#9ca3af}
+.placa-portal-info em{color:#fbbf24;font-style:normal}
+.placa-portal-acoes{display:flex;gap:8px;flex-wrap:wrap}
+.placa-portal-palco{flex:1;display:flex;align-items:center;justify-content:center;padding:2.5vw}
+.placa-portal-palco .placa-cipa{max-width:min(96vw,calc((100vh - 120px) * 1.9));min-width:min(100%,320px)}
+.placa-portal-recorde{margin:0 auto 2vw;padding:10px 18px;border-radius:999px;background:#14532d;color:#dcfce7;font-weight:700;font-size:clamp(14px,1.6vw,22px);text-align:center}
+:fullscreen .placa-portal-barra{display:none}
+:fullscreen .placa-portal-palco .placa-cipa{max-width:min(96vw,170vh)}
+@media print{.placa-portal-barra{display:none}}
+</style>
 <style id="placa-cipa-css"></style>
 <style>
 /* Placa CIPA · Dias sem acidentes */
@@ -4308,7 +4324,9 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
           <div style="display:flex;gap:10px;flex-wrap:wrap">
             <a class="btn" href="${e(url)}" target="_blank" rel="noopener">🚪 Abrir Acesso de Terceiros</a>
             <a class="btn secondary" href="${e(url)}#/terminal" target="_blank" rel="noopener">🖐️ Abrir terminal biométrico</a>
+            <a class="btn secondary" href="${e(placaPortalUrl())}" target="_blank" rel="noopener">🪧 Abrir placa da CIPA</a>
           </div>
+          <div class="sub">A placa abre em uma nova aba, pronta para TV ou monitor da portaria. Ela mostra os dias sem acidentes com afastamento calculados a partir das CATs do módulo CIPA e se atualiza sozinha a cada 5 minutos.</div>
         </div>
       </div>
       ${podeEditar ? `
@@ -16288,9 +16306,76 @@ function renderPcmsoDash(root){
   });
 
 
+  // ===================== PLACA DA CIPA · ABA DA PORTARIA =====================
+  // Aba somente leitura (index.html#placa-cipa), aberta a partir de
+  // Administração › Acesso de Terceiros. Usa os mesmos dados do sistema SST
+  // (CATs, configuração da placa e logomarca) e relê o Firebase a cada 5 min.
+  let placaPortalActive=false, placaPortalTimer=null, placaPortalAtualizadoEm=null, placaPortalErro="", placaPortalLendo=false;
+  function isPlacaPortalMode(){ return location.hash.startsWith("#placa-cipa"); }
+  function placaPortalUrl(){ return location.href.split("#")[0]+"#placa-cipa"; }
+  async function placaPortalRefresh(){
+    if(placaPortalLendo) return; placaPortalLendo=true;
+    try{
+      const get=window.firestoreGetFreshDoc||window.firestoreGetDoc;
+      const snap=await get();
+      if(snap?.exists?.()){
+        const d=JSON.parse(snap.data().json||"{}");
+        ["cipaCATs","cipaPlaca","companyLogo","company"].forEach(k=>{ if(k in d) state[k]=d[k]; });
+      }
+      placaPortalErro=""; placaPortalAtualizadoEm=new Date();
+    }catch(e){ console.warn("Placa CIPA: leitura do servidor falhou",e); placaPortalErro="Sem conexão com o servidor. Exibindo os últimos dados carregados."; }
+    finally{ placaPortalLendo=false; }
+    if(isPlacaPortalMode()) renderPlacaPortal();
+  }
+  function renderPlacaPortal(){
+    const app=document.getElementById("app");
+    if(!placaPortalActive){
+      placaPortalActive=true;
+      if(!placaPortalAtualizadoEm) placaPortalAtualizadoEm=new Date();
+      clearInterval(placaPortalTimer);
+      let dia=placaHojeISO(), ultimaLeitura=Date.now();
+      placaPortalTimer=setInterval(()=>{
+        if(!isPlacaPortalMode()) return;
+        if(Date.now()-ultimaLeitura>=5*60000){ ultimaLeitura=Date.now(); placaPortalRefresh(); }
+        else if(placaHojeISO()!==dia){ dia=placaHojeISO(); renderPlacaPortal(); }
+      },30000);
+      document.title="Placa CIPA · Dias sem acidentes";
+    }
+    const d=calcularPlacaCipa(), emp=companyData();
+    const nome=emp.nomeFantasia||emp.razaoSocial||"";
+    const hora=placaPortalAtualizadoEm?placaPortalAtualizadoEm.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"}):"";
+    app.innerHTML=`<main class="placa-portal" id="placa-portal">
+      <header class="placa-portal-barra">
+        <div class="placa-portal-info"><strong>🪧 Placa da CIPA</strong><span>${nome?empEsc(nome)+" — ":""}atualizada às ${hora}${placaPortalErro?` <em>${empEsc(placaPortalErro)}</em>`:""}</span></div>
+        <div class="placa-portal-acoes">
+          <button type="button" class="btn secondary" id="placa-portal-atualizar">${placaPortalLendo?"Atualizando…":"↻ Atualizar"}</button>
+          <button type="button" class="btn" id="placa-portal-cheia">⛶ Tela cheia</button>
+        </div>
+      </header>
+      <div class="placa-portal-palco">${placaCipaHtml(d)}</div>
+      ${d.novoRecorde?`<div class="placa-portal-recorde">🏆 Novo recorde! Estamos no maior período sem acidentes com afastamento.</div>`:""}
+    </main>`;
+    app.querySelector("#placa-portal-atualizar").onclick=()=>{ app.querySelector("#placa-portal-atualizar").textContent="Atualizando…"; placaPortalRefresh(); };
+    app.querySelector("#placa-portal-cheia").onclick=()=>{
+      const el=document.documentElement;
+      if(document.fullscreenElement) document.exitFullscreen?.();
+      else (el.requestFullscreen||el.webkitRequestFullscreen||function(){}).call(el);
+    };
+  }
+  window.addEventListener("hashchange",()=>{
+    if(!loaded) return;
+    if(isPlacaPortalMode()){ closeModal(); renderPlacaPortal(); }
+    else if(placaPortalActive){ placaPortalActive=false; clearInterval(placaPortalTimer); document.title="Sistema Modular SST"; render(); }
+  });
+  // ================= FIM PLACA DA CIPA · ABA DA PORTARIA =================
+
   function render(){
     if(!loaded) {
       loadState();
+      return;
+    }
+    if(isPlacaPortalMode()){
+      renderPlacaPortal();
       return;
     }
     if(isFdsPortalMode()){
