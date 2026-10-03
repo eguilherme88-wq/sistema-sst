@@ -2107,7 +2107,7 @@ nav button .nav-label{line-height:1.25}
 
 
 <style>
-.pgr-risk-box{min-height:70px;border:1px solid var(--line);border-radius:7px;padding:10px;background:var(--soft);display:flex;gap:7px;align-content:flex-start;flex-wrap:wrap}.risk-chip{display:inline-flex;padding:6px 9px;border-radius:16px;background:#fff3cd;border:1px solid #f1d98a;font-size:11px;font-weight:700}.muted{color:var(--ink-dim);font-size:11px}
+.pgr-risk-box{min-height:70px;border:1px solid var(--line);border-radius:7px;padding:10px;background:var(--soft);display:flex;gap:7px;align-content:flex-start;flex-wrap:wrap}.risk-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:16px;background:rgba(245,197,24,.12);border:1px solid rgba(245,197,24,.45);color:#ffd866;font-size:11.5px;font-weight:700;line-height:1.3}.risk-chip small{display:inline-block;padding:1px 7px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:var(--ink-dim);font-size:10px;font-weight:600}[data-theme="light"] .risk-chip{background:#fff3cd;border-color:#f1d98a;color:#7a5200}[data-theme="light"] .risk-chip small{background:#fff;border-color:#f1d98a;color:#8a6a20}.muted{color:var(--ink-dim);font-size:11px}
 .exam-picker{border:1px solid var(--line);border-radius:7px;padding:8px;max-height:210px;overflow:auto}.exam-check{display:flex;gap:8px;align-items:flex-start;padding:7px;border-bottom:1px solid var(--line)}.exam-check:last-child{border-bottom:0}.exam-check small{display:block;color:var(--ink-dim);margin-top:2px}
 </style>
 
@@ -6916,7 +6916,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         const risks=[];
         const g=curGhe();
         [...pcmsoPgrHazardsForJob(funcInput.value,g?.id||""),...(g&&!funcInput.value?gheRiskTexts().map(text=>({text,source:g.codigo||"GHE"})):[]),...pgrRisksForFunction(funcInput.value)].forEach(x=>{const base=t=>normalizeText(String(t).replace(/\s*\([^)]*\)\s*$/,""));if(x.text&&!risks.some(y=>base(y.text)===base(x.text)))risks.push(x)});
-        riskBox.innerHTML=risks.length?risks.map(x=>`<span class="risk-chip">⚠️ ${empEsc(x.text)}${x.source&&x.source!=="pgrRisks"?` <small>· ${empEsc(x.source)}</small>`:""}</span>`).join(""):`<span class="muted">${funcInput.value?`Nenhum perigo cadastrado no PGR para esta função${g?" neste GHE":""}.`:"Selecione o cargo / função para carregar os perigos do PGR."}</span>`;
+        riskBox.innerHTML=risks.length?risks.map(x=>`<span class="risk-chip">⚠️ ${empEsc(x.text)}${x.source&&x.source!=="pgrRisks"?`<small>${empEsc(x.source)}</small>`:""}</span>`).join(""):`<span class="muted">${funcInput.value?`Nenhum perigo cadastrado no PGR para esta função${g?" neste GHE":""}.`:"Selecione o cargo / função para carregar os perigos do PGR."}</span>`;
         riskHidden.value=risks.map(x=>x.text).join("\n");
       };
       const paintExams=()=>{
