@@ -6700,6 +6700,24 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     if(!Array.isArray(state.pcmsoComplementaryExamCatalog)) state.pcmsoComplementaryExamCatalog=[];
   }
   function normalizeText(v){return String(v||"").trim().toLowerCase();}
+  function pcmsoJobByName(funcao){const t=normalizeText(funcao);return t?(state.generalJobs||[]).find(j=>normalizeText(j.nome)===t)||null:null}
+  function pcmsoSectorsForJob(funcao){const job=pcmsoJobByName(funcao);if(!job)return[];return(state.generalSectors||[]).filter(s=>Array.isArray(s.cargoIds)&&s.cargoIds.includes(job.id)).map(s=>s.nome)}
+  // Perigos do PGR ligados ao cargo: GHEs que contêm o cargo + Inventário de Riscos (cargo específico ou "Todos os cargos do GHE").
+  function pcmsoPgrHazardsForJob(funcao,onlyGheId=""){
+    const target=normalizeText(funcao),job=pcmsoJobByName(funcao),out=[];
+    if(!target)return out;
+    const add=(text,source)=>{if(text&&!out.some(x=>normalizeText(x.text)===normalizeText(text)))out.push({text,source})};
+    const ghes=(state.pgrGhes||[]).filter(g=>g.ativo!==false&&(!onlyGheId||g.id===onlyGheId)&&job&&(g.cargoIds||[]).includes(job.id));
+    const gheIds=new Set(ghes.map(g=>g.id));
+    ghes.forEach(g=>pgrGheHazards(g).forEach(h=>add(`${h.nome} (${h.tipo})`,g.codigo||"GHE")));
+    (state.pgrRisks||[]).forEach(r=>{
+      if(onlyGheId&&r.gheId!==onlyGheId)return;
+      const ativ=normalizeText(r.atividade);
+      const match=ativ===target||(r.gheId&&gheIds.has(r.gheId)&&ativ.startsWith("todos os cargos"));
+      if(match&&r.perigo)add(`${r.perigo}${r.tipo?` (${r.tipo})`:""}`,((state.pgrGhes||[]).find(g=>g.id===r.gheId)?.codigo)||"Inventário PGR");
+    });
+    return out;
+  }
   function pgrRisksForFunction(funcao){
     const target=normalizeText(funcao); if(!target) return [];
     const out=[];
@@ -6711,7 +6729,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     const scan=(obj,source="PGR")=>{
       if(!obj||typeof obj!=="object") return;
       const fn=normalizeText(obj.funcao||obj.cargo||obj.atividade||obj.funcaoNome);
-      if(fn===target || fn.includes(target) || target.includes(fn)){
+      if(fn && (fn===target || fn.includes(target) || target.includes(fn))){
         ["riscos","risks","perigos","agentes","fatoresRisco","fatoresDeRisco"].forEach(k=>{
           const v=obj[k]; if(Array.isArray(v))v.forEach(x=>add(x,source)); else if(v)add(v,source);
         });
@@ -6896,8 +6914,9 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
       };
       const paintRisks=()=>{
         const risks=[];
-        [...gheRiskTexts().map(text=>({text,source:"GHE"})),...pgrRisksForFunction(funcInput.value)].forEach(x=>{if(x.text&&!risks.some(y=>normalizeText(y.text)===normalizeText(x.text)))risks.push(x)});
-        riskBox.innerHTML=risks.length?risks.map(x=>`<span class="risk-chip">⚠️ ${x.text}</span>`).join(""):`<span class="muted">Nenhum risco cadastrado no PGR para esta função${curGhe()?" / GHE":""}.</span>`;
+        const g=curGhe();
+        [...pcmsoPgrHazardsForJob(funcInput.value,g?.id||""),...(g&&!funcInput.value?gheRiskTexts().map(text=>({text,source:g.codigo||"GHE"})):[]),...pgrRisksForFunction(funcInput.value)].forEach(x=>{const base=t=>normalizeText(String(t).replace(/\s*\([^)]*\)\s*$/,""));if(x.text&&!risks.some(y=>base(y.text)===base(x.text)))risks.push(x)});
+        riskBox.innerHTML=risks.length?risks.map(x=>`<span class="risk-chip">⚠️ ${empEsc(x.text)}${x.source&&x.source!=="pgrRisks"?` <small>· ${empEsc(x.source)}</small>`:""}</span>`).join(""):`<span class="muted">${funcInput.value?`Nenhum perigo cadastrado no PGR para esta função${g?" neste GHE":""}.`:"Selecione o cargo / função para carregar os perigos do PGR."}</span>`;
         riskHidden.value=risks.map(x=>x.text).join("\n");
       };
       const paintExams=()=>{
@@ -6905,8 +6924,14 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         picker.innerHTML=state.pcmsoComplementaryExamCatalog.length?state.pcmsoComplementaryExamCatalog.map(x=>`<label class="exam-check"><input type="checkbox" value="${x.nome}" ${selected.has(x.nome)?"checked":""}> <span><strong>${x.nome}</strong>${x.grupo?`<small>${x.grupo}</small>`:""}</span></label>`).join(""):`<span class="muted">Nenhum exame complementar cadastrado. Use o menu “Exames Complementares”.</span>`;
         picker.querySelectorAll("input").forEach(ch=>ch.onchange=()=>{compHidden.value=[...picker.querySelectorAll("input:checked")].map(i=>i.value).join("\n");});
       };
-      funcInput.addEventListener("input",paintRisks);funcInput.addEventListener("change",paintRisks);
-      gheSel.addEventListener("change",()=>{applyGhe(false);paintRisks();});
+      const applyJobSectors=()=>{
+        let secs=pcmsoSectorsForJob(funcInput.value);const g=curGhe();
+        if(g){const gs=pgrGheSectors(g),inter=secs.filter(x=>gs.includes(x));secs=inter.length?inter:gs;}
+        if(!secs.length)return;
+        sectorBox.querySelectorAll('input[name="setores"]').forEach(ch=>ch.checked=secs.includes(ch.value));
+      };
+      funcInput.addEventListener("change",()=>{applyJobSectors();paintRisks();});
+      gheSel.addEventListener("change",()=>{applyGhe(false);if(funcInput.value)applyJobSectors();paintRisks();});
       applyGhe(true);paintRisks();paintExams();
       ov.querySelector("#pcmso-function-form").onsubmit=async e=>{
           e.preventDefault(); const fd=new FormData(e.target), data=Object.fromEntries(fd);
