@@ -5830,21 +5830,25 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     const ids=Array.isArray(ghe?.hazardIds)?ghe.hazardIds:[];
     return ids.map(id=>(state.pgrHazards||[]).find(h=>h.id===id)).filter(Boolean);
   }
+  function pgrGheSectors(ghe){
+    if(Array.isArray(ghe?.setores)&&ghe.setores.length) return ghe.setores.filter(Boolean);
+    return ghe?.setor?[ghe.setor]:[];
+  }
   function pgrGheEmployees(ghe){
-    const setor=normalizeText(ghe?.setor),nomes=new Set(pgrGheJobs(ghe).map(j=>normalizeText(j.nome)));
-    return(state.employees||[]).filter(e=>normalizeText(e.setor)===setor&&nomes.has(normalizeText(e.cargo||e.funcao))).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'));
+    const setores=new Set(pgrGheSectors(ghe).map(normalizeText)),nomes=new Set(pgrGheJobs(ghe).map(j=>normalizeText(j.nome)));
+    return(state.employees||[]).filter(e=>setores.has(normalizeText(e.setor))&&nomes.has(normalizeText(e.cargo||e.funcao))).sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'));
   }
   function renderPgrGhe(root){
     ensureGeneralMasterData();ensurePgrHazards();
     const search=root.dataset.gheSearch||"",setor=root.dataset.gheSetor||"",situacao=root.dataset.gheSituacao||"",q=normalizeText(search);
     const setores=(state.generalSectors||[]).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
     const all=state.pgrGhes||[];
-    const filtered=all.filter(g=>{const jobs=pgrGheJobs(g),hazards=pgrGheHazards(g);return(!q||normalizeText([g.codigo,g.nome,g.setor,pgrGheActivityDescription(g),g.observacoes,...jobs.map(j=>j.nome),...hazards.map(h=>h.nome)].join(" ")).includes(q))&&(!setor||g.setor===setor)&&(!situacao||String(g.ativo!==false)===situacao)});
+    const filtered=all.filter(g=>{const jobs=pgrGheJobs(g),hazards=pgrGheHazards(g);return(!q||normalizeText([g.codigo,g.nome,g.setor,pgrGheActivityDescription(g),g.observacoes,...jobs.map(j=>j.nome),...hazards.map(h=>h.nome)].join(" ")).includes(q))&&(!setor||pgrGheSectors(g).includes(setor))&&(!situacao||String(g.ativo!==false)===situacao)});
     const totalWorkers=new Set(filtered.flatMap(g=>pgrGheEmployees(g).map(e=>e.id))).size;
     root.innerHTML=`<div class="page-head"><div><h2>👥 Grupos Homogêneos de Exposição (GHE)</h2><div class="sub">Agrupamento de trabalhadores com atividades e exposições ocupacionais semelhantes.</div></div>${checkPermission("Master")?'<button class="btn" id="btn-new-ghe">+ Cadastrar GHE</button>':''}</div>
       <div class="annual-kpis emp-kpis" style="grid-template-columns:repeat(3,minmax(0,1fr));"><div class="annual-kpi"><div class="annual-kpi-icon blue">👥</div><div><div class="num">${all.length}</div><div class="label">GHEs cadastrados</div></div></div><div class="annual-kpi"><div class="annual-kpi-icon green">👷</div><div><div class="num">${totalWorkers}</div><div class="label">Trabalhadores enquadrados</div></div></div><div class="annual-kpi"><div class="annual-kpi-icon amber">☣️</div><div><div class="num">${new Set(filtered.flatMap(g=>(g.hazardIds||[]))).size}</div><div class="label">Perigos relacionados</div></div></div></div>
       <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${filtered.length} de ${all.length} GHE(s)</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="ghe-search" type="search" value="${empEsc(search)}" placeholder="Código, nome, cargo, atividade ou perigo"></div><div class="field"><label>Setor</label><select id="ghe-setor"><option value="">Todos</option>${setores.map(s=>`<option value="${empEsc(s.nome)}" ${setor===s.nome?'selected':''}>${empEsc(s.nome)}</option>`).join('')}</select></div><div class="field"><label>Situação</label><select id="ghe-situacao"><option value="">Todas</option><option value="true" ${situacao==='true'?'selected':''}>Ativos</option><option value="false" ${situacao==='false'?'selected':''}>Inativos</option></select></div><button class="btn secondary" id="ghe-clear">Limpar</button></div></div>
-      <div class="panel">${filtered.length?`<div style="overflow:auto"><table><thead><tr><th>Código / GHE</th><th>Setor</th><th>Cargos / Funções</th><th>Perigos / Agentes</th><th>Expostos</th><th>Situação</th>${checkPermission("Administrador")?'<th>Ações</th>':''}</tr></thead><tbody>${filtered.map(g=>{const jobs=pgrGheJobs(g),hazards=pgrGheHazards(g),workers=pgrGheEmployees(g);return`<tr><td><strong>${empEsc(g.codigo)}</strong><br><small>${empEsc(g.nome)}</small></td><td>🏢 ${empEsc(g.setor)}</td><td>${jobs.length?jobs.map(j=>`<button type="button" class="ghe-job-link" data-ghe-job="${j.id}" title="Ver descrição do cargo">💼 ${empEsc(j.nome)}</button>`).join(' '):'—'}</td><td>${hazards.length?hazards.map(h=>pgrTipoChip(h.tipo).replace(empEsc(h.tipo),empEsc(h.nome))).join(' '):'—'}</td><td><button type="button" class="pgr-exposed-btn" data-ghe-people="${g.id}">👥 ${workers.length}</button></td><td><span class="status-pill ${g.ativo!==false?'ok':'bad'}"><span class="dot"></span>${g.ativo!==false?'Ativo':'Inativo'}</span></td>${checkPermission("Administrador")?`<td><div class="row-actions"><button class="action-link" data-edit-ghe="${g.id}">✏️ Editar</button><button class="action-link" data-del-ghe="${g.id}">Remover</button></div></td>`:''}</tr>`}).join('')}</tbody></table></div>`:'<div class="empty">Nenhum GHE encontrado.</div>'}</div>`;
+      <div class="panel">${filtered.length?`<div style="overflow:auto"><table><thead><tr><th>Código / GHE</th><th>Setor</th><th>Cargos / Funções</th><th>Perigos / Agentes</th><th>Expostos</th><th>Situação</th>${checkPermission("Administrador")?'<th>Ações</th>':''}</tr></thead><tbody>${filtered.map(g=>{const jobs=pgrGheJobs(g),hazards=pgrGheHazards(g),workers=pgrGheEmployees(g);return`<tr><td><strong>${empEsc(g.codigo)}</strong><br><small>${empEsc(g.nome)}</small></td><td>${pgrGheSectors(g).map(x=>`🏢 ${empEsc(x)}`).join('<br>')||'—'}</td><td>${jobs.length?jobs.map(j=>`<button type="button" class="ghe-job-link" data-ghe-job="${j.id}" title="Ver descrição do cargo">💼 ${empEsc(j.nome)}</button>`).join(' '):'—'}</td><td>${hazards.length?hazards.map(h=>pgrTipoChip(h.tipo).replace(empEsc(h.tipo),empEsc(h.nome))).join(' '):'—'}</td><td><button type="button" class="pgr-exposed-btn" data-ghe-people="${g.id}">👥 ${workers.length}</button></td><td><span class="status-pill ${g.ativo!==false?'ok':'bad'}"><span class="dot"></span>${g.ativo!==false?'Ativo':'Inativo'}</span></td>${checkPermission("Administrador")?`<td><div class="row-actions"><button class="action-link" data-edit-ghe="${g.id}">✏️ Editar</button><button class="action-link" data-del-ghe="${g.id}">Remover</button></div></td>`:''}</tr>`}).join('')}</tbody></table></div>`:'<div class="empty">Nenhum GHE encontrado.</div>'}</div>`;
   }
   function openPgrGhePeopleModal(id){
     const g=(state.pgrGhes||[]).find(x=>x.id===id);if(!g)return;const people=pgrGheEmployees(g);
@@ -5859,11 +5863,12 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     const current=(state.pgrGhes||[]).find(x=>x.id===id)||null,sectors=(state.generalSectors||[]).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")),hazards=(state.pgrHazards||[]).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));
     if(!sectors.length){alert("Cadastre primeiro um setor em Geral / Pessoas → Cadastro de Setores.");return;}
     const nextCode=`GHE-${String((state.pgrGhes||[]).length+1).padStart(3,'0')}`;
-    openModal(`<h3>${current?'✏️ Editar':'👥 Cadastrar'} GHE</h3><form id="ghe-form"><div class="field-row"><div class="field"><label>Código *</label><input required name="codigo" value="${empEsc(current?.codigo||nextCode)}"></div><div class="field"><label>Nome do GHE *</label><input required name="nome" value="${empEsc(current?.nome||'')}" placeholder="Ex.: GHE Administrativo"></div></div><div class="field-row"><div class="field"><label>Setor *</label><select required name="setor" id="ghe-form-setor"><option value="">Selecione o setor</option>${sectors.map(s=>`<option value="${empEsc(s.nome)}" ${current?.setor===s.nome?'selected':''}>${empEsc(s.nome)}</option>`).join('')}</select></div><div class="field"><label>Situação</label><select name="ativo"><option value="true" ${current?.ativo!==false?'selected':''}>Ativo</option><option value="false" ${current?.ativo===false?'selected':''}>Inativo</option></select></div></div><div class="field"><label>Cargos / Funções do Cadastro Geral *</label><div id="ghe-jobs" style="border:1px solid var(--line);border-radius:7px;padding:8px 12px;max-height:170px;overflow:auto"><span class="muted">Selecione primeiro o setor.</span></div></div><div class="field"><label>Perigos / agentes de exposição</label><div style="border:1px solid var(--line);border-radius:7px;padding:8px 12px;max-height:180px;overflow:auto">${hazards.length?hazards.map(h=>`<label style="display:flex;gap:8px;align-items:center;padding:5px 0;font-weight:500"><input type="checkbox" name="hazardIds" value="${h.id}" ${(current?.hazardIds||[]).includes(h.id)?'checked':''} style="width:auto"> ${PGR_TIPO_ICON[h.tipo]||'☣️'} ${empEsc(h.nome)} <small>(${empEsc(h.tipo)})</small></label>`).join(''):'<span class="muted">Nenhum perigo cadastrado em Cadastro de Perigos.</span>'}</div></div><div class="field-row"><div class="field"><label>Jornada / frequência de exposição</label><input name="jornada" value="${empEsc(current?.jornada||'')}" placeholder="Ex.: 8 horas por dia"></div><div class="field"><label>Observações</label><input name="observacoes" value="${empEsc(current?.observacoes||'')}"></div></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">💾 Salvar GHE</button></div></form>`,ov=>{
-      const sectorSel=ov.querySelector('#ghe-form-setor'),jobsBox=ov.querySelector('#ghe-jobs');
-      const paintJobs=()=>{const sector=(state.generalSectors||[]).find(s=>s.nome===sectorSel.value),ids=new Set(sector?.cargoIds||[]),selected=new Set(current?.setor===sectorSel.value?(current?.cargoIds||[]):[]),jobs=(state.generalJobs||[]).filter(j=>ids.has(j.id)).sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));jobsBox.innerHTML=jobs.length?jobs.map(j=>`<label style="display:flex;gap:8px;align-items:center;padding:5px 0;font-weight:500"><input type="checkbox" name="cargoIds" value="${j.id}" ${selected.has(j.id)?'checked':''} style="width:auto"> 💼 ${empEsc(j.nome)}</label>`).join(''):'<span class="muted">Nenhum cargo do Cadastro Geral está vinculado a este setor.</span>'};
-      sectorSel.addEventListener('change',paintJobs);if(sectorSel.value)paintJobs();
-      ov.querySelector('#ghe-form').addEventListener('submit',async e=>{e.preventDefault();const fd=new FormData(e.target),cargoIds=fd.getAll('cargoIds'),hazardIds=fd.getAll('hazardIds');if(!cargoIds.length){alert('Selecione ao menos um cargo/função para o GHE.');return;}const codigo=String(fd.get('codigo')||'').trim();if((state.pgrGhes||[]).some(g=>g.id!==id&&normalizeText(g.codigo)===normalizeText(codigo))){alert('Já existe um GHE com este código.');return;}const record={codigo,nome:String(fd.get('nome')||'').trim(),setor:fd.get('setor'),cargoIds,hazardIds,descricaoAtividades:pgrGheActivityDescription({cargoIds}),jornada:String(fd.get('jornada')||'').trim(),observacoes:String(fd.get('observacoes')||'').trim(),ativo:fd.get('ativo')==='true',updatedAt:new Date().toISOString()};if(current)Object.assign(current,record);else(state.pgrGhes||=[]).push({id:uid('ghe'),...record,createdAt:new Date().toISOString()});await saveState();closeModal();render();});
+    openModal(`<h3>${current?'✏️ Editar':'👥 Cadastrar'} GHE</h3><form id="ghe-form"><div class="field-row"><div class="field"><label>Código *</label><input required name="codigo" value="${empEsc(current?.codigo||nextCode)}"></div><div class="field"><label>Nome do GHE *</label><input required name="nome" value="${empEsc(current?.nome||'')}" placeholder="Ex.: GHE Administrativo"></div></div><div class="field-row"><div class="field"><label>Setores * <small class="muted">(marque um ou mais)</small></label><div id="ghe-form-setores" style="border:1px solid var(--line);border-radius:7px;padding:6px 12px;max-height:150px;overflow:auto">${sectors.map(s=>`<label style="display:flex;gap:8px;align-items:center;padding:4px 0;font-weight:500"><input type="checkbox" name="setores" value="${empEsc(s.nome)}" ${pgrGheSectors(current).includes(s.nome)?'checked':''} style="width:auto"> 🏢 ${empEsc(s.nome)}</label>`).join('')}</div></div><div class="field"><label>Situação</label><select name="ativo"><option value="true" ${current?.ativo!==false?'selected':''}>Ativo</option><option value="false" ${current?.ativo===false?'selected':''}>Inativo</option></select></div></div><div class="field"><label>Cargos / Funções do Cadastro Geral *</label><div id="ghe-jobs" style="border:1px solid var(--line);border-radius:7px;padding:8px 12px;max-height:170px;overflow:auto"><span class="muted">Selecione primeiro o setor.</span></div></div><div class="field"><label>Perigos / agentes de exposição</label><div style="border:1px solid var(--line);border-radius:7px;padding:8px 12px;max-height:180px;overflow:auto">${hazards.length?hazards.map(h=>`<label style="display:flex;gap:8px;align-items:center;padding:5px 0;font-weight:500"><input type="checkbox" name="hazardIds" value="${h.id}" ${(current?.hazardIds||[]).includes(h.id)?'checked':''} style="width:auto"> ${PGR_TIPO_ICON[h.tipo]||'☣️'} ${empEsc(h.nome)} <small>(${empEsc(h.tipo)})</small></label>`).join(''):'<span class="muted">Nenhum perigo cadastrado em Cadastro de Perigos.</span>'}</div></div><div class="field-row"><div class="field"><label>Jornada / frequência de exposição</label><input name="jornada" value="${empEsc(current?.jornada||'')}" placeholder="Ex.: 8 horas por dia"></div><div class="field"><label>Observações</label><input name="observacoes" value="${empEsc(current?.observacoes||'')}"></div></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">💾 Salvar GHE</button></div></form>`,ov=>{
+      const sectorBox=ov.querySelector('#ghe-form-setores'),jobsBox=ov.querySelector('#ghe-jobs');
+      let firstPaint=true;
+      const paintJobs=()=>{const chosen=[...sectorBox.querySelectorAll('input[name="setores"]:checked')].map(i=>i.value);if(!chosen.length){jobsBox.innerHTML='<span class="muted">Selecione primeiro ao menos um setor.</span>';firstPaint=false;return;}const ids=new Set((state.generalSectors||[]).filter(s=>chosen.includes(s.nome)).flatMap(s=>s.cargoIds||[])),selected=new Set(firstPaint?(current?.cargoIds||[]):[...jobsBox.querySelectorAll('input[name="cargoIds"]:checked')].map(i=>i.value));firstPaint=false;const jobs=(state.generalJobs||[]).filter(j=>ids.has(j.id)).sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR"));jobsBox.innerHTML=jobs.length?jobs.map(j=>`<label style="display:flex;gap:8px;align-items:center;padding:5px 0;font-weight:500"><input type="checkbox" name="cargoIds" value="${j.id}" ${selected.has(j.id)?'checked':''} style="width:auto"> 💼 ${empEsc(j.nome)}</label>`).join(''):'<span class="muted">Nenhum cargo do Cadastro Geral está vinculado aos setores selecionados.</span>'};
+      sectorBox.addEventListener('change',paintJobs);paintJobs();
+      ov.querySelector('#ghe-form').addEventListener('submit',async e=>{e.preventDefault();const fd=new FormData(e.target),setores=fd.getAll('setores'),cargoIds=fd.getAll('cargoIds'),hazardIds=fd.getAll('hazardIds');if(!setores.length){alert('Selecione ao menos um setor para o GHE.');return;}if(!cargoIds.length){alert('Selecione ao menos um cargo/função para o GHE.');return;}const codigo=String(fd.get('codigo')||'').trim();if((state.pgrGhes||[]).some(g=>g.id!==id&&normalizeText(g.codigo)===normalizeText(codigo))){alert('Já existe um GHE com este código.');return;}const record={codigo,nome:String(fd.get('nome')||'').trim(),setores,setor:setores.join(', '),cargoIds,hazardIds,descricaoAtividades:pgrGheActivityDescription({cargoIds}),jornada:String(fd.get('jornada')||'').trim(),observacoes:String(fd.get('observacoes')||'').trim(),ativo:fd.get('ativo')==='true',updatedAt:new Date().toISOString()};if(current)Object.assign(current,record);else(state.pgrGhes||=[]).push({id:uid('ghe'),...record,createdAt:new Date().toISOString()});await saveState();closeModal();render();});
     });
   }
 
@@ -6791,7 +6796,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
       <div class="panel">
         <div class="panel-head"><h3>🔎 Pesquisa</h3></div>
         <div class="pcmso-function-filters">
-          <div class="field"><label>Pesquisar</label><input id="pcmso-function-search" placeholder="Função, risco ou exame"></div>
+          <div class="field"><label>Pesquisar</label><input id="pcmso-function-search" placeholder="Função, GHE, risco ou exame"></div>
           <div class="field"><label>Função</label><select id="pcmso-function-filter"><option value="">Todas</option>${functions.map(f=>`<option>${f}</option>`).join("")}</select></div>
         </div>
       </div>
@@ -6802,12 +6807,12 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     const paint=()=>{
       const q=(root.querySelector("#pcmso-function-search").value||"").toLowerCase();
       const ff=root.querySelector("#pcmso-function-filter").value;
-      const list=rows.filter(r=>(!ff||r.funcao===ff)&&(!q||[r.funcao,r.setor,r.riscos,r.examesClinicos,r.examesComplementares].join(" ").toLowerCase().includes(q)));
+      const list=rows.filter(r=>(!ff||r.funcao===ff)&&(!q||[r.funcao,r.setor,(state.pgrGhes||[]).find(x=>x.id===r.gheId)?.codigo,(state.pgrGhes||[]).find(x=>x.id===r.gheId)?.nome,r.riscos,r.examesClinicos,r.examesComplementares].join(" ").toLowerCase().includes(q)));
       root.querySelector("#pcmso-function-count").textContent=`${list.length} cadastro(s)`;
       root.querySelector("#pcmso-function-table").innerHTML=list.length?`
-        <table class="pcmso-function-table"><thead><tr><th>Função</th><th>Setor</th><th>Riscos / perigos do PGR</th><th>Exames clínicos</th><th>Exames complementares</th><th>Periodicidade</th><th>Ações</th></tr></thead><tbody>
+        <table class="pcmso-function-table"><thead><tr><th>Função</th><th>Setor / GHE</th><th>Riscos / perigos do PGR</th><th>Exames clínicos</th><th>Exames complementares</th><th>Periodicidade</th><th>Ações</th></tr></thead><tbody>
         ${list.map(r=>`<tr>
-          <td><strong>${r.funcao||"—"}</strong></td><td>${r.setor||"—"}</td>
+          <td><strong>${r.funcao||"—"}</strong></td><td>${(Array.isArray(r.setores)&&r.setores.length?r.setores:[r.setor].filter(Boolean)).map(x=>empEsc(x)).join("<br>")||"—"}${(()=>{const g=(state.pgrGhes||[]).find(x=>x.id===r.gheId);return g?`<br><span class="ca-tag">👥 ${empEsc(g.codigo)}</span>`:""})()}</td>
           <td>${(r.riscos||"—").replace(/\n/g,"<br>")}</td>
           <td>${(r.examesClinicos||"Avaliação clínica ocupacional").replace(/\n/g,"<br>")}</td>
           <td>${(r.examesComplementares||"—").replace(/\n/g,"<br>")}</td>
@@ -6826,13 +6831,16 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
   }
   function openPcmsoFunctionExamForm(id=""){
     ensurePcmsoFunctionExams();
-    const r=(state.pcmsoFunctionExams||[]).find(x=>x.id===id)||{id:"",funcao:"",setor:"",riscos:"",examesClinicos:"Avaliação clínica ocupacional",examesComplementares:"",periodicidade:"Conforme PCMSO",intervaloMeses:"",admissional:true,periodico:true,retorno:true,mudancaRisco:true,demissional:true,observacoes:""};
+    const r=(state.pcmsoFunctionExams||[]).find(x=>x.id===id)||{id:"",gheId:"",funcao:"",setor:"",setores:[],riscos:"",examesClinicos:"Avaliação clínica ocupacional",examesComplementares:"",periodicidade:"Conforme PCMSO",intervaloMeses:"",admissional:true,periodico:true,retorno:true,mudancaRisco:true,demissional:true,observacoes:""};
     const funcs=pcmsoFunctionsList();
+    const rSetores=Array.isArray(r.setores)&&r.setores.length?r.setores:String(r.setor||"").split(",").map(x=>x.trim()).filter(Boolean);
+    const pcmsoGhes=(state.pgrGhes||[]).filter(g=>g.ativo!==false||g.id===r.gheId).slice().sort((a,b)=>String(a.codigo||"").localeCompare(String(b.codigo||""),"pt-BR"));
     openModal(`<h3>${id?"✏️ Editar":"➕ Cadastrar"} Exames por Função</h3>
       <form id="pcmso-function-form">
+        <div class="field"><label>👥 GHE do PGR <small class="muted">(opcional)</small></label><select name="gheId" id="pcmso-ghe-select"><option value="">${pcmsoGhes.length?"Não vincular a GHE":"Nenhum GHE ativo cadastrado no PGR"}</option>${pcmsoGhes.map(g=>`<option value="${g.id}" ${r.gheId===g.id?"selected":""}>${empEsc(g.codigo)} · ${empEsc(g.nome)} · ${empEsc(pgrGheSectors(g).join(", "))}</option>`).join("")}</select><small id="pcmso-ghe-hint" class="muted">Ao escolher um GHE, os setores, os cargos e os perigos cadastrados no PGR são carregados automaticamente.</small></div>
         <div class="field-row">
           <div class="field"><label>Cargo / Função *</label><select name="funcao" id="pcmso-job-select" required><option value="">Selecione o cargo / função</option>${(ensureGeneralMasterData(),state.generalJobs).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")).map(x=>`<option value="${x.nome}" ${r.funcao===x.nome?"selected":""}>${x.nome}</option>`).join("")}</select></div>
-          <div class="field"><label>Setor *</label><select name="setor" id="pcmso-sector-select" required><option value="">Selecione o setor</option>${(ensureGeneralMasterData(),state.generalSectors).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")).map(x=>`<option value="${x.nome}" ${r.setor===x.nome?"selected":""}>${x.nome}</option>`).join("")}</select></div>
+          <div class="field"><label>Setores * <small class="muted">(marque um ou mais)</small></label><div id="pcmso-sector-box" style="border:1px solid var(--line);border-radius:7px;padding:6px 12px;max-height:150px;overflow:auto">${(ensureGeneralMasterData(),state.generalSectors).slice().sort((a,b)=>a.nome.localeCompare(b.nome,"pt-BR")).map(x=>`<label style="display:flex;gap:8px;align-items:center;padding:4px 0;font-weight:500"><input type="checkbox" name="setores" value="${empEsc(x.nome)}" ${rSetores.includes(x.nome)?"checked":""} style="width:auto"> 🏢 ${empEsc(x.nome)}</label>`).join("")||'<span class="muted">Nenhum setor cadastrado.</span>'}</div></div>
         </div>
         <div class="field"><label>Perigos / fatores de risco cadastrados no PGR</label><div id="pcmso-pgr-risks" class="pgr-risk-box"><span class="muted">Digite ou selecione a função para carregar automaticamente os riscos do PGR.</span></div><input type="hidden" name="riscos" id="pcmso-riscos-hidden" value="${r.riscos||""}"></div>
         <div class="pcmso-exam-grid">
@@ -6865,9 +6873,31 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
       const riskHidden=form.querySelector("#pcmso-riscos-hidden");
       const picker=form.querySelector("#pcmso-complementary-picker");
       const compHidden=form.querySelector("#pcmso-exames-complementares-hidden");
+      const gheSel=form.querySelector("#pcmso-ghe-select");
+      const gheHint=form.querySelector("#pcmso-ghe-hint");
+      const sectorBox=form.querySelector("#pcmso-sector-box");
+      const curGhe=()=>(state.pgrGhes||[]).find(g=>g.id===gheSel.value)||null;
+      const applyGhe=(initial)=>{
+        const ghe=curGhe();
+        const jobNames=ghe?new Set(pgrGheJobs(ghe).map(j=>j.nome)):null;
+        [...funcInput.options].forEach(o=>{o.hidden=!!(jobNames&&o.value&&!jobNames.has(o.value));});
+        if(ghe){
+          if(!initial){const secs=pgrGheSectors(ghe);sectorBox.querySelectorAll('input[name="setores"]').forEach(ch=>ch.checked=secs.includes(ch.value));}
+          if(funcInput.value&&!jobNames.has(funcInput.value))funcInput.value="";
+          if(!funcInput.value&&jobNames.size===1)funcInput.value=[...jobNames][0];
+          gheHint.textContent=`${ghe.codigo}: ${pgrGheSectors(ghe).length} setor(es), ${jobNames.size} cargo(s) e ${pgrGheHazards(ghe).length} perigo(s) vinculados no PGR.`;
+        }else gheHint.textContent="Ao escolher um GHE, os setores, os cargos e os perigos cadastrados no PGR são carregados automaticamente.";
+      };
+      const gheRiskTexts=()=>{
+        const ghe=curGhe();if(!ghe)return[];
+        const out=pgrGheHazards(ghe).map(h=>`${h.nome} (${h.tipo})`);
+        (state.pgrRisks||[]).filter(x=>x.gheId===ghe.id).forEach(x=>{const t=x.perigo?`${x.perigo}${x.tipo?` (${x.tipo})`:""}`:"";if(t)out.push(t)});
+        return out;
+      };
       const paintRisks=()=>{
-        const risks=pgrRisksForFunction(funcInput.value);
-        riskBox.innerHTML=risks.length?risks.map(x=>`<span class="risk-chip">⚠️ ${x.text}</span>`).join(""):`<span class="muted">Nenhum risco cadastrado no PGR para esta função.</span>`;
+        const risks=[];
+        [...gheRiskTexts().map(text=>({text,source:"GHE"})),...pgrRisksForFunction(funcInput.value)].forEach(x=>{if(x.text&&!risks.some(y=>normalizeText(y.text)===normalizeText(x.text)))risks.push(x)});
+        riskBox.innerHTML=risks.length?risks.map(x=>`<span class="risk-chip">⚠️ ${x.text}</span>`).join(""):`<span class="muted">Nenhum risco cadastrado no PGR para esta função${curGhe()?" / GHE":""}.</span>`;
         riskHidden.value=risks.map(x=>x.text).join("\n");
       };
       const paintExams=()=>{
@@ -6876,9 +6906,12 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         picker.querySelectorAll("input").forEach(ch=>ch.onchange=()=>{compHidden.value=[...picker.querySelectorAll("input:checked")].map(i=>i.value).join("\n");});
       };
       funcInput.addEventListener("input",paintRisks);funcInput.addEventListener("change",paintRisks);
-      paintRisks();paintExams();
+      gheSel.addEventListener("change",()=>{applyGhe(false);paintRisks();});
+      applyGhe(true);paintRisks();paintExams();
       ov.querySelector("#pcmso-function-form").onsubmit=async e=>{
           e.preventDefault(); const fd=new FormData(e.target), data=Object.fromEntries(fd);
+          const setores=fd.getAll("setores"); if(!setores.length){alert("Selecione ao menos um setor.");return;}
+          data.setores=setores; data.setor=setores.join(", "); data.gheId=fd.get("gheId")||"";
           ["admissional","periodico","retorno","mudancaRisco","demissional"].forEach(k=>data[k]=fd.has(k));
           if(id){const i=state.pcmsoFunctionExams.findIndex(x=>x.id===id);state.pcmsoFunctionExams[i]={...state.pcmsoFunctionExams[i],...data,updatedAt:new Date().toISOString()};}
           else state.pcmsoFunctionExams.push({id:uid("pcmsofunc"),...data,createdAt:new Date().toISOString()});
@@ -11873,7 +11906,7 @@ function renderPcmsoDash(root){
         if(!setor){ jobSel.innerHTML = '<option value="">Selecione primeiro o setor</option>'; jobSel.disabled = true; return; }
         const setorCadastro=(state.generalSectors||[]).find(s=>normalizeText(s.nome)===normalizeText(setor));
         const ghe=(state.pgrGhes||[]).find(g=>g.id===gheSel?.value);
-        const idsVinculados=new Set(ghe&&ghe.setor===setor?(ghe.cargoIds||[]):(Array.isArray(setorCadastro?.cargoIds)?setorCadastro.cargoIds:[]));
+        const cargosSetor=Array.isArray(setorCadastro?.cargoIds)?setorCadastro.cargoIds:[];const idsVinculados=new Set(ghe&&pgrGheSectors(ghe).includes(setor)?(ghe.cargoIds||[]).filter(id=>cargosSetor.includes(id)):cargosSetor);
         const cargos=(state.generalJobs||[]).filter(c=>idsVinculados.has(c.id)).sort((a,b)=>String(a.nome||"").localeCompare(String(b.nome||""),"pt-BR"));
         if(!cargos.length){
           jobSel.innerHTML = '<option value="">Nenhum cargo neste setor</option>'; jobSel.disabled = true;
@@ -11887,9 +11920,10 @@ function renderPcmsoDash(root){
         if(ghe&&(!atual||atual.gheId===ghe.id)&&![...jobSel.options].some(o=>o.value===jobSel.value)) jobSel.value="__GHE_ALL__";
         jobHint.textContent = `${cargos.length} cargo${cargos.length===1?"":"s"} ${ghe?'pertencente'+(cargos.length===1?'':'s')+' ao GHE':'do Cadastro Geral vinculado'+(cargos.length===1?'':'s')+' a este setor'}.`;
       };
-      gheSel?.addEventListener("change",()=>{const ghe=(state.pgrGhes||[]).find(g=>g.id===gheSel.value);if(ghe){setorSel.value=ghe.setor;setorSel.disabled=true}else setorSel.disabled=false;fillJobs()});
+      const applyGheSectors=(keep)=>{const ghe=(state.pgrGhes||[]).find(g=>g.id===gheSel?.value);const secs=ghe?pgrGheSectors(ghe):null;[...setorSel.options].forEach(o=>{o.hidden=!!(secs&&o.value&&!secs.includes(o.value))});if(secs){if(!(keep&&secs.includes(setorSel.value)))setorSel.value=secs[0]||'';setorSel.disabled=secs.length<=1}else setorSel.disabled=false};
+      gheSel?.addEventListener("change",()=>{applyGheSectors(false);fillJobs()});
       setorSel.addEventListener("change", fillJobs);
-      if(gheSel?.value){const ghe=(state.pgrGhes||[]).find(g=>g.id===gheSel.value);if(ghe){setorSel.value=ghe.setor;setorSel.disabled=true}}if(setorSel.value)fillJobs();
+      if(gheSel?.value)applyGheSectors(true);if(setorSel.value)fillJobs();
 
       // ---- Perigos cadastrados (agrupados por tipo) ----
       const fillHazards = (selectId="") => {
@@ -11974,8 +12008,9 @@ function renderPcmsoDash(root){
         const ghe=(state.pgrGhes||[]).find(g=>g.id===fd.gheId);
         if(!atual&&!ghe){alert("Selecione o GHE para definir o risco.");gheSel?.focus();return;}
         if(!jobSel.value){ alert("Selecione o cargo / função do setor."); return; }
-        const setorFinal=ghe?.setor||fd.setor;
-        const setorCadastro=(state.generalSectors||[]).find(s=>normalizeText(s.nome)===normalizeText(setorFinal));
+        const setorFinal=ghe?(jobSel.value==="__GHE_ALL__"?pgrGheSectors(ghe).join(', '):(pgrGheSectors(ghe).includes(setorSel.value)?setorSel.value:pgrGheSectors(ghe)[0])):fd.setor;
+        const setorValid=ghe&&jobSel.value!=="__GHE_ALL__"?setorFinal:(ghe?pgrGheSectors(ghe)[0]:setorFinal);
+        const setorCadastro=(state.generalSectors||[]).find(s=>normalizeText(s.nome)===normalizeText(setorValid));
         const cargoCadastro=(state.generalJobs||[]).find(c=>c.nome===jobSel.value);
         if(jobSel.value!=="__GHE_ALL__"&&(!cargoCadastro||!Array.isArray(setorCadastro?.cargoIds)||!setorCadastro.cargoIds.includes(cargoCadastro.id))){
           alert("Selecione um cargo válido do Cadastro Geral vinculado a este setor.");
@@ -15085,7 +15120,7 @@ function renderPcmsoDash(root){
     const targets=[];
     const ghes=(state.pgrGhes||[]).filter(g=>(f.gheIds||[]).includes(g.id));
     ghes.forEach(g=>targets.push({key:"ghe:"+g.id,gheId:g.id,setor:g.setor,atividade:`Todos os cargos do ${g.codigo||"GHE"}`,rotulo:`${g.codigo} · ${g.nome}`}));
-    (f.setores||[]).filter(s=>!ghes.some(g=>normalizeText(g.setor)===normalizeText(s))).forEach(s=>{
+    (f.setores||[]).filter(s=>!ghes.some(g=>pgrGheSectors(g).some(x=>normalizeText(x)===normalizeText(s)))).forEach(s=>{
       const sec=(state.generalSectors||[]).find(x=>normalizeText(x.nome)===normalizeText(s));
       const ids=new Set(Array.isArray(sec?.cargoIds)?sec.cargoIds:[]);
       const jobs=(state.generalJobs||[]).filter(j=>ids.has(j.id));
@@ -15871,7 +15906,7 @@ function renderPcmsoDash(root){
           <label>🏢 Setores onde o produto é utilizado ou armazenado *</label>
           ${sectors.length?`<div class="fds-sector-grid">${sectors.map(s=>`<label class="fds-sector-opt"><input type="checkbox" name="setores" value="${empEsc(s.nome)}" ${setoresSel.has(s.nome)?"checked":""}> ${empEsc(s.nome)}</label>`).join("")}</div>`:`<div class="pgr-hint warn">Cadastre setores em Geral / Pessoas → Cadastro de Setores.</div>`}
           <label style="margin-top:12px">👥 GHEs expostos <span class="muted">(opcional · filtrados pelos setores marcados)</span></label>
-          <div class="fds-ghe-list" id="fds-ghe-list">${ghes.map(g=>`<label class="fds-ghe-opt" data-setor="${empEsc(g.setor)}"><input type="checkbox" name="gheIds" value="${g.id}" ${ghesSel.has(g.id)?"checked":""}> <strong>${empEsc(g.codigo)}</strong> · ${empEsc(g.nome)} <small>${empEsc(g.setor)}</small></label>`).join("")}<div class="muted" id="fds-ghe-empty">Nenhum GHE ativo nos setores marcados. O risco será lançado por cargo do setor.</div></div>
+          <div class="fds-ghe-list" id="fds-ghe-list">${ghes.map(g=>`<label class="fds-ghe-opt" data-setores="${empEsc(JSON.stringify(pgrGheSectors(g)))}"><input type="checkbox" name="gheIds" value="${g.id}" ${ghesSel.has(g.id)?"checked":""}> <strong>${empEsc(g.codigo)}</strong> · ${empEsc(g.nome)} <small>${empEsc(g.setor)}</small></label>`).join("")}<div class="muted" id="fds-ghe-empty">Nenhum GHE ativo nos setores marcados. O risco será lançado por cargo do setor.</div></div>
           <div class="field-row" style="margin-top:12px"><div class="field"><label>Frequência de uso</label>${sel("frequenciaUso",FDS_FREQ.map(x=>[x.id,x.nome]),f.frequenciaUso||"intermitente")}</div><div class="field"><label>Quantidade máxima armazenada</label><input name="quantidadeMaxima" value="${v("quantidadeMaxima")}" placeholder="Ex.: 200 L"></div></div>
           <div class="field"><label>Local de armazenamento</label><input name="localArmazenamento" value="${v("localArmazenamento")}" placeholder="Ex.: Almoxarifado de inflamáveis · Galpão B"></div>
           ${chk("pgrSync","🔗 Registrar e atualizar este agente químico no Inventário de Riscos do PGR",("pgrSync" in f)?f.pgrSync!==false:true,"Cria o perigo “Agente químico” no Cadastro de Perigos e um risco por GHE (ou por cargo do setor). Severidade e probabilidade ajustadas no PGR são preservadas.")}
@@ -15933,7 +15968,7 @@ function renderPcmsoDash(root){
       ov.querySelectorAll(".fds-picto-opt input,.fds-epi-opt input").forEach(i=>i.addEventListener("change",()=>{i.closest("label").classList.toggle("on",i.checked);paintPreview();}));
       ov.querySelector("#fds-epi-search")?.addEventListener("input",e=>{const q=empPlain(e.target.value);ov.querySelectorAll(".fds-epi-opt").forEach(l=>l.style.display=!q||l.dataset.name.includes(q)?"":"none");});
       const snapshot=()=>{const fd=new FormData(form);return{pictogramas:fd.getAll("pictogramas"),frasesH:fd.get("frasesH"),frequenciaUso:fd.get("frequenciaUso"),setores:fd.getAll("setores"),gheIds:fd.getAll("gheIds"),id:recId,pgrHazardId:cur?.pgrHazardId};};
-      const paintGhes=()=>{const s=new Set(new FormData(form).getAll("setores"));let n=0;ov.querySelectorAll(".fds-ghe-opt").forEach(l=>{const show=s.has(l.dataset.setor);l.style.display=show?"":"none";if(show)n++;});const e=ov.querySelector("#fds-ghe-empty");if(e)e.style.display=n?"none":"";};
+      const paintGhes=()=>{const s=new Set(new FormData(form).getAll("setores"));let n=0;ov.querySelectorAll(".fds-ghe-opt").forEach(l=>{let secs=[];try{secs=JSON.parse(l.dataset.setores||"[]")}catch(_){}const show=secs.some(x=>s.has(x));l.style.display=show?"":"none";if(show)n++;});const e=ov.querySelector("#fds-ghe-empty");if(e)e.style.display=n?"none":"";};
       const paintPreview=()=>{
         const snap=snapshot(),sev=fdsSeveridadeSugerida(snap),prob=fdsProbSugerida(snap),info=calcRiskScore(sev,prob);
         ov.querySelector("#fds-sev-preview").innerHTML=`<span class="status-pill ${sev>=4?"bad":sev>=3?"warn":"ok"}">Severidade ${sev} de 4</span>`;
