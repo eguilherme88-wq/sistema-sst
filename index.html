@@ -732,6 +732,38 @@
   .pgr-filter-row{display:grid;grid-template-columns:minmax(220px,1.7fr) repeat(3,minmax(150px,1fr)) auto;gap:10px;align-items:end;padding:14px 18px}.pgr-filter-row .field{margin:0}.pgr-filter-row input,.pgr-filter-row select{width:100%}.pgr-exposed-btn{border:1px solid var(--line);background:var(--panel-2);color:var(--ink);border-radius:999px;padding:5px 10px;font-weight:700;cursor:pointer;white-space:nowrap}.pgr-exposed-btn:hover{border-color:var(--yellow);color:var(--amber)}
   @media(max-width:1000px){.pgr-filter-row{grid-template-columns:1fr 1fr}}@media(max-width:650px){.pgr-filter-row{grid-template-columns:1fr}}
   .pgr-criteria-box{display:none;margin:0 0 16px;padding:14px;border:1px solid var(--line);border-left:4px solid var(--yellow);border-radius:6px;background:var(--panel-2);font-size:12px;line-height:1.5}.pgr-criteria-box.open{display:block}.pgr-criteria-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.pgr-criteria-box h4{margin:0 0 7px;font-size:13px}.pgr-criteria-box ol{margin:0;padding-left:20px}.pgr-criteria-result{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}@media(max-width:650px){.pgr-criteria-grid{grid-template-columns:1fr}}
+  /* ===== PGR: Matriz de Riscos Psicossociais ===== */
+  .psi-filter-row{grid-template-columns:minmax(200px,1.5fr) repeat(4,minmax(130px,1fr)) auto}
+  @media(max-width:1100px){.psi-filter-row{grid-template-columns:1fr 1fr}}@media(max-width:650px){.psi-filter-row{grid-template-columns:1fr}}
+  .psi-grid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px}@media(max-width:1000px){.psi-grid{grid-template-columns:1fr}}
+  .psi-heat{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:4px 8px;overflow-x:auto}
+  .psi-heat-ylab{writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;font-weight:700;color:var(--ink-dim);text-align:center}
+  .psi-heat-xlab{grid-column:2;text-align:center;font-size:11px;font-weight:700;color:var(--ink-dim)}
+  .psi-heat-table{border-collapse:separate;border-spacing:5px;width:100%;min-width:360px}
+  .psi-heat-table th{font-size:11px;font-weight:600;color:var(--ink-dim);background:none;border:none;padding:2px 4px}
+  .psi-heat-rowh{text-align:right;white-space:nowrap}.psi-heat-colh{text-align:center}
+  .psi-cell{position:relative;height:58px;border-radius:8px;text-align:center;cursor:pointer;font-weight:700;border:2px solid transparent;transition:transform .12s,box-shadow .12s}
+  .psi-cell.ok{background:color-mix(in srgb,var(--green) 26%,transparent)}
+  .psi-cell.warn{background:color-mix(in srgb,var(--amber) 30%,transparent)}
+  .psi-cell.bad{background:color-mix(in srgb,var(--red) 32%,transparent)}
+  .psi-cell:not(.has){opacity:.55}.psi-cell:hover,.psi-cell:focus-visible{transform:scale(1.04);outline:none;box-shadow:0 0 0 2px var(--yellow)}
+  .psi-cell.active{border-color:var(--yellow);opacity:1}
+  .psi-cell-score{font-size:12px;color:var(--ink-dim);position:absolute;top:4px;left:7px}
+  .psi-cell-n{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 6px;border-radius:999px;background:var(--panel);border:1px solid var(--line);font-size:14px;color:var(--ink)}
+  .psi-legend{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+  .psi-level{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap;border:1px solid var(--line)}
+  .psi-level.ok{background:color-mix(in srgb,var(--green) 16%,transparent);border-color:color-mix(in srgb,var(--green) 45%,transparent)}
+  .psi-level.warn{background:color-mix(in srgb,var(--amber) 18%,transparent);border-color:color-mix(in srgb,var(--amber) 45%,transparent)}
+  .psi-level.bad{background:color-mix(in srgb,var(--red) 18%,transparent);border-color:color-mix(in srgb,var(--red) 45%,transparent)}
+  .psi-matrix{border-collapse:collapse;width:100%;font-size:12px}
+  .psi-matrix th,.psi-matrix td{border:1px solid var(--line);padding:6px 8px;text-align:center}
+  .psi-matrix th{font-size:11px;min-width:90px}.psi-matrix .psi-matrix-f{text-align:left;min-width:240px;white-space:nowrap}
+  .psi-mx{font-weight:800;cursor:pointer}.psi-mx small{font-weight:600;color:var(--ink-dim);margin-left:3px;font-size:10px}
+  .psi-mx.none{color:var(--ink-dim);font-weight:400;cursor:default}
+  .psi-mx.ok{background:color-mix(in srgb,var(--green) 22%,transparent)}.psi-mx.warn{background:color-mix(in srgb,var(--amber) 26%,transparent)}.psi-mx.bad{background:color-mix(in srgb,var(--red) 28%,transparent)}
+  .psi-mx[role=button]:hover,.psi-mx[role=button]:focus-visible{outline:2px solid var(--yellow);outline-offset:-2px}
+  .psi-checks{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px}
+  .psi-table{min-width:1380px}.psi-table td{vertical-align:top}.psi-table td:nth-child(1){min-width:150px}.psi-table td:nth-child(2){min-width:130px}.psi-table td:nth-child(10){min-width:110px}
   .pgr-dashboard-cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:20px}.pgr-kpi{display:flex;align-items:center;gap:14px;min-height:108px;position:relative;overflow:hidden}.pgr-kpi-icon{width:54px;height:54px;border-radius:14px;display:grid;place-items:center;font-size:27px;flex:none}.pgr-kpi.high .pgr-kpi-icon{background:#fee2e2}.pgr-kpi.medium .pgr-kpi-icon{background:#ffedd5}.pgr-kpi.mapped .pgr-kpi-icon{background:#e0f2fe}.pgr-kpi.people .pgr-kpi-icon{background:#dcfce7}.pgr-kpi .num{line-height:1}.pgr-kpi small{display:block;color:var(--ink-dim);font-size:11px;margin-top:5px}.pgr-dash-filter{margin-bottom:16px}.pgr-dash-filter .pgr-filter-row{grid-template-columns:minmax(220px,1.7fr) repeat(3,minmax(145px,1fr)) auto}
   @media(max-width:1000px){.pgr-dashboard-cards{grid-template-columns:1fr 1fr}.pgr-dash-filter .pgr-filter-row{grid-template-columns:1fr 1fr}}@media(max-width:600px){.pgr-dashboard-cards,.pgr-dash-filter .pgr-filter-row{grid-template-columns:1fr}}
 
@@ -2555,6 +2587,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     fireCorrectiveActions: [],
     pgrRisks: [],
     pgrGhes: [],
+    pgrPsicoRisks: [],
     pgrIssuer: null,
     nr15Assessments: [],
     nr15Professionals: [],
@@ -2643,6 +2676,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     pgr: [
       { id: "pgr-dash", name: "📊 Dashboard PGR" },
       { id: "pgr-list", name: "⚠️ Inventário de Riscos" },
+      { id: "pgr-psico", name: "🧠 Riscos Psicossociais" },
       { id: "pgr-issuer", name: "👷 Responsável pelo PGR" },
       { id: "pgr-ghe", name: "👥 Cadastro de GHE" },
       { id: "pgr-hazards", name: "☣️ Cadastro de Perigos" },
@@ -3155,7 +3189,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     }
   }
 
-  const DEFAULT_STATE_SHAPE = {usersDb:[], employees:[],items:[],deliveries:[],stockMovements:[],pcmso:[],fireEquip:[],fireInspections:[],fireBrigadistas:[],fireCorrectiveActions:[],pgrRisks:[],pgrGhes:[],pgrIssuer:null,nr15Assessments:[],nr15Professionals:[],confinedSpaces:[],pets:[],ecSupervisors:[],ecPortalPublicUrl:"",fdsList:[],fdsPortalPublicUrl:"",trainings:[],courseCatalog:[],roleMatrix:[],roleTrainingCompliance:[],annualTrainingPlan:[],cipaMembers:[],cipaElections:[],cipaMeetings:[],cipaActions:[],tercEmpresas:[],tercFuncionarios:[],tercIntegracoes:[],tercTiposDocumento:[],tercDocumentos:[],modulePermissions:{master:[],usuario:[]},userSpecificPermissions:{},roleActionPermissions:{},roleSubitemPermissions:{Master:{}},companyLogo:null,systemLogo:null,portariaLicenca:null};
+  const DEFAULT_STATE_SHAPE = {usersDb:[], employees:[],items:[],deliveries:[],stockMovements:[],pcmso:[],fireEquip:[],fireInspections:[],fireBrigadistas:[],fireCorrectiveActions:[],pgrRisks:[],pgrGhes:[],pgrPsicoRisks:[],pgrIssuer:null,nr15Assessments:[],nr15Professionals:[],confinedSpaces:[],pets:[],ecSupervisors:[],ecPortalPublicUrl:"",fdsList:[],fdsPortalPublicUrl:"",trainings:[],courseCatalog:[],roleMatrix:[],roleTrainingCompliance:[],annualTrainingPlan:[],cipaMembers:[],cipaElections:[],cipaMeetings:[],cipaActions:[],tercEmpresas:[],tercFuncionarios:[],tercIntegracoes:[],tercTiposDocumento:[],tercDocumentos:[],modulePermissions:{master:[],usuario:[]},userSpecificPermissions:{},roleActionPermissions:{},roleSubitemPermissions:{Master:{}},companyLogo:null,systemLogo:null,portariaLicenca:null};
 
   // Aplica migrações/valores-padrão em uma base carregada (de qualquer origem)
   // para manter compatibilidade com estados salvos por versões anteriores.
@@ -3168,6 +3202,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     if(!Array.isArray(state.fireBrigadistas)) state.fireBrigadistas=[];
     if(!Array.isArray(state.fireCorrectiveActions)) state.fireCorrectiveActions=[];
     if(!Array.isArray(state.pgrGhes)) state.pgrGhes=[];
+    if(!Array.isArray(state.pgrPsicoRisks)) state.pgrPsicoRisks=[];
     if(!state.pgrIssuer || typeof state.pgrIssuer!=="object" || Array.isArray(state.pgrIssuer)) state.pgrIssuer=null;
     if(!Array.isArray(state.nr15Assessments)) state.nr15Assessments=[];
     if(!Array.isArray(state.nr15Professionals)) state.nr15Professionals=[];
@@ -5815,6 +5850,268 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         ${renderPgrTableList(filtered, checkPermission("Administrador"))}
       </div>
     `;
+  }
+
+  // ===== PGR · Matriz de Riscos Psicossociais (NR-01, 1.5.3.1.4 — fatores de risco psicossociais relacionados ao trabalho) =====
+  const PSICO_FATORES = [
+    {id:"sobrecarga",nome:"Excesso de demandas (sobrecarga)",icon:"⏱️",desc:"Volume, ritmo ou complexidade acima da capacidade; metas inalcançáveis; prazos curtos; pressão constante.",medidas:"Dimensionar equipe e metas à capacidade real; planejar prazos com participação dos trabalhadores; controlar horas extras; garantir pausas."},
+    {id:"subcarga",nome:"Baixa demanda (subcarga)",icon:"💤",desc:"Tarefas monótonas, repetitivas ou abaixo das competências; ociosidade prolongada.",medidas:"Rodízio e enriquecimento de tarefas; aproveitar competências; plano de desenvolvimento."},
+    {id:"controle",nome:"Baixo controle / falta de autonomia",icon:"🔒",desc:"Pouca participação nas decisões sobre modo, ritmo e ordem do próprio trabalho.",medidas:"Ampliar participação nas decisões; autonomia sobre pausas e sequência de tarefas; canal de sugestões com retorno."},
+    {id:"apoio",nome:"Falta de suporte / apoio",icon:"🤝",desc:"Apoio insuficiente de chefias e colegas; falta de recursos, orientação ou treinamento.",medidas:"Capacitar lideranças em gestão de pessoas; reuniões de acompanhamento; garantir recursos e treinamento."},
+    {id:"papel",nome:"Baixa clareza de papel / função",icon:"❓",desc:"Atribuições, responsabilidades e expectativas indefinidas ou conflitantes.",medidas:"Descrever cargos e responsabilidades; alinhar expectativas por escrito; definir linha de reporte."},
+    {id:"reconhecimento",nome:"Baixas recompensas e reconhecimento",icon:"🏅",desc:"Esforço sem reconhecimento proporcional; falta de perspectiva de crescimento.",medidas:"Feedback regular; critérios transparentes de promoção e remuneração; programa de reconhecimento."},
+    {id:"justica",nome:"Baixa justiça organizacional",icon:"⚖️",desc:"Decisões e tratamentos percebidos como injustos, desiguais ou pouco transparentes.",medidas:"Critérios claros e comunicados; tratamento equânime; instância para contestação de decisões."},
+    {id:"mudancas",nome:"Má gestão de mudanças organizacionais",icon:"🔄",desc:"Reestruturações, novos sistemas ou processos sem informação, preparo ou participação.",medidas:"Comunicar mudanças com antecedência; envolver os trabalhadores; treinamento e período de adaptação."},
+    {id:"relacionamentos",nome:"Maus relacionamentos no trabalho",icon:"🗯️",desc:"Conflitos interpessoais frequentes, falta de cooperação, comunicação hostil.",medidas:"Mediação de conflitos; acordos de convivência; capacitação em comunicação e liderança."},
+    {id:"assedio",nome:"Assédio moral ou sexual",icon:"🚫",desc:"Condutas abusivas, humilhação, intimidação, discriminação ou assédio sexual.",medidas:"Política de prevenção ao assédio; canal de denúncia sigiloso; apuração com proteção à vítima; treinamentos em conjunto com a CIPA (NR-05)."},
+    {id:"violencia",nome:"Eventos violentos ou traumáticos",icon:"⚡",desc:"Violência de terceiros, assaltos, acidentes graves ou outras situações traumáticas.",medidas:"Procedimentos de segurança e resposta; apoio psicológico pós-evento; registro e análise das ocorrências."},
+    {id:"isolado",nome:"Trabalho remoto ou isolado",icon:"🏝️",desc:"Trabalho solitário, à distância ou em local isolado, com pouco contato e suporte.",medidas:"Rotina de contato com a liderança; meios de comunicação e de acionamento de emergência; encontros de equipe."},
+    {id:"comunicacao",nome:"Comunicação difícil ou deficiente",icon:"📡",desc:"Informações insuficientes, tardias ou contraditórias; dificuldade de comunicação no ambiente.",medidas:"Canais oficiais e reuniões curtas periódicas; orientações registradas; retorno às dúvidas."},
+    {id:"jornada",nome:"Jornada e turnos inadequados",icon:"🌙",desc:"Turnos noturnos ou alternados, jornadas longas, descanso insuficiente, contato fora do horário.",medidas:"Escalas com descanso adequado; limitar horas extras; política de desconexão."},
+    {id:"outro",nome:"Outro fator (descrever)",icon:"🧩",desc:"Fator psicossocial específico da organização, não listado acima.",medidas:""}
+  ];
+  const PSICO_DANOS = ["Estresse ocupacional","Ansiedade","Depressão","Síndrome de burnout","Distúrbios do sono","Fadiga / esgotamento","DORT associado à tensão","Uso nocivo de álcool ou drogas","Acidentes por desatenção ou fadiga","Conflitos e afastamentos"];
+  const PSICO_METODOS = ["Questionário / pesquisa de clima","Entrevistas individuais","Grupo focal / roda de conversa","Observação do trabalho (AEP/AET)","Indicadores (absenteísmo, turnover, afastamentos)","Canal de denúncias / CIPA"];
+  const PSICO_STATUS = ["Não iniciada","Em andamento","Concluída"];
+
+  function psicoFator(id){ return PSICO_FATORES.find(f=>f.id===id) || PSICO_FATORES[PSICO_FATORES.length-1]; }
+  function psicoFatorNome(r){ return r.fator==="outro" ? (String(r.fatorOutro||"").trim()||"Outro fator") : psicoFator(r.fator).nome; }
+  function psicoUnitKey(r){ return r.gheId ? "g:"+r.gheId : "s:"+String(r.setor||""); }
+  function psicoUnitLabel(r){
+    if(r.gheId){ const g=(state.pgrGhes||[]).find(x=>x.id===r.gheId); return g ? `${g.codigo} · ${g.nome}` : "GHE removido"; }
+    return r.setor || "—";
+  }
+  function psicoExposed(r){
+    if(r.gheId){ const g=(state.pgrGhes||[]).find(x=>x.id===r.gheId); return g ? pgrGheEmployees(g) : []; }
+    const s=normalizeText(r.setor); return s ? (state.employees||[]).filter(e=>normalizeText(e.setor)===s) : [];
+  }
+  function psicoAtrasada(r){
+    if(r.status==="Concluída" || !r.prazo) return false;
+    return String(r.prazo) < new Date().toISOString().slice(0,10);
+  }
+  function psicoLevelChip(info){
+    const icon = info.class==="bad"?"🔴":info.class==="warn"?"🟠":"🟢";
+    return `<span class="psi-level ${info.class}">${icon} ${info.label} · ${info.score}</span>`;
+  }
+  function psicoStatusChip(r){
+    if(psicoAtrasada(r)) return `<span class="status-pill bad"><span class="dot"></span>Atrasada</span>`;
+    const c = r.status==="Concluída"?"ok":r.status==="Em andamento"?"warn":"";
+    return `<span class="status-pill ${c}"><span class="dot"></span>${empEsc(r.status||"Não iniciada")}</span>`;
+  }
+  function psicoUnitOptions(){
+    ensureGeneralMasterData();
+    const ghes=(state.pgrGhes||[]).filter(g=>g.ativo!==false).slice().sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo),"pt-BR"));
+    const setores=[...new Set([...(state.generalSectors||[]).map(s=>s.nome),...(state.employees||[]).map(e=>e.setor)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+    return {ghes,setores};
+  }
+  function psicoFiltered(root){
+    const q=normalizeText(root.dataset.psiSearch||""),unit=root.dataset.psiUnit||"",fator=root.dataset.psiFator||"",nivel=root.dataset.psiNivel||"",status=root.dataset.psiStatus||"",cell=root.dataset.psiCell||"";
+    return (state.pgrPsicoRisks||[]).filter(r=>{
+      const info=calcRiskScore(r.severidade,r.probabilidade);
+      const st=psicoAtrasada(r)?"Atrasada":(r.status||"Não iniciada");
+      return (!q||normalizeText([psicoFatorNome(r),psicoUnitLabel(r),r.fonte,(r.danos||[]).join(" "),r.medidas,r.responsavel].join(" ")).includes(q))
+        &&(!unit||psicoUnitKey(r)===unit)&&(!fator||r.fator===fator)&&(!nivel||info.class===nivel)&&(!status||st===status)
+        &&(!cell||cell===`${r.severidade}-${r.probabilidade}`);
+    });
+  }
+
+  function psicoHeatmapHtml(rows, activeCell, interactive=true){
+    const sevNames={4:"4 · Crítica",3:"3 · Alta",2:"2 · Moderada",1:"1 · Leve"},probNames={1:"1 · Rara",2:"2 · Improvável",3:"3 · Provável",4:"4 · Frequente"};
+    let h=`<div class="psi-heat"><div class="psi-heat-ylab">Severidade ↑</div><table class="psi-heat-table"><tbody>`;
+    [4,3,2,1].forEach(s=>{
+      h+=`<tr><th class="psi-heat-rowh">${sevNames[s]}</th>`;
+      [1,2,3,4].forEach(p=>{
+        const info=calcRiskScore(s,p),n=rows.filter(r=>Number(r.severidade)===s&&Number(r.probabilidade)===p).length,key=`${s}-${p}`;
+        const attrs=interactive?`role="button" tabindex="0" data-psi-cell="${key}" title="${info.label} (${info.score}) · ${n} avaliação(ões) — clique para filtrar"`:"";
+        h+=`<td class="psi-cell ${info.class} ${activeCell===key?'active':''} ${n?'has':''}" ${attrs}><span class="psi-cell-score">${info.score}</span>${n?`<span class="psi-cell-n">${n}</span>`:''}</td>`;
+      });
+      h+=`</tr>`;
+    });
+    h+=`<tr><th></th>${[1,2,3,4].map(p=>`<th class="psi-heat-colh">${probNames[p]}</th>`).join("")}</tr></tbody></table><div class="psi-heat-xlab">Probabilidade →</div></div>`;
+    return h;
+  }
+
+  function psicoFactorMatrixHtml(rows, interactive=true){
+    if(!rows.length) return `<div class="empty-state" style="padding:22px">Nenhuma avaliação para montar a matriz.</div>`;
+    const units=[...new Map(rows.map(r=>[psicoUnitKey(r),psicoUnitLabel(r)])).entries()].sort((a,b)=>a[1].localeCompare(b[1],"pt-BR"));
+    const fatores=PSICO_FATORES.filter(f=>f.id!=="outro");
+    const extras=[...new Set(rows.filter(r=>r.fator==="outro").map(psicoFatorNome))];
+    const lines=[...fatores.map(f=>({key:f.id,label:`${f.icon} ${f.nome}`,match:r=>r.fator===f.id})),...extras.map(n=>({key:"outro",label:`🧩 ${empEsc(n)}`,match:r=>r.fator==="outro"&&psicoFatorNome(r)===n}))];
+    let h=`<div style="overflow:auto"><table class="psi-matrix"><thead><tr><th class="psi-matrix-f">Fator de risco psicossocial</th>${units.map(([,l])=>`<th>${empEsc(l)}</th>`).join("")}</tr></thead><tbody>`;
+    lines.forEach(line=>{
+      h+=`<tr><td class="psi-matrix-f">${line.label}</td>`;
+      units.forEach(([k])=>{
+        const items=rows.filter(r=>psicoUnitKey(r)===k&&line.match(r));
+        if(!items.length){ h+=`<td class="psi-mx none" title="Não avaliado">—</td>`; return; }
+        const worst=items.map(r=>({r,info:calcRiskScore(r.severidade,r.probabilidade)})).sort((a,b)=>b.info.score-a.info.score)[0];
+        h+=`<td class="psi-mx ${worst.info.class}" ${interactive?`role="button" tabindex="0" data-psi-open="${worst.r.id}"`:''} title="${worst.info.label} (${worst.info.score})${items.length>1?` · ${items.length} avaliações`:''}">${worst.info.score}${items.length>1?`<small>×${items.length}</small>`:''}</td>`;
+      });
+      h+=`</tr>`;
+    });
+    return h+`</tbody></table></div>`;
+  }
+
+  function renderPgrPsico(root){
+    if(!Array.isArray(state.pgrPsicoRisks)) state.pgrPsicoRisks=[];
+    const all=state.pgrPsicoRisks,rows=psicoFiltered(root),canEdit=checkPermission("Master"),canDel=checkPermission("Administrador");
+    const {ghes,setores}=psicoUnitOptions();
+    const unitSel=root.dataset.psiUnit||"",fatorSel=root.dataset.psiFator||"",nivelSel=root.dataset.psiNivel||"",statusSel=root.dataset.psiStatus||"",cell=root.dataset.psiCell||"";
+    const altos=rows.filter(r=>calcRiskScore(r.severidade,r.probabilidade).class==="bad").length;
+    const medios=rows.filter(r=>calcRiskScore(r.severidade,r.probabilidade).class==="warn").length;
+    const atrasadas=rows.filter(psicoAtrasada).length,pendentes=rows.filter(r=>r.status!=="Concluída").length;
+    const expostos=new Set(rows.flatMap(r=>psicoExposed(r).map(e=>e.id))).size;
+    const fatoresAvaliados=new Set(all.map(r=>r.fator).filter(f=>f!=="outro")).size;
+    const usedUnits=[...new Map(all.map(r=>[psicoUnitKey(r),psicoUnitLabel(r)])).entries()].sort((a,b)=>a[1].localeCompare(b[1],"pt-BR"));
+    const sorted=rows.slice().sort((a,b)=>calcRiskScore(b.severidade,b.probabilidade).score-calcRiskScore(a.severidade,a.probabilidade).score);
+
+    root.innerHTML=`
+      <div class="page-head"><div><h2>🧠 Matriz de Riscos Psicossociais</h2><div class="sub">Identificação e avaliação dos fatores de risco psicossociais relacionados ao trabalho, integrados ao GRO/PGR (NR-01).</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">${all.length?'<button class="btn secondary" id="psi-print">🖨️ Imprimir matriz</button>':''}${canEdit?'<button class="btn" id="psi-new">+ Avaliar fator psicossocial</button>':''}</div></div>
+
+      <div class="pgr-dashboard-cards">
+        <div class="stat-card pgr-kpi high"><div class="pgr-kpi-icon">🚨</div><div><div class="num" style="color:var(${altos?'--red':'--green'})">${altos}</div><div class="label">Riscos de nível Alto</div><small>${medios} de nível Médio</small></div></div>
+        <div class="stat-card pgr-kpi mapped"><div class="pgr-kpi-icon">🧠</div><div><div class="num">${rows.length}</div><div class="label">Avaliações</div><small>${fatoresAvaliados} de ${PSICO_FATORES.length-1} fatores de referência avaliados</small></div></div>
+        <div class="stat-card pgr-kpi medium"><div class="pgr-kpi-icon">🛠️</div><div><div class="num" style="color:var(${atrasadas?'--red':pendentes?'--amber':'--ink'})">${pendentes}</div><div class="label">Ações pendentes</div><small>${atrasadas} com prazo vencido</small></div></div>
+        <div class="stat-card pgr-kpi people"><div class="pgr-kpi-icon">👥</div><div><div class="num" style="color:var(--green)">${expostos}</div><div class="label">Pessoas expostas</div><small>Pelos GHEs / setores avaliados</small></div></div>
+      </div>
+
+      <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${rows.length} de ${all.length} avaliação(ões)${cell?` · célula ${cell.replace('-',' × ')}`:''}</span></div><div class="pgr-filter-row psi-filter-row">
+        <div class="field"><label>Pesquisar</label><input id="psi-search" type="search" value="${empEsc(root.dataset.psiSearch||'')}" placeholder="Fator, GHE, fonte, dano, medida…"></div>
+        <div class="field"><label>GHE / Setor</label><select id="psi-unit"><option value="">Todos</option>${usedUnits.map(([k,l])=>`<option value="${empEsc(k)}" ${unitSel===k?'selected':''}>${empEsc(l)}</option>`).join('')}</select></div>
+        <div class="field"><label>Fator</label><select id="psi-fator"><option value="">Todos</option>${PSICO_FATORES.map(f=>`<option value="${f.id}" ${fatorSel===f.id?'selected':''}>${f.icon} ${f.nome}</option>`).join('')}</select></div>
+        <div class="field"><label>Nível</label><select id="psi-nivel"><option value="">Todos</option><option value="ok" ${nivelSel==='ok'?'selected':''}>🟢 Baixo</option><option value="warn" ${nivelSel==='warn'?'selected':''}>🟠 Médio</option><option value="bad" ${nivelSel==='bad'?'selected':''}>🔴 Alto</option></select></div>
+        <div class="field"><label>Ação</label><select id="psi-status"><option value="">Todas</option>${[...PSICO_STATUS,"Atrasada"].map(s=>`<option ${statusSel===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        <button type="button" class="btn secondary" id="psi-clear">Limpar</button>
+      </div></div>
+
+      <div class="psi-grid">
+        <div class="panel"><div class="panel-head"><h3>🌡️ Matriz Severidade × Probabilidade</h3><span>Clique numa célula para filtrar</span></div><div style="padding:14px 16px">${psicoHeatmapHtml(rows,cell)}
+          <div class="psi-legend"><span class="psi-level ok">🟢 Baixo 1–5</span><span class="psi-level warn">🟠 Médio 6–11</span><span class="psi-level bad">🔴 Alto 12–16</span></div></div></div>
+        <div class="panel"><div class="panel-head"><h3>🧭 Como avaliar</h3></div><div style="padding:14px 16px;font-size:12.5px;line-height:1.55">
+          <p style="margin:0 0 8px">A NR-01 exige que o gerenciamento de riscos ocupacionais abranja os <strong>fatores de risco psicossociais relacionados ao trabalho</strong>, avaliados pela organização do trabalho (demandas, controle, apoio, relações, jornada), e não pela saúde individual do trabalhador.</p>
+          <p style="margin:0 0 8px"><strong>Severidade</strong>: gravidade dos possíveis danos (estresse leve → adoecimento mental incapacitante). <strong>Probabilidade</strong>: frequência e intensidade da exposição, consideradas as medidas já existentes.</p>
+          <p style="margin:0">Use mais de uma fonte de identificação (pesquisa, escuta dos trabalhadores, indicadores de absenteísmo e afastamentos) e garanta a participação dos trabalhadores e o sigilo das respostas individuais.</p></div></div>
+      </div>
+
+      <div class="panel" style="margin-top:14px"><div class="panel-head"><h3>🗂️ Matriz Fator × GHE / Setor</h3><span>Maior nível encontrado em cada cruzamento · clique para abrir</span></div><div style="padding:12px 14px">${psicoFactorMatrixHtml(rows)}</div></div>
+
+      <div class="panel" style="margin-top:14px"><div class="panel-head"><h3>📋 Inventário de riscos psicossociais e plano de ação</h3><span>Ordenado do maior para o menor risco</span></div>
+        ${sorted.length?`<div style="overflow:auto"><table class="psi-table"><thead><tr><th>Fator</th><th>GHE / Setor</th><th>Fonte / circunstância</th><th>Possíveis danos</th><th style="text-align:center">S</th><th style="text-align:center">P</th><th>Nível</th><th>Medidas de prevenção</th><th>Responsável / prazo</th><th>Ação</th>${canEdit||canDel?'<th></th>':''}</tr></thead><tbody>
+        ${sorted.map(r=>{const info=calcRiskScore(r.severidade,r.probabilidade),f=psicoFator(r.fator),n=psicoExposed(r).length;return `<tr>
+          <td><strong>${f.icon} ${empEsc(psicoFatorNome(r))}</strong></td>
+          <td>${empEsc(psicoUnitLabel(r))}<br><small class="muted">👥 ${n} exposto${n===1?'':'s'}</small></td>
+          <td style="min-width:200px">${empEsc(r.fonte||'—')}${(r.metodos||[]).length?`<br><small class="muted">🔍 ${empEsc(r.metodos.join(' · '))}</small>`:''}</td>
+          <td style="min-width:150px">${(r.danos||[]).map(d=>`<span class="pgr-epi">${empEsc(d)}</span>`).join(' ')||'—'}</td>
+          <td style="text-align:center">${r.severidade}</td><td style="text-align:center">${r.probabilidade}</td>
+          <td>${psicoLevelChip(info)}</td>
+          <td style="min-width:220px;white-space:pre-line">${empEsc(r.medidas||'—')}</td>
+          <td>${empEsc(r.responsavel||'—')}<br><small class="muted">${r.prazo?`📅 ${fmtDate(r.prazo)}`:'Sem prazo'}</small></td>
+          <td>${psicoStatusChip(r)}</td>
+          ${canEdit||canDel?`<td class="row-actions" style="white-space:nowrap">${canEdit?`<button class="action-link" data-psi-edit="${r.id}">Editar</button>`:''} ${canDel?`<button class="action-link" data-psi-del="${r.id}">Remover</button>`:''}</td>`:''}
+        </tr>`}).join('')}</tbody></table></div>`:`<div class="empty-state" style="padding:26px">${all.length?'Nenhuma avaliação corresponde aos filtros.':'Nenhum fator psicossocial avaliado ainda. Clique em “+ Avaliar fator psicossocial” para começar.'}</div>`}
+      </div>`;
+
+    const rerender=()=>renderPgrPsico(root);
+    const bindSel=(id,key)=>root.querySelector(id)?.addEventListener("change",e=>{const v=e.currentTarget.value;if(v)root.dataset[key]=v;else delete root.dataset[key];rerender();});
+    root.querySelector("#psi-search")?.addEventListener("input",e=>{root.dataset.psiSearch=e.currentTarget.value;const p=e.currentTarget.selectionStart;rerender();const i=root.querySelector('#psi-search');i?.focus();i?.setSelectionRange(p,p);});
+    bindSel("#psi-unit","psiUnit");bindSel("#psi-fator","psiFator");bindSel("#psi-nivel","psiNivel");bindSel("#psi-status","psiStatus");
+    root.querySelector("#psi-clear")?.addEventListener("click",()=>{["psiSearch","psiUnit","psiFator","psiNivel","psiStatus","psiCell"].forEach(k=>delete root.dataset[k]);rerender();});
+    const cellAct=el=>{const k=el.dataset.psiCell;if(root.dataset.psiCell===k)delete root.dataset.psiCell;else root.dataset.psiCell=k;rerender();};
+    root.querySelectorAll("[data-psi-cell]").forEach(el=>{el.addEventListener("click",()=>cellAct(el));el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();cellAct(el);}});});
+    root.querySelectorAll("[data-psi-open]").forEach(el=>{const go=()=>canEdit?openPgrPsicoModal(root,el.dataset.psiOpen):null;el.addEventListener("click",go);el.addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();go();}});});
+    root.querySelector("#psi-new")?.addEventListener("click",()=>openPgrPsicoModal(root));
+    root.querySelectorAll("[data-psi-edit]").forEach(b=>b.addEventListener("click",()=>openPgrPsicoModal(root,b.dataset.psiEdit)));
+    root.querySelectorAll("[data-psi-del]").forEach(b=>b.addEventListener("click",async()=>{
+      const r=all.find(x=>x.id===b.dataset.psiDel);if(!r||!confirm(`Remover a avaliação "${psicoFatorNome(r)}" de ${psicoUnitLabel(r)}?`))return;
+      state.pgrPsicoRisks=all.filter(x=>x.id!==r.id);const ok=await saveState();rerender();if(ok===false)alert('Não foi possível confirmar o salvamento. Verifique a conexão.');
+    }));
+    root.querySelector("#psi-print")?.addEventListener("click",()=>printPgrPsico(rows));
+  }
+
+  function openPgrPsicoModal(root,id=""){
+    if(!checkPermission("Master")) return;
+    const cur=(state.pgrPsicoRisks||[]).find(x=>x.id===id)||null,{ghes,setores}=psicoUnitOptions();
+    if(!ghes.length&&!setores.length){alert("Cadastre primeiro um GHE (PGR → Cadastro de GHE) ou um setor em Geral / Pessoas.");return;}
+    const unitVal=cur?psicoUnitKey(cur):"",danos=new Set(cur?.danos||[]),metodos=new Set(cur?.metodos||[]);
+    const people=[...new Set((state.employees||[]).map(e=>e.nome).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+    openModal(`<h3>${cur?'✏️ Editar':'🧠 Nova'} avaliação de fator psicossocial</h3>
+      <form id="psi-form">
+        <div class="field-row">
+          <div class="field"><label>Fator de risco psicossocial *</label><select name="fator" id="psi-f-fator" required><option value="">Selecione</option>${PSICO_FATORES.map(f=>`<option value="${f.id}" ${cur?.fator===f.id?'selected':''}>${f.icon} ${f.nome}</option>`).join('')}</select>
+            <div class="pgr-hint" id="psi-f-desc">${cur?empEsc(psicoFator(cur.fator).desc):'Escolha um fator para ver a descrição.'}</div></div>
+          <div class="field"><label>GHE / Setor avaliado *</label><select name="unit" required><option value="">Selecione</option>
+            ${ghes.length?`<optgroup label="GHE">${ghes.map(g=>`<option value="g:${g.id}" ${unitVal==='g:'+g.id?'selected':''}>👥 ${empEsc(g.codigo)} · ${empEsc(g.nome)}</option>`).join('')}</optgroup>`:''}
+            ${setores.length?`<optgroup label="Setor">${setores.map(s=>`<option value="s:${empEsc(s)}" ${unitVal==='s:'+s?'selected':''}>🏢 ${empEsc(s)}</option>`).join('')}</optgroup>`:''}
+          </select></div>
+        </div>
+        <div class="field" id="psi-f-outro-wrap" style="display:${cur?.fator==='outro'?'block':'none'}"><label>Nome do fator *</label><input name="fatorOutro" value="${empEsc(cur?.fatorOutro||'')}" placeholder="Ex.: Atendimento a público agressivo"></div>
+        <div class="field"><label>Fonte / circunstância (o que, no trabalho, gera o fator) *</label><textarea name="fonte" required rows="2" placeholder="Ex.: metas diárias de produção acima da capacidade da linha, com horas extras frequentes">${empEsc(cur?.fonte||'')}</textarea></div>
+        <div class="field"><label>Como foi identificado</label><div class="psi-checks">${PSICO_METODOS.map(m=>`<label class="pgr-epi-opt ${metodos.has(m)?'on':''}"><input type="checkbox" name="metodos" value="${empEsc(m)}" ${metodos.has(m)?'checked':''}> ${empEsc(m)}</label>`).join('')}</div></div>
+        <div class="field"><label>Possíveis danos à saúde</label><div class="psi-checks">${PSICO_DANOS.map(d=>`<label class="pgr-epi-opt ${danos.has(d)?'on':''}"><input type="checkbox" name="danos" value="${empEsc(d)}" ${danos.has(d)?'checked':''}> ${empEsc(d)}</label>`).join('')}</div></div>
+        <div class="field-row">
+          <div class="field"><label>Severidade (1 a 4)</label><select name="severidade">
+            <option value="1">1 - Leve (desconforto, estresse pontual)</option><option value="2">2 - Moderada (estresse recorrente, queixas)</option><option value="3">3 - Alta (adoecimento, afastamento)</option><option value="4">4 - Crítica (incapacidade, risco à vida, coletivo)</option></select></div>
+          <div class="field"><label>Probabilidade (1 a 4)</label><select name="probabilidade">
+            <option value="1">1 - Rara (exposição excepcional)</option><option value="2">2 - Improvável (ocasional, controles eficazes)</option><option value="3">3 - Provável (frequente, controles parciais)</option><option value="4">4 - Frequente (contínua, sem controles)</option></select></div>
+        </div>
+        <div class="pgr-hint" id="psi-f-score" style="margin:-4px 0 12px"></div>
+        <div class="field"><label>Medidas existentes</label><textarea name="existentes" rows="2" placeholder="O que já é feito hoje">${empEsc(cur?.existentes||'')}</textarea></div>
+        <div class="field"><label>Medidas de prevenção propostas (plano de ação)</label><textarea name="medidas" rows="3" id="psi-f-medidas">${empEsc(cur?.medidas||'')}</textarea>
+          <button type="button" class="pgr-link" id="psi-f-sugerir">💡 Inserir medidas sugeridas para este fator</button></div>
+        <div class="field-row">
+          <div class="field"><label>Responsável</label><input name="responsavel" list="psi-people" value="${empEsc(cur?.responsavel||'')}"><datalist id="psi-people">${people.map(p=>`<option value="${empEsc(p)}">`).join('')}</datalist></div>
+          <div class="field"><label>Prazo</label><input type="date" name="prazo" value="${empEsc(cur?.prazo||'')}"></div>
+          <div class="field"><label>Situação da ação</label><select name="status">${PSICO_STATUS.map(s=>`<option ${(cur?.status||'Não iniciada')===s?'selected':''}>${s}</option>`).join('')}</select></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>Data da avaliação</label><input type="date" name="dataAvaliacao" value="${empEsc(cur?.dataAvaliacao||new Date().toISOString().slice(0,10))}"></div>
+          <div class="field"><label>Próxima revisão</label><input type="date" name="revisao" value="${empEsc(cur?.revisao||'')}"></div>
+        </div>
+        <div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn" type="submit">💾 Salvar avaliação</button></div>
+      </form>`, ov=>{
+      const form=ov.querySelector("#psi-form"),fSel=form.querySelector("#psi-f-fator"),sev=form.querySelector('[name="severidade"]'),prob=form.querySelector('[name="probabilidade"]'),scoreEl=form.querySelector("#psi-f-score");
+      sev.value=String(cur?.severidade||2);prob.value=String(cur?.probabilidade||2);
+      const paintScore=()=>{const i=calcRiskScore(sev.value,prob.value);scoreEl.innerHTML=`Resultado: ${psicoLevelChip(i)}`;};
+      sev.addEventListener("change",paintScore);prob.addEventListener("change",paintScore);paintScore();
+      fSel.addEventListener("change",()=>{const f=psicoFator(fSel.value);form.querySelector("#psi-f-desc").textContent=fSel.value?f.desc:"Escolha um fator para ver a descrição.";form.querySelector("#psi-f-outro-wrap").style.display=fSel.value==="outro"?"block":"none";});
+      form.querySelector("#psi-f-sugerir").addEventListener("click",()=>{const f=psicoFator(fSel.value);if(!fSel.value||!f.medidas){alert("Escolha um fator de referência para ver as medidas sugeridas.");return;}const t=form.querySelector("#psi-f-medidas");if(!t.value.includes(f.medidas))t.value=(t.value.trim()?t.value.trim()+"\n":"")+f.medidas;});
+      form.querySelectorAll(".psi-checks input").forEach(i=>i.addEventListener("change",()=>i.closest("label").classList.toggle("on",i.checked)));
+      form.addEventListener("submit",async e=>{
+        e.preventDefault();const fd=new FormData(form),unit=String(fd.get("unit")||""),fator=String(fd.get("fator")||"");
+        if(fator==="outro"&&!String(fd.get("fatorOutro")||"").trim()){alert("Informe o nome do fator.");return;}
+        const rec={fator,fatorOutro:fator==="outro"?String(fd.get("fatorOutro")).trim():"",gheId:unit.startsWith("g:")?unit.slice(2):"",setor:unit.startsWith("s:")?unit.slice(2):"",
+          fonte:String(fd.get("fonte")||"").trim(),metodos:fd.getAll("metodos"),danos:fd.getAll("danos"),severidade:Number(fd.get("severidade")),probabilidade:Number(fd.get("probabilidade")),
+          existentes:String(fd.get("existentes")||"").trim(),medidas:String(fd.get("medidas")||"").trim(),responsavel:String(fd.get("responsavel")||"").trim(),prazo:String(fd.get("prazo")||""),
+          status:String(fd.get("status")||"Não iniciada"),dataAvaliacao:String(fd.get("dataAvaliacao")||""),revisao:String(fd.get("revisao")||""),updatedAt:new Date().toISOString()};
+        if(rec.gheId){const g=(state.pgrGhes||[]).find(x=>x.id===rec.gheId);if(g)rec.setor=pgrGheSectors(g).join(", ");}
+        if(!Array.isArray(state.pgrPsicoRisks))state.pgrPsicoRisks=[];
+        if(cur)Object.assign(cur,rec);else state.pgrPsicoRisks.push({id:uid("psi"),createdAt:rec.updatedAt,...rec});
+        const ok=await saveState();closeModal();renderPgrPsico(root);
+        if(ok===false)alert("Não foi possível confirmar o salvamento. Verifique a conexão.");
+      });
+    });
+  }
+
+  function printPgrPsico(rows){
+    const empresa=empEsc(state.company?.razaoSocial||""),resp=state.pgrIssuer?.nome?`${empEsc(state.pgrIssuer.nome)} · ${empEsc(state.pgrIssuer.funcao||'')}`:"—";
+    const sorted=rows.slice().sort((a,b)=>calcRiskScore(b.severidade,b.probabilidade).score-calcRiskScore(a.severidade,a.probabilidade).score);
+    const html=`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Matriz de Riscos Psicossociais</title><style>
+      body{font-family:Arial,Helvetica,sans-serif;color:#14212b;margin:24px;font-size:11px}h1{font-size:18px;margin:0 0 4px}h2{font-size:13px;margin:22px 0 8px}
+      .meta{color:#5b6b78;margin-bottom:10px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #c9d3db;padding:5px 6px;vertical-align:top;text-align:left}th{background:#eef2f5}
+      .ok{background:#d9f2e1}.warn{background:#ffe8c7}.bad{background:#f9d0cb}.none{color:#9aa7b2;text-align:center}
+      .psi-heat{display:inline-block}.psi-heat-table td{width:70px;height:44px;text-align:center;font-weight:700;font-size:13px}.psi-heat-table th{border:none;background:none;font-size:10px}
+      .psi-cell-n{display:block;font-size:10px;font-weight:400}.psi-heat-ylab,.psi-heat-xlab{font-size:10px;color:#5b6b78}.psi-matrix td,.psi-matrix th{text-align:center}.psi-matrix .psi-matrix-f{text-align:left}
+      .psi-level{padding:2px 6px;border-radius:8px;white-space:nowrap}.psi-level.ok{background:#d9f2e1}.psi-level.warn{background:#ffe8c7}.psi-level.bad{background:#f9d0cb}small{color:#5b6b78}
+      @page{size:A4 landscape;margin:12mm}</style></head><body>
+      <h1>Matriz de Riscos Psicossociais — PGR (NR-01)</h1><div class="meta">${empresa?empresa+' · ':''}Responsável pelo PGR: ${resp} · Emitido em ${new Date().toLocaleDateString('pt-BR')}</div>
+      <h2>Matriz Severidade × Probabilidade</h2>${psicoHeatmapHtml(rows,"",false)}
+      <h2>Matriz Fator × GHE / Setor (maior nível)</h2>${psicoFactorMatrixHtml(rows,false)}
+      <h2>Inventário e plano de ação</h2><table><thead><tr><th>Fator</th><th>GHE / Setor</th><th>Fonte / circunstância</th><th>Possíveis danos</th><th>S</th><th>P</th><th>Nível</th><th>Medidas existentes</th><th>Medidas propostas</th><th>Responsável</th><th>Prazo</th><th>Situação</th></tr></thead><tbody>
+      ${sorted.map(r=>{const i=calcRiskScore(r.severidade,r.probabilidade);return `<tr><td>${empEsc(psicoFatorNome(r))}</td><td>${empEsc(psicoUnitLabel(r))}</td><td>${empEsc(r.fonte||'—')}</td><td>${empEsc((r.danos||[]).join(', ')||'—')}</td><td>${r.severidade}</td><td>${r.probabilidade}</td><td class="${i.class}">${i.label} (${i.score})</td><td>${empEsc(r.existentes||'—')}</td><td style="white-space:pre-line">${empEsc(r.medidas||'—')}</td><td>${empEsc(r.responsavel||'—')}</td><td>${r.prazo?fmtDate(r.prazo):'—'}</td><td>${psicoAtrasada(r)?'Atrasada':empEsc(r.status||'Não iniciada')}</td></tr>`}).join('')}
+      </tbody></table><script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script></body></html>`;
+    const w=window.open("","_blank");
+    if(!w){alert("O navegador bloqueou a janela de impressão. Permita pop-ups para este site e tente novamente.");return;}
+    w.document.open();w.document.write(html);w.document.close();
   }
 
   function pgrGheJobs(ghe){
@@ -14289,6 +14586,7 @@ function renderPcmsoDash(root){
     } else if(currentModule === "pgr"){
       if(currentTab === "pgr-dash") renderPgrDash(main);
       else if(currentTab === "pgr-list") renderPgrList(main);
+      else if(currentTab === "pgr-psico") renderPgrPsico(main);
       else if(currentTab === "pgr-issuer") renderPgrIssuer(main);
       else if(currentTab === "pgr-ghe") renderPgrGhe(main);
       else if(currentTab === "pgr-hazards") renderPgrHazards(main);
