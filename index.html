@@ -9923,8 +9923,9 @@ function renderPcmsoDash(root){
 
     function updateDisplay(){
       if(isBranco){
-        displayEl.textContent = "BRANCO";
-        previewEl.textContent = "Voto em branco selecionado. Pressione CONFIRMA (Enter).";
+        // Sigilo: o branco aparece igual a um número completo digitado.
+        displayEl.textContent = "*".repeat(numDigits);
+        previewEl.textContent = "Pressione CONFIRMA (Enter) para registrar o voto.";
         return;
       }
       // O visor nunca exibe "_" vazio. Sem digitação mostra apenas "*".
@@ -9955,7 +9956,7 @@ function renderPcmsoDash(root){
 
     function confirmar(){
       if(isBranco){
-        if(enviando || !confirm("Confirmar VOTO EM BRANCO?\n\nEsta ação não poderá ser desfeita.")) return;
+        if(enviando || !confirm("Confirmar seu voto?\n\nEsta ação não poderá ser desfeita.")) return;
         enviar(null);
         return;
       }
@@ -9971,7 +9972,7 @@ function renderPcmsoDash(root){
         updateDisplay();
         return;
       }
-      if(enviando || !confirm(`Confirmar voto na Chapa ${cand.numero}?\n\nEsta ação não poderá ser desfeita.`)) return;
+      if(enviando || !confirm("Confirmar seu voto?\n\nEsta ação não poderá ser desfeita.")) return;
       enviar(cand);
     }
 
@@ -10063,6 +10064,8 @@ function renderPcmsoDash(root){
           ` : `
             <p>Aguardando o Administrador/Master liberar a urna para um eleitor votar neste terminal.</p>
             <div class="empty" style="padding:30px 10px;">🔒 Nenhuma votação liberada no momento.</div>
+            <button type="button" class="btn" id="btn-terminal-verificar" style="justify-content:center; margin:0 auto;">🔄 Verificar liberação</button>
+            <div id="terminal-verificar-msg" style="font-size:12px; color:var(--ink-dim); margin-top:8px; min-height:16px;" aria-live="polite"></div>
           `}
           <div style="text-align:center; margin-top:18px;">
             <button type="button" class="action-link" id="btn-terminal-logout">Sair do Terminal</button>
@@ -10071,6 +10074,21 @@ function renderPcmsoDash(root){
       </div>
     `;
     document.getElementById("btn-terminal-logout").addEventListener("click", () => { stopCipaPoll(); handleLogout(); });
+    // Consulta o banco na hora (sem esperar o ciclo automático) e, se o
+    // Admin/Master já liberou a urna, volta direto para a cédula.
+    document.getElementById("btn-terminal-verificar")?.addEventListener("click", async (ev) => {
+      const btn = ev.currentTarget;
+      const msg = document.getElementById("terminal-verificar-msg");
+      btn.disabled = true; btn.textContent = "⏳ Verificando...";
+      const ok = await atualizarEleicoesCipaDoBanco();
+      const liberada = (state.cipaElections || []).some(e => e.urnaStatus === "Aberta" && e.votoPendente);
+      if(liberada){ renderVotoCipaTerminal(); return; }
+      if(!btn.isConnected) return;
+      btn.disabled = false; btn.textContent = "🔄 Verificar liberação";
+      if(msg) msg.textContent = ok
+        ? `Ainda não há eleitor liberado (verificado às ${new Date().toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}).`
+        : "Não foi possível consultar o servidor. Verifique a internet e tente novamente.";
+    });
 
     if(el){
       const employeeId = el.votoPendente.employeeId;
