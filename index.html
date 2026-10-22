@@ -9852,9 +9852,9 @@ function renderPcmsoDash(root){
                style="position:absolute; opacity:0; height:0; width:0; pointer-events:none;">
         <div class="urna-keys">
           ${[1,2,3,4,5,6,7,8,9].map(n => `<button type="button" class="urna-key" data-key="${n}">${n}</button>`).join("")}
-          <button type="button" class="urna-key branco" data-key="branco">✖<br>BRANCO</button>
+          <button type="button" class="urna-key branco" data-key="branco" title="Atalho: tecla B">✖<br>BRANCO (B)</button>
           <button type="button" class="urna-key" data-key="0">0</button>
-          <button type="button" class="urna-key corrige" data-key="corrige">⌫<br>CORRIGE</button>
+          <button type="button" class="urna-key corrige" data-key="corrige" title="Atalho: tecla Backspace">⌫<br>CORRIGE (⌫)</button>
         </div>
         <button type="button" class="btn" id="urna-confirmar" style="width:100%; justify-content:center; margin-top:14px;">✅ CONFIRMA (Enter)</button>
         <div class="urna-msg" id="urna-msg"></div>
@@ -9862,6 +9862,40 @@ function renderPcmsoDash(root){
         </div>
 </div>
     `;
+  }
+
+  // Som de conclusão do voto, sintetizado (sem arquivo externo), no estilo da
+  // urna eletrônica: quatro bipes curtos seguidos de um longo.
+  let cipaAudioCtx = null;
+  function cipaAudioPreparar(){
+    // Chamado no gesto do eleitor (CONFIRMA) para o navegador liberar o áudio.
+    try{
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC) return null;
+      if(!cipaAudioCtx) cipaAudioCtx = new AC();
+      if(cipaAudioCtx.state === "suspended") cipaAudioCtx.resume();
+      return cipaAudioCtx;
+    }catch(e){ return null; }
+  }
+  function tocarSomFimVoto(){
+    const ctx = cipaAudioPreparar();
+    if(!ctx) return;
+    try{
+      const t0 = ctx.currentTime + 0.05;
+      const vol = 0.2;
+      [[0,0.08],[0.11,0.08],[0.22,0.08],[0.33,0.08],[0.44,0.6]].forEach(([ini, dur]) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = "square";
+        osc.frequency.value = 1000;
+        g.gain.setValueAtTime(0.0001, t0 + ini);
+        g.gain.exponentialRampToValueAtTime(vol, t0 + ini + 0.01);
+        g.gain.setValueAtTime(vol, t0 + ini + dur - 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + ini + dur);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(t0 + ini); osc.stop(t0 + ini + dur + 0.02);
+      });
+    }catch(e){ console.warn("Som de fim de voto indisponível:", e); }
   }
 
   // Liga o comportamento da cédula eletrônica renderizada por buildUrnaBallotHtml
@@ -9875,6 +9909,7 @@ function renderPcmsoDash(root){
     function enviar(cand){
       if(enviando) return;
       enviando = true;
+      cipaAudioPreparar();
       const btn = container.querySelector("#urna-confirmar");
       if(btn){ btn.disabled = true; btn.textContent = "⏳ Registrando voto..."; }
       Promise.resolve(opts.onConfirm(cand)).catch(err => { console.error(err); alert("Não foi possível registrar o voto. Tente novamente."); })
@@ -9951,12 +9986,13 @@ function renderPcmsoDash(root){
     });
 
     container.querySelector("#urna-confirmar").addEventListener("click", confirmar);
+    container.addEventListener("click", () => { if(!enviando) hiddenInput.focus(); });
 
     hiddenInput.addEventListener("keydown", (e) => {
       if(e.key >= "0" && e.key <= "9"){ addDigit(e.key); e.preventDefault(); }
       else if(e.key === "Backspace"){ corrige(); e.preventDefault(); }
       else if(e.key === "Enter"){ confirmar(); e.preventDefault(); }
-      else if(e.key.toLowerCase() === "b"){ setBranco(); e.preventDefault(); }
+      else if(e.key.toLowerCase() === "b"){ setBranco(); e.preventDefault(); } // tecla B = voto em BRANCO
     });
 
     updateDisplay();
@@ -9969,6 +10005,7 @@ function renderPcmsoDash(root){
     const app = document.getElementById("app");
     const nome = emp?.nome || "Eleitor";
     const texto = cipaComprovanteTexto(el, nome, codigo, dataHora);
+    tocarSomFimVoto();
     app.innerHTML = `
       <div class="login-overlay">
         <div class="login-card" style="max-width:460px; text-align:center;">
