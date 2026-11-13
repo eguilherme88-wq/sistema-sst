@@ -2349,6 +2349,31 @@ nav button .nav-label{line-height:1.25}
 .inicio-head h2{text-transform:none}
 @media(max-width:800px){.placa-resumo{grid-template-columns:1fr 1fr}.placa-palco{padding:8px}}
 </style>
+
+<style id="sst-module-dropdown-style">
+/* Module navigation now lives in the header selector on every screen. */
+.sst-header #sst-modules,.sst-header #btn-mobile-menu,.sst-header #sst-drawer-backdrop{display:none!important}
+.sst-header .sst-module-picker{flex:1 1 300px;min-width:180px;max-width:440px;margin:0 auto;padding:2px 12px}
+.sst-module-picker label{display:block;color:var(--ink-dim);font-size:11px;font-weight:600;letter-spacing:.04em;margin:0 0 5px 2px}
+.sst-module-picker select{display:block;width:100%;min-height:44px;margin:0;padding:9px 38px 9px 13px;border:1px solid var(--line);border-radius:9px;background-color:var(--panel-2);color:var(--ink);font:600 14px var(--font-body);cursor:pointer;box-sizing:border-box}
+.sst-module-picker select:hover{border-color:var(--yellow)}
+.sst-module-picker select:focus-visible{outline:2px solid var(--yellow);outline-offset:3px}
+.sst-module-picker option{background:var(--panel);color:var(--ink)}
+.sst-module-picker option:disabled{color:var(--ink-dim)}
+@media(max-width:900px){
+ .sst-header .sst-header-top{flex-wrap:wrap;gap:8px}
+ .sst-header .brand{flex:0 0 auto}
+ .sst-header .sst-module-picker{flex:1 1 190px;min-width:150px;padding:0 4px;max-width:360px}
+ .sst-header .header-user-section{margin-left:auto}
+}
+@media(max-width:600px){
+ .sst-header .sst-header-top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
+ .sst-header .brand{grid-column:1;grid-row:1}
+ .sst-header .header-user-section{grid-column:2;grid-row:1;gap:5px}
+ .sst-header .sst-module-picker{grid-column:1/-1;grid-row:2;width:100%;max-width:none;min-width:0;box-sizing:border-box;padding:0}
+ .sst-module-picker label{font-size:10px;margin-bottom:3px}
+}
+</style>
 </head>
 <style>
 /* =====================================================================
@@ -14510,6 +14535,14 @@ function renderPcmsoDash(root){
           <div class="brand">
             <img class="brand-logo" src="${FIXED_SYSTEM_LOGO}" alt="Partner · sistema modular de SST">
           </div>
+          <div class="sst-module-picker">
+            <label for="sst-module-select">Módulos do sistema</label>
+            <select id="sst-module-select" aria-label="Selecionar módulo do sistema">
+              <option value="inicio" ${currentModule==='inicio'?'selected':''}>🏠 Início</option>
+              ${ALL_MODULES.map(m=>`<option value="${empEsc(m.id)}" ${currentModule===m.id?'selected':''} ${availableMods.includes(m.id)?'':'disabled'}>${empEsc(m.name)}${availableMods.includes(m.id)?'':' — Sem acesso'}</option>`).join('')}
+              ${currentUser.role==='Administrador'||currentUser.role==='Master'?`<option value="admin-perms" ${currentModule==='admin-perms'?'selected':''}>⚙️ Administração</option>`:''}
+            </select>
+          </div>
           ${trialHeaderNotice()}
           <div class="header-user-section">
             <button class="sst-about-btn" id="btn-about" title="Sobre o sistema e direitos reservados">ℹ️ <span>Sobre</span></button>
@@ -14619,6 +14652,14 @@ function renderPcmsoDash(root){
         renderContent();
         renderShell();
       });
+    });
+
+    document.getElementById("sst-module-select").addEventListener("change", event => {
+      const mod = event.target.value;
+      const allowed = mod === "inicio" || availableMods.includes(mod) || (mod === "admin-perms" && ["Administrador", "Master"].includes(currentUser.role));
+      if(!allowed){ event.target.value=currentModule; return; }
+      const target = Array.from(app.querySelectorAll("[data-mod]")).find(button => button.dataset.mod === mod);
+      if(target) target.click();
     });
 
     app.querySelectorAll("nav button[data-tab]").forEach(btn => {
