@@ -5,14 +5,14 @@
 <title>Sistema Modular SST</title>
 
 <!-- PWA: permite instalar/abrir este sistema como app no celular -->
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json?v=sst-modular-2">
 <meta name="theme-color" content="#1B1D1B">
-<link rel="icon" href="icon-192.png" type="image/png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png?v=sst-modular-2" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png?v=sst-modular-2">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="SST/CIPA">
+<meta name="apple-mobile-web-app-title" content="SST Modular">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=IBM+Plex+Mono:wght@500;600&amp;display=swap" rel="stylesheet">
@@ -3763,6 +3763,40 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
   function roleLabel(role){
     if(role === "VotacaoCIPA") return "Terminal de Votação CIPA";
     return role;
+  }
+
+
+  function renderAdminInstall(main){
+    main.innerHTML = `<h1>Administração · Instalar aplicativo</h1>
+    <p>Use o Partner em uma janela própria no computador ou na tela inicial do celular e tablet.</p>
+    <section style="background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:24px;max-width:960px">
+      <h2>📲 Partner · Sistema Modular SST</h2>
+      <p id="partner-install-status" role="status" aria-live="polite"></p>
+      <button class="btn" id="partner-install-button" type="button">Instalar neste dispositivo</button>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px;margin-top:24px">
+        <div><h3>💻 Windows e Linux</h3><p>No Google Chrome, abra o menu ⋮ e procure “Instalar Partner” ou “Transmitir, salvar e compartilhar → Instalar página como app”. No Windows, também é possível usar o Microsoft Edge.</p></div>
+        <div><h3>📱 Android · celular e tablet</h3><p>Abra no Chrome e toque em “Instalar neste dispositivo”. Se a opção não aparecer, abra o menu ⋮ e escolha “Instalar aplicativo” ou “Adicionar à tela inicial”.</p></div>
+        <div><h3>🍎 iPhone e iPad</h3><p>Abra no Safari, toque em Compartilhar e selecione “Adicionar à Tela de Início”. Ative “Abrir como App”, se essa opção aparecer, e confirme em Adicionar.</p></div>
+      </div>
+      <p>O sistema precisa estar publicado em HTTPS. Abrir o HTML baixado diretamente não permite instalar. A instalação é feita em cada dispositivo e não muda as permissões de acesso.</p>
+      <p>Mantenha conexão com a internet para acessar e salvar os dados. As atualizações são recebidas ao abrir o aplicativo conectado.</p>
+    </section>`;
+    const button=main.querySelector('#partner-install-button');
+    const status=main.querySelector('#partner-install-status');
+    const refresh=()=>{
+      const installed=window.matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+      button.disabled=installed || !window.partnerInstallPrompt;
+      button.textContent=installed?'Aplicativo aberto no modo instalado':window.partnerInstallPrompt?'Instalar neste dispositivo':'Siga as instruções abaixo';
+      status.textContent=installed?'Você já está usando o aplicativo instalado.':!window.isSecureContext || location.protocol==='file:'?'Publique o pacote em HTTPS para habilitar a instalação.':window.partnerInstallError?'Não foi possível preparar a instalação. Confira se todos os arquivos do pacote foram publicados e recarregue a página.':window.partnerInstallPrompt?'Pronto para instalar neste dispositivo.':'Se o navegador não oferecer o botão, use o menu descrito abaixo. Se já instalou, abra pelo ícone do Partner.';
+    };
+    refresh();
+    window.addEventListener('partner-install-change',refresh);
+    button.addEventListener('click',async()=>{
+      const prompt=window.partnerInstallPrompt;if(!prompt)return;
+      button.disabled=true;
+      try{await prompt.prompt();const choice=await prompt.userChoice;window.partnerInstallPrompt=null;refresh();if(choice.outcome==='dismissed')status.textContent='Instalação cancelada. Você pode tentar novamente pelo menu do navegador.';}
+      catch(e){window.partnerInstallPrompt=null;refresh();status.textContent='Use o menu do navegador para instalar o aplicativo.';}
+    });
   }
 
   function renderAdminUsers(root){
@@ -14456,6 +14490,7 @@ function renderPcmsoDash(root){
       navItems = `
         <button data-tab="admin-users-tab" class="${currentTab==="admin-users-tab"?'active':''}">👥 Gerenciar Usuários</button>
         <button data-tab="admin-access-tab" class="${currentTab==="admin-access-tab"?'active':''}">🔐 Matriz de Acessos</button>
+        <button data-tab="admin-install-tab" class="${currentTab==="admin-install-tab"?'active':''}">📲 Instalar aplicativo</button>
         <button data-tab="admin-logo-tab" class="${currentTab==="admin-logo-tab"?'active':''}">🖼️ Logo dos Relatórios</button>
         <button data-tab="admin-portaria-tab" class="${currentTab==="admin-portaria-tab"?'active':''}">🚧 Acesso de Terceiros</button>
         <button data-tab="my-account-tab" class="${currentTab==="my-account-tab"?'active':''}">🔑 Alterar Minha Senha</button>
@@ -14621,6 +14656,7 @@ function renderPcmsoDash(root){
     if(currentModule === "admin-perms"){
       if(currentTab === "admin-users-tab") renderAdminUsers(main);
       else if(currentTab === "admin-access-tab") renderAdminPermissions(main);
+      else if(currentTab === "admin-install-tab") renderAdminInstall(main);
       else if(currentTab === "admin-logo-tab") renderAdminLogoV2(main);
       else if(currentTab === "admin-portaria-tab") renderAdminPortaria(main);
       return;
@@ -16824,15 +16860,12 @@ function renderPcmsoDash(root){
 </script>
 
 <script>
-  // Registra o Service Worker (permite instalar como app / funcionar
-  // parcialmente offline). Só roda quando o arquivo está hospedado em
-  // http(s) — em file:// ou dentro do preview do Claude o navegador não
-  // suporta Service Worker, então falha silenciosamente sem afetar o app.
-  if("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")){
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("service-worker.js").catch(() => {});
-    });
-  }
+window.partnerInstallPrompt=null;
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();window.partnerInstallPrompt=event;window.dispatchEvent(new Event('partner-install-change'));});
+window.addEventListener('appinstalled',()=>{window.partnerInstallPrompt=null;window.dispatchEvent(new Event('partner-install-change'));});
+if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
+  window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{window.partnerInstallError=true;window.dispatchEvent(new Event('partner-install-change'));}));
+}
 </script>
 
 <script>
