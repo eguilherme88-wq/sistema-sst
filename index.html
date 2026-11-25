@@ -1072,6 +1072,13 @@ header.top-header.sst-header{display:block;padding:0;position:sticky;top:0;z-ind
 .sst-footer button{all:unset;cursor:pointer;text-decoration:underline;color:var(--ink-dim)}
 .sst-footer button:hover{color:var(--ink)}
 .login-copy{margin-top:16px;text-align:center;font-size:11px;color:var(--ink-dim);line-height:1.5}
+.login-card .btn{box-sizing:border-box;max-width:100%}
+.login-bio{margin-top:14px;text-align:center}
+.login-bio-sep{display:flex;align-items:center;gap:10px;color:var(--ink-dim);font-size:11px;margin-bottom:12px}
+.login-bio-sep::before,.login-bio-sep::after{content:"";flex:1;height:1px;background:var(--line)}
+.login-bio-btn{width:100%;justify-content:center;gap:8px;min-height:46px;font-size:14px}
+.login-bio-user{margin-top:8px;font-size:11.5px;color:var(--ink-dim)}
+.login-bio-forget{all:unset;cursor:pointer;margin-top:6px;font-size:11px;color:var(--ink-dim);text-decoration:underline}
 .modal.sst-about-modal{max-width:640px}
 .sst-about-head{display:flex;align-items:center;gap:16px;padding-bottom:14px;margin-bottom:12px;border-bottom:1px solid var(--line)}
 .sst-about-head img{height:56px;max-width:200px;object-fit:contain}
@@ -2833,13 +2840,142 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     const found = usersList.find(u => u.username.toLowerCase() === userInp && u.pass === passInp);
 
     if(found) {
+      if(completeLogin(found, errDiv)) {
+        const userInDb = (state.usersDb || []).find(u => u.id === found.id);
+        if(!(userInDb && userInDb.mustChangePassword)) setTimeout(() => maybeOfferBiometricLogin(found.id), 400);
+      }
+    } else {
+      errDiv.style.display = "block";
+      errDiv.innerText = "Usuário ou senha incorretos!";
+    }
+  }
+
+  // ---- ENTRADA POR BIOMETRIA (celular/tablet) ----------------------------
+  // A credencial fica presa a este aparelho (WebAuthn, autenticador da
+  // plataforma: digital / Face ID). O aparelho guarda qual usuário está
+  // vinculado e o cadastro do usuário guarda as credenciais liberadas, para
+  // que o Administrador possa revogar (ex.: ao redefinir a senha).
+  const BIOMETRIC_LOGIN_KEY = "sst-erp-biometric-login";
+  const BIOMETRIC_DECLINED_KEY = "sst-erp-biometric-declined";
+  function isMobileOrTabletDevice(){
+    const ua = navigator.userAgent || "";
+    if(/Android|iPhone|iPad|iPod|Mobile|Tablet|Silk|Kindle/i.test(ua)) return true;
+    // iPadOS se apresenta como "Macintosh", mas possui tela de toque.
+    return /Macintosh/i.test(ua) && (navigator.maxTouchPoints || 0) > 1;
+  }
+  async function biometricLoginSupported(){
+    if(!isMobileOrTabletDevice() || !biometricAvailable()) return false;
+    try {
+      if(typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === "function")
+        return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+    } catch(_) {}
+    return false;
+  }
+  function getBiometricBinding(){
+    try { const v = JSON.parse(localStorage.getItem(BIOMETRIC_LOGIN_KEY) || "null"); return v && v.userId && v.credentialId ? v : null; }
+    catch(_) { return null; }
+  }
+  function clearBiometricBinding(){ try { localStorage.removeItem(BIOMETRIC_LOGIN_KEY); } catch(_) {} }
+  function biometricDeviceLabel(){
+    const ua = navigator.userAgent || "";
+    if(/iPad/i.test(ua) || (/Macintosh/i.test(ua) && (navigator.maxTouchPoints||0) > 1)) return "iPad";
+    if(/iPhone/i.test(ua)) return "iPhone";
+    if(/Android/i.test(ua)) return /Mobile/i.test(ua) ? "Celular Android" : "Tablet Android";
+    return "Dispositivo móvel";
+  }
+  function bioEsc(v){ return String(v ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+  async function enableBiometricLogin(userId){
+    const user = (state.usersDb || []).find(u => u.id === userId);
+    if(!user) throw new Error("Usuário não encontrado.");
+    const credentialId = await registerEmployeeBiometric(user.name || user.username, user.username);
+    user.biometricLogins = (user.biometricLogins || []).filter(b => b && b.id !== credentialId);
+    user.biometricLogins.push({ id: credentialId, device: biometricDeviceLabel(), createdAt: new Date().toISOString() });
+    await saveState();
+    localStorage.setItem(BIOMETRIC_LOGIN_KEY, JSON.stringify({ userId: user.id, credentialId, username: user.username, name: user.name || user.username }));
+    try { localStorage.removeItem(BIOMETRIC_DECLINED_KEY + ":" + user.id); } catch(_) {}
+  }
+
+  async function maybeOfferBiometricLogin(userId){
+    const user = (state.usersDb || []).find(u => u.id === userId);
+    if(!user || user.role === "VotacaoCIPA") return; // terminal compartilhado
+    if(!(await biometricLoginSupported())) return;
+    const binding = getBiometricBinding();
+    if(binding && binding.userId === userId && (user.biometricLogins || []).some(b => b.id === binding.credentialId)) return;
+    try { if(localStorage.getItem(BIOMETRIC_DECLINED_KEY + ":" + userId)) return; } catch(_) {}
+    if(document.querySelector(".modal-overlay")) return;
+    const other = binding && binding.userId !== userId;
+    openModal(`
+      <h3>🔐 Entrar com biometria?</h3>
+      <div style="font-size:13px; color:var(--ink-dim); margin-bottom:16px; line-height:1.5;">
+        Nos próximos acessos por este aparelho você poderá entrar usando a <strong>digital</strong> ou o <strong>reconhecimento facial</strong>, sem digitar usuário e senha.
+        ${other ? `<br><br>Este aparelho hoje está vinculado a <strong>${bioEsc(binding.name)}</strong>. Ao ativar, a biometria passará a entrar com a sua conta.` : ""}
+      </div>
+      <div id="bio-offer-error" style="color:var(--red); font-size:12px; margin-bottom:12px; display:none;"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn secondary" id="bio-offer-no">Agora não</button>
+        <button type="button" class="btn" id="bio-offer-yes">Ativar biometria</button>
+      </div>
+    `, (ov) => {
+      ov.querySelector("#bio-offer-no").addEventListener("click", () => {
+        try { localStorage.setItem(BIOMETRIC_DECLINED_KEY + ":" + userId, "1"); } catch(_) {}
+        window.closeModal();
+      });
+      ov.querySelector("#bio-offer-yes").addEventListener("click", async (ev) => {
+        const btn = ev.currentTarget; const err = ov.querySelector("#bio-offer-error");
+        btn.disabled = true;
+        try {
+          await enableBiometricLogin(userId);
+          window.closeModal();
+          alert("Biometria ativada! No próximo acesso por este aparelho, toque em \"Entrar com biometria\".");
+        } catch(e) {
+          btn.disabled = false;
+          err.style.display = "block";
+          err.innerText = e && e.name === "NotAllowedError" ? "Cadastro cancelado ou não autorizado. Tente novamente." : (e && e.message) || "Não foi possível ativar a biometria.";
+        }
+      });
+    });
+  }
+
+  async function handleBiometricLogin(){
+    const errDiv = document.getElementById("login-error");
+    const showErr = (msg) => { if(errDiv){ errDiv.style.display = "block"; errDiv.innerText = msg; } };
+    const binding = getBiometricBinding();
+    if(!binding){ showErr("Nenhuma biometria vinculada a este aparelho. Entre com usuário e senha."); return; }
+    try {
+      const assertion = await navigator.credentials.get({ publicKey: {
+        challenge: biometricRandomBytes(),
+        allowCredentials: [{ type: "public-key", id: biometricFromBase64Url(binding.credentialId) }],
+        userVerification: "required",
+        timeout: 60000
+      }});
+      if(!assertion || biometricToBase64Url(assertion.rawId) !== binding.credentialId) throw new Error("Credencial inválida.");
+    } catch(e) {
+      showErr(e && e.name === "NotAllowedError" ? "Biometria cancelada ou não reconhecida. Tente novamente ou use usuário e senha." : "Não foi possível confirmar a biometria. Use usuário e senha.");
+      return;
+    }
+    const user = (state.usersDb || []).find(u => u.id === binding.userId);
+    if(!user || !(user.biometricLogins || []).some(b => b.id === binding.credentialId)) {
+      clearBiometricBinding();
+      showErr("A biometria deste aparelho foi desativada (senha redefinida ou usuário removido). Entre com usuário e senha.");
+      renderLoginOverlay();
+      const e2 = document.getElementById("login-error");
+      if(e2){ e2.style.display = "block"; e2.innerText = "A biometria deste aparelho foi desativada. Entre com usuário e senha para ativá-la novamente."; }
+      return;
+    }
+    completeLogin(user, errDiv);
+  }
+
+  function completeLogin(found, errDiv) {
       const vencTeste = trialEfetivo(found);
       if(vencTeste) {
         const today = new Date().toISOString().slice(0, 10);
         if(today > vencTeste) {
-          errDiv.style.display = "block";
-          errDiv.innerText = "Acesso negado: O seu período de teste expirou em " + fmtDate(vencTeste) + ". Contate o administrador.";
-          return;
+          if(errDiv){
+            errDiv.style.display = "block";
+            errDiv.innerText = "Acesso negado: O seu período de teste expirou em " + fmtDate(vencTeste) + ". Contate o administrador.";
+          }
+          return false;
         }
       }
 
@@ -2866,10 +3002,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
       if(currentUser.role !== "VotacaoCIPA"){ currentModule = "inicio"; currentTab = "inicio"; }
 
       render();
-    } else {
-      errDiv.style.display = "block";
-      errDiv.innerText = "Usuário ou senha incorretos!";
-    }
+      return true;
   }
 
   function handleLogout() {
@@ -2898,11 +3031,35 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
             <div id="login-error" style="color:var(--red); font-size:12px; margin-bottom:12px; display:none;"></div>
             <button type="submit" class="btn" style="width:100%; justify-content:center;">Entrar</button>
           </form>
+          <div id="login-bio" class="login-bio" style="display:none;">
+            <div class="login-bio-sep"><span>ou</span></div>
+            <button type="button" id="login-bio-btn" class="btn secondary login-bio-btn">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 11c0 3.5-1 6.5-2.5 9"/><path d="M8.5 6.6A6 6 0 0 1 18 11c0 2.5-.3 4.8-1 7"/><path d="M6 9.5A6 6 0 0 1 7 7.2"/><path d="M6 13c0 2-.4 3.8-1.2 5.4"/><path d="M15 11a3 3 0 0 0-6 0c0 3-.6 5.8-1.8 8"/><path d="M14.5 15.5c-.2 1.6-.6 3.1-1.2 4.5"/></svg>
+              <span>Entrar com biometria</span>
+            </button>
+            <div class="login-bio-user" id="login-bio-user"></div>
+            <button type="button" class="login-bio-forget" id="login-bio-forget">Não usar biometria neste aparelho</button>
+          </div>
           <div class="login-copy">© ${new Date().getFullYear()} Partner · Sistema Modular de SST<br>Todos os direitos reservados.</div>
         </div>
       </div>
     `;
     document.getElementById("login-form").addEventListener("submit", handleLogin);
+    const bioBinding = getBiometricBinding();
+    if(bioBinding) {
+      biometricLoginSupported().then(ok => {
+        const box = document.getElementById("login-bio");
+        if(!ok || !box) return;
+        box.style.display = "block";
+        document.getElementById("login-bio-user").textContent = "Conta vinculada: " + (bioBinding.name || bioBinding.username);
+        document.getElementById("login-bio-btn").addEventListener("click", handleBiometricLogin);
+        document.getElementById("login-bio-forget").addEventListener("click", () => {
+          if(!confirm("Deseja deixar de usar a biometria neste aparelho? Você poderá ativá-la de novo no próximo acesso com senha.")) return;
+          clearBiometricBinding();
+          box.style.display = "none";
+        });
+      });
+    }
   }
 
   function renderFirstAccessModal() {
@@ -2949,6 +3106,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         await saveState();
         window.closeModal();
         render();
+        setTimeout(() => maybeOfferBiometricLogin(currentUser.id), 400);
       });
     });
   }
@@ -4047,6 +4205,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         e.preventDefault();
         const data = Object.fromEntries(new FormData(e.target));
         user.pass = data.newPass;
+        user.biometricLogins = []; // senha redefinida: revoga a biometria em todos os aparelhos
         await saveState();
         window.closeModal();
         render();
