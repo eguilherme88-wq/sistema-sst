@@ -12961,7 +12961,13 @@ function renderPcmsoDash(root){
       <h3>${isEdit ? "Editar Funcionário" : "Novo Funcionário"}</h3>
       <form id="emp-form">
         <div class="field"><label>Nome Completo</label><input required name="nome" value="${esc(employee?.nome)}"></div>
-        <div class="field"><label>Matrícula</label><input name="matricula" required value="${esc(employeeRegistration)}" ${isEdit?'':'readonly'} inputmode="numeric" placeholder="Ex.: 000123"><div style="font-size:11px;color:var(--ink-dim);margin-top:5px;">${isEdit?'Matrícula atual do funcionário.':'Numeração gerada automaticamente após a última matrícula cadastrada.'}</div><div id="emp-matricula-error" style="display:none;font-size:11px;color:var(--red);margin-top:5px;">Esta matrícula já está cadastrada para outro funcionário.</div></div>
+        <div class="field"><label>Matrícula</label>
+          <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px;font-size:13px;">
+            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;margin:0;"><input type="radio" id="emp-mat-mode-auto" value="auto" ${isEdit?'':'checked'} style="width:auto;margin:0;"> Gerar automaticamente</label>
+            <label style="display:flex;align-items:center;gap:6px;font-weight:400;cursor:pointer;margin:0;"><input type="radio" id="emp-mat-mode-manual" value="manual" ${isEdit?'checked':''} style="width:auto;margin:0;"> Informar manualmente</label>
+          </div>
+          <input name="matricula" required value="${esc(employeeRegistration)}" ${isEdit?'':'readonly'} placeholder="Ex.: 000123">
+          <div id="emp-matricula-hint" style="font-size:11px;color:var(--ink-dim);margin-top:5px;">${isEdit?'Matrícula atual do funcionário. Você pode editá-la ou gerar uma nova automaticamente.':'Numeração gerada automaticamente após a última matrícula cadastrada.'}</div><div id="emp-matricula-error" style="display:none;font-size:11px;color:var(--red);margin-top:5px;">Esta matrícula já está cadastrada para outro funcionário.</div></div>
         <div class="field-row">
           <div class="field"><label>Cargo / Função</label><select name="cargo" id="employee-job-select" required><option value="">Selecione o cargo cadastrado</option>${cargosCadastrados.map(x=>`<option value="${esc(x.nome)}" ${employee?.cargo===x.nome?'selected':''}>${esc(x.nome)}</option>`).join('')}</select>${!cargosCadastrados.length?'<div style="font-size:11px;color:var(--red);margin-top:5px;">Cadastre primeiro um cargo em Cadastro de Cargos.</div>':''}</div>
           <div class="field"><label>Setor</label><select name="setor" id="employee-sector-select" required><option value="">Selecione primeiro o cargo</option></select><div id="employee-sector-link-info" style="font-size:11px;color:var(--ink-dim);margin-top:5px;">O setor será carregado conforme o vínculo do cargo.</div>${!setoresCadastrados.length?'<div style="font-size:11px;color:var(--red);margin-top:5px;">Cadastre primeiro um setor em Cadastro de Setores.</div>':''}</div>
@@ -13133,6 +13139,36 @@ function renderPcmsoDash(root){
           alert("Não foi possível acessar a câmera. Verifique se o navegador tem permissão para usar a câmera e se o sistema está sendo aberto por HTTPS ou localhost.");
         }
       });
+
+      (()=>{
+        const matInput = ov.querySelector('#emp-form [name="matricula"]');
+        const autoRadio = ov.querySelector('#emp-mat-mode-auto');
+        const manualRadio = ov.querySelector('#emp-mat-mode-manual');
+        const hint = ov.querySelector('#emp-matricula-hint');
+        const originalValue = isEdit ? String(employee?.matricula || "") : "";
+        let manualValue = isEdit ? originalValue : "";
+        const applyMode = (mode)=>{
+          if(!matInput) return;
+          autoRadio.checked = mode === "auto";
+          manualRadio.checked = mode === "manual";
+          matInput.setCustomValidity("");
+          const error = ov.querySelector("#emp-matricula-error");
+          if(error) error.style.display = "none";
+          if(mode === "auto"){
+            if(!matInput.readOnly) manualValue = matInput.value;
+            matInput.value = nextEmployeeRegistration();
+            matInput.readOnly = true;
+            if(hint) hint.textContent = "Numeração gerada automaticamente após a última matrícula cadastrada.";
+          } else {
+            matInput.readOnly = false;
+            matInput.value = manualValue;
+            if(hint) hint.textContent = isEdit ? "Matrícula atual do funcionário. Você pode editá-la livremente." : "Digite a matrícula do funcionário (ex.: número do RH/folha).";
+            matInput.focus();
+          }
+        };
+        autoRadio?.addEventListener("change", ()=>applyMode("auto"));
+        manualRadio?.addEventListener("change", ()=>applyMode("manual"));
+      })();
 
       ov.querySelector('#emp-form [name="matricula"]')?.addEventListener("input", e=>{
         e.currentTarget.setCustomValidity("");
