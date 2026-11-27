@@ -1390,6 +1390,12 @@ header.top-header.sst-header{display:block;padding:0;position:sticky;top:0;z-ind
           if(!merged) merged = JSON.parse(jsonString);
           if(freshObj && typeof window.cipaMergeVotes === "function") merged = window.cipaMergeVotes(freshObj, merged);
         }catch(cipaMergeError){ console.warn("Mescla dos votos da CIPA não aplicada:", cipaMergeError); }
+        // PTE-APR emitidas/assinadas em outro aparelho não podem ser apagadas
+        // nem desfeitas por uma sessão aberta com dados antigos.
+        try{
+          if(!merged) merged = JSON.parse(jsonString);
+          if(freshObj && typeof window.pteMergeStates === "function") merged = window.pteMergeStates(freshObj, merged);
+        }catch(pteMergeError){ console.warn("Mescla das PTE-APR não aplicada:", pteMergeError); }
         if(merged) out = JSON.stringify(merged);
       }
       // Fotos, logos e assinaturas saem do documento principal.
@@ -1415,6 +1421,24 @@ header.top-header.sst-header{display:block;padding:0;position:sticky;top:0;z-ind
     window.firestoreCipaVote = async (voto) => sstRehydrateObj(await votar(voto));
     window.firestoreCipaSaveLink = async (...a) => sstRehydrateObj(await salvarLink(...a));
   }
+  // ---- PTE-APR: cada emissão/assinatura é aplicada em transação sobre o
+  // estado mais recente do banco (regras em window.pteApplyAction). Assim
+  // assinaturas feitas ao mesmo tempo em celulares diferentes não se perdem.
+  window.firestorePteAction = async (action) => {
+    const act = await sstExternalizeObj(action);
+    const res = await runTransaction(db, async tx => {
+      const snap = await tx.get(window.firestoreStateRef);
+      if(!snap.exists() || typeof snap.data()?.json !== "string") throw new Error("Banco de dados principal indisponível.");
+      if(typeof window.pteApplyAction !== "function") throw new Error("Módulo PTE-APR indisponível. Recarregue a página.");
+      const fresh = JSON.parse(snap.data().json);
+      const pte = window.pteApplyAction(fresh, JSON.parse(JSON.stringify(act)));
+      const json = JSON.stringify(fresh);
+      if(new Blob([json]).size > 1040000) throw new Error("O banco principal passou do limite de 1 MB do Firestore. Remova fotos/arquivos grandes.");
+      tx.set(window.firestoreStateRef, { json, updatedAt: serverTimestamp() });
+      return { ptes: fresh.ptes || [], pteDeleted: fresh.pteDeleted || {}, id: pte ? pte.id : null };
+    });
+    return sstRehydrateObj(res);
+  };
   // Mescla o cadastro de FDS: vence o registro com "updatedAt" mais recente;
   // exclusões ficam registradas em fdsDeleted para não "ressuscitar" produtos.
   window.fdsMergeStates = (fresh, mine) => {
@@ -2679,6 +2703,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
   const ALL_MODULES = [
     { id: "trainings", name: "🎓 Treinamentos" },
     { id: "ec", name: "🚧 Espaço Confinado (NR-33)" },
+    { id: "pte", name: "📝 PTE-APR" },
     { id: "pgr", name: "⚠️ PGR (NR-1)" },
     { id: "fds", name: "🧪 FDS (NR-26)" },
     { id: "nr15", name: "☣️ Insalubridade (NR-15)" },
@@ -2704,6 +2729,12 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
       { id: "ec-pets", name: "📜 Gestão de PETs" },
       { id: "ec-supervisors", name: "👷 Supervisores Autorizados" },
       { id: "ec-portal", name: "📱 Portal e QR Codes" }
+    ],
+    pte: [
+      { id: "pte-dash", name: "📊 Dashboard PTE-APR" },
+      { id: "pte-list", name: "📝 Gestão de PTE-APR" },
+      { id: "pte-emitentes", name: "👷 Emitentes Autorizados" },
+      { id: "pte-portal", name: "📱 Portal do Celular" }
     ],
     pgr: [
       { id: "pgr-dash", name: "📊 Dashboard PGR" },
@@ -3372,7 +3403,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     }
   }
 
-  const DEFAULT_STATE_SHAPE = {usersDb:[], employees:[],items:[],deliveries:[],stockMovements:[],pcmso:[],fireEquip:[],fireInspections:[],fireBrigadistas:[],fireCorrectiveActions:[],pgrRisks:[],pgrGhes:[],pgrPsicoRisks:[],pgrIssuer:null,nr15Assessments:[],nr15Professionals:[],confinedSpaces:[],pets:[],ecSupervisors:[],ecPortalPublicUrl:"",fdsList:[],fdsPortalPublicUrl:"",trainings:[],courseCatalog:[],roleMatrix:[],roleTrainingCompliance:[],annualTrainingPlan:[],cipaMembers:[],cipaElections:[],cipaMeetings:[],cipaActions:[],tercEmpresas:[],tercFuncionarios:[],tercIntegracoes:[],tercTiposDocumento:[],tercDocumentos:[],modulePermissions:{master:[],usuario:[]},userSpecificPermissions:{},roleActionPermissions:{},roleSubitemPermissions:{Master:{}},companyLogo:null,systemLogo:null,portariaLicenca:null};
+  const DEFAULT_STATE_SHAPE = {usersDb:[], employees:[],items:[],deliveries:[],stockMovements:[],pcmso:[],fireEquip:[],fireInspections:[],fireBrigadistas:[],fireCorrectiveActions:[],pgrRisks:[],pgrGhes:[],pgrPsicoRisks:[],pgrIssuer:null,nr15Assessments:[],nr15Professionals:[],confinedSpaces:[],pets:[],ecSupervisors:[],ecPortalPublicUrl:"",ptes:[],pteDeleted:{},pteEmitters:[],ptePortalPublicUrl:"",fdsList:[],fdsPortalPublicUrl:"",trainings:[],courseCatalog:[],roleMatrix:[],roleTrainingCompliance:[],annualTrainingPlan:[],cipaMembers:[],cipaElections:[],cipaMeetings:[],cipaActions:[],tercEmpresas:[],tercFuncionarios:[],tercIntegracoes:[],tercTiposDocumento:[],tercDocumentos:[],modulePermissions:{master:[],usuario:[]},userSpecificPermissions:{},roleActionPermissions:{},roleSubitemPermissions:{Master:{}},companyLogo:null,systemLogo:null,portariaLicenca:null};
 
   // Aplica migrações/valores-padrão em uma base carregada (de qualquer origem)
   // para manter compatibilidade com estados salvos por versões anteriores.
@@ -3394,6 +3425,10 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     if(!state.company||typeof state.company!=="object"||Array.isArray(state.company)) state.company={};
     if(!state.company.razaoSocial&&state.nr15Company.razaoSocial){const o=state.nr15Company,cu=String(o.cidade||"").split("/");state.company={razaoSocial:o.razaoSocial||"",cnpj:o.cnpj||"",logradouro:o.endereco||"",cnaeCodigo:String(o.cnae||"").split(" — ")[0]||"",cnaeDescricao:String(o.cnae||"").split(" — ").slice(1).join(" — "),grauRisco:o.grauRisco||"",jornada:o.jornada||"",cidade:(cu[0]||"").trim(),uf:(cu[1]||"").trim().toUpperCase(),updatedAt:new Date().toISOString(),updatedBy:"Migrado do laudo NR-15"};}
     if(!Array.isArray(state.ecSupervisors)) state.ecSupervisors=[];
+    if(!Array.isArray(state.ptes)) state.ptes=[];
+    if(!state.pteDeleted||typeof state.pteDeleted!=="object"||Array.isArray(state.pteDeleted)) state.pteDeleted={};
+    if(!Array.isArray(state.pteEmitters)) state.pteEmitters=[];
+    if(typeof state.ptePortalPublicUrl!=="string") state.ptePortalPublicUrl="";
     if(typeof state.ecPortalPublicUrl!=="string") state.ecPortalPublicUrl="";
     if(!Array.isArray(state.fdsList)) state.fdsList=[];
     if(!state.fdsDeleted||typeof state.fdsDeleted!=="object") state.fdsDeleted={};
@@ -3657,6 +3692,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
             if(Array.isArray(m.pgrRisks)) state.pgrRisks = m.pgrRisks;
             if(Array.isArray(m.pgrHazards)) state.pgrHazards = m.pgrHazards;
             if(m.fdsPortalPublicUrl) state.fdsPortalPublicUrl = m.fdsPortalPublicUrl;
+            if(Array.isArray(m.ptes)){ state.ptes = m.ptes; state.pteDeleted = m.pteDeleted || {}; }
             if(Array.isArray(m.cipaElections)){ state.cipaElections = m.cipaElections; state.cipaElections.forEach(ensureElectionVotingFields); }
           }catch(e){}
         }
@@ -14910,6 +14946,11 @@ function renderPcmsoDash(root){
       else if(currentTab === "ec-pets") renderEcPets(main);
       else if(currentTab === "ec-supervisors") renderEcSupervisors(main);
       else if(currentTab === "ec-portal") renderEcPortalSettings(main);
+    } else if(currentModule === "pte"){
+      if(currentTab === "pte-dash") renderPteDash(main);
+      else if(currentTab === "pte-list") renderPteList(main);
+      else if(currentTab === "pte-emitentes") renderPteEmitentes(main);
+      else if(currentTab === "pte-portal") renderPtePortalSettings(main);
     } else if(currentModule === "pgr"){
       if(currentTab === "pgr-dash") renderPgrDash(main);
       else if(currentTab === "pgr-list") renderPgrList(main);
@@ -17054,6 +17095,740 @@ function renderPcmsoDash(root){
   });
   // ================= FIM PLACA DA CIPA · ABA DA PORTARIA =================
 
+  // =====================================================================
+  // PTE-APR · Permissão de Trabalho Especial com Análise Preliminar de Riscos
+  // Emissão pelo sistema (aba Gestão de PTE-APR) e pelo celular (#pte-portal).
+  // Todas as gravações usam transação sobre o estado mais recente do banco,
+  // para que assinaturas feitas em celulares diferentes não se sobrescrevam.
+  // =====================================================================
+  const PTE_ICONS={eletricidade:'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAoHBwgHBgoICAgLCgoLDhgQDg0NDh0VFhEYIx8lJCIfIiEmKzcvJik0KSEiMEExNDk7Pj4+JS5ESUM8SDc9Pjv/2wBDAQoLCw4NDhwQEBw7KCIoOzs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozs7Ozv/wAARCABPAGADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwD2asuUXVxrM0Ed69vFHAjgIiHJZmByWB/uitSs+EH+37s/9O0P/oUlAC/YbvH/ACFrj/v3F/8AE0Cyu/8AoK3B/wC2cX/xNXq5D4jeJv7B0Q29vJtvb0FIyDyi/wATe3oPf6VUbt2FZFttf0lHZG8WxhlOCCYeD/3zUtpqdlfXC29p4oFxM4JVI/JYnHJ4218+ZJPJzXtPw08Kf2Rpn9qXceLy8UFQw5jj7D2J6n8K2nTUY3v+BKaZ1X2G8/6C1x/36i/+JoFjeZ/5C0//AH6j/wDiav1l+INfsvDmmm+vd5XcEVEALMx7CsE2yrE32G8z/wAhaf8A79R//E0n2G9/6C0//fqP/wCJrnvC/wARdP8AEmo/2f8AZZbW4YExh2DK4HOM+uK7Gm7p2YWM/wCw33/QXm/78x//ABNS6bJJLZI8r735BbGM4JGf0q3VPS/+PBP95/8A0I0rjLlUYsf23dHv9ni/9Cer1Uof+Qzdn/phF/N6QE15dwWNnNdXEgjhhQu7HsB1r548Ta/N4i1yfUJchWO2JCfuIOg/z616L8Ur3VrxY9F02xu5YOJLiSOFirH+Fcgdup/CvKruxvbF1W8tZrdmGVEqFSR+NddGFlzGcn0Or+HXhX+39Y+13KZsbJgzg9JH7L/U17kAB0rwXRPH+t6Lp8OmadDaiNW4/cks7E9+eTmvadBbVH0mF9YMf2xxudY02hM9F/Cs6yle7KjZGia5fx9o9prehCC41CCxkjk8yGSZwqlsEYOfXNL458Xx+FtJ3xGN76Y4gibn6sR6D+deF6nq99rF695f3DzTOerdB7AdhSpU5SfMEmkdd4TTRfDXiAajq2t2zPbBhFHahpQxIxksBgcE17DpWrWWtWCXunziaByQGAIII6gg9DXzMp4Ga6Hwj4tuvC2pCaPMttKcTwZ++PUeh962q0nLW+olKx9C1U0v/jwT/ef/ANCNGmala6tYRX1nKJIZRkEdvUH3FGl/8eCf7z/+hGuMst1Th/5C11/1yi/m9XKpw/8AIWuv+uUX83oAlvLqGytJrq4kEcUKF3Y9gK+d/E+vXHiPWpr+YkKTtijP/LNOw/x9zXcfFnxOzyr4ftJMKmHuip6nqq/1/KvM4yqSIZE3qGBYZxkema7KFOy5mRJ9D0f4W+ERdTDX76PMULYtUYcMw6t+Hb3+letZx2ryO2+LktnbRWtrodvFDEoSOMStgAdB0r0zQbvUL/S47rUrRLSeX5vJVi21e2fesaym3eQRstEeI30WreM/G8kMiy+dLOUCspxBGD6dgBVbxtptrpPiefTrJNkNtHGg9WOwZJ9ySa+hDHFGzzbUViPmfGDgepr5z8Sagmq+Jb++i5jnnZkP+z0H6CtqU+d6bIlrqzJCHPWvSYvh0mq+AdP1CxQLqXlmRlzgTqSSB9cYxXnR55HFfQvgm+g1HwfpssChVSERMo/hZeD/ACz+NVWm4JNAlc8/+FeqX9jrkuiTJIYJlZyjKQYnUdcdgeh/CvU9L/48E/3n/wDQjVgRIshkCKHPVscn8ar6Z/x4p/vP/wChGuSclJ3NFexbqnF/yFbr/rlF/N6uVTh/5C11/wBcov5vUDM6bwX4cuJpJptIt3kkYs7MDkk9+tcr4/0bw14f8Ou9vpNsl3cHyoCByvqw+g/UivRjXnN5p8nj7xrJvLf2NpZ8osOkr/xAfU8E+granJ31eiIcV2M34Z+ChdSLr+oxZiRv9FjYfeYfxn1A7V6ximQxRwRLFEioiAKqqMAAdhUlRObm7spKxzHxE1CbTfBl5Jb5Dy7YdwP3QxwT+Wa8X8MaDN4j12HTo22K3zyv/dQdf8Pxr2v4hW5ufA+pqACVjD8/7LA/0rzj4SLjxk5/6dJP/Qlrek7U20RLcg+JHhuHQdYgNjD5dnPCoUdgy8H8eh/Gt/4O6oQb7SJH44niU/k3/stdh440Ndc8L3cIjDTxL50JxyGXnA+oyPxrx3wZqbaR4s0+4BO1pBE49Vb5T/P9KaftKbQbM+haqaZ/x4J/vP8A+hGrVVdL/wCPBP8Aeb/0I1yGhbqnD/yFrr/rlF/N6uVnTQ6gl9JPaG2KSIqkS7gQRn0+tMB+rfa3sXhssrPN+7WTHEWer/gOfrinaXp1tpOnxWVrHsiiGB6k9yfcmos6z/dsf++n/wAKXdrH92x/76f/AAos7WFoX6KobtX7pZf99v8A4UbtX/uWX/fb/wCFFmF0TalZR6lptxYy58u4jaNsehFct4P8AL4W1KW+e9+1O0ZjTEe3aCQSep9BXSbtWx/q7LP++/8AhSbtY/55WX/fx/8A4mmnJKwWT1L55Fc9/wAIL4d/tQaiNOAnD+ZgO23dnOducda0t2r/APPKy/7+v/8AE0obV8cw2X/f1/8A4mkm1sDSZeqppWf7Ojz1y3/oRpm7V8/6my/7+v8A/E1Lp8MlvZxwylS6j5ivTJOTil0Gf//Z',quente:'data:image/jpeg;base64,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',altura:'data:image/jpeg;base64,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',confinado:'data:image/jpeg;base64,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'};
+  const PTE_TIPOS=[
+    {k:'eletricidade',label:'Eletricidade'},
+    {k:'quente',label:'A quente',extra:'quenteTipo',extraLabel:'Tipo (solda, corte, esmerilhamento...)'},
+    {k:'altura',label:'Em altura',extra:'alturaTipo',extraLabel:'Tipo (andaime, escada, PTA, telhado...)'},
+    {k:'confinado',label:'Espaço confinado'},
+    {k:'outro',label:'Outro',extra:'outroQual',extraLabel:'Qual?'}
+  ];
+  const PTE_EPIS=['Protetor auricular','Bota de segurança','Capacete','Óculos de segurança','Avental','Perneira','Luvas prot. mecânica','Luvas prot. química','Luvas prot. abrasiva','Máscara filtro mecânico','Máscara cartucho químico','Máscara autônoma','Protetor facial','Protetor facial soldador','Cinto de segurança','Travaquedas/talabarte','Mangote','Vestimenta eletricista','Extintor','Biombo anti-chamas','Cones/fitas/isolamento','Kit de emergência','Monitoramento atmosférico'];
+  const PTE_QUALIF=['Integração de segurança','Treinamento NR-10','Treinamento NR-33','Treinamento NR-35','Treinamento operador de máquinas','CNH'];
+  const PTE_ENERGIAS=['Desenergizadas','Despressurizadas','Resfriadas/ventilação','Bloqueadas','Etiquetadas','Testadas'];
+  const PTE_CONDICOES=[
+    'Local/área está limpo para a atividade?',
+    'Equipamentos/ferramentas estão em boas condições?',
+    'Equipamentos/ferramentas são adequados para a atividade?',
+    'Trabalhadores possuem todos os EPI/EPC de acordo com a necessidade?',
+    'Trabalhadores possuem capacitações/certificações de acordo com a necessidade?',
+    'Local/área está sinalizado/isolado?',
+    'Materiais/equipamentos para emergência e resgate estão no local?',
+    'Há pessoas capacitadas para realizar salvamento/resgate?'
+  ];
+  const PTE_GRAUS=[{v:'Baixo',c:'ok'},{v:'Médio',c:'warn'},{v:'Alto',c:'bad'},{v:'Crítico',c:'bad'}];
+  const PTE_ROLES=[
+    {k:'solicitante',label:'Solicitante'},
+    {k:'emitente',label:'Emitente'},
+    {k:'aprovador',label:'Aprovador'},
+    {k:'coemitente',label:'Co-emitente',opt:true},
+    {k:'contratada',label:'Responsável contratada',onlyContratada:true}
+  ];
+  const PTE_RECOMENDACOES=[
+    'Siga rigorosamente as recomendações de segurança relativas às atividades/tarefas;',
+    'Antes de iniciar as atividades inspecione o local e ferramentas/equipamentos, e certifique-se que todos os cuidados indicados foram tomados;',
+    'Esta PTE-APR é válida somente quando assinada pelos responsáveis e devidamente liberada.'
+  ];
+  const PTE_TXT_TERMO='Declaro que tenho conhecimento dessa PTE-APR, bem como compreendo suas exigências e confirmo que as mesmas serão adotadas por mim.';
+  const PTE_TXT_APROV='Declaro que todas as exigências dessa PTE-APR foram tomadas e cumpridas, sendo assim aprovado e liberado o início da atividade.';
+  const PTE_TXT_REVAL='Declaro que todas as exigências dessa PTE-APR foram tomadas e cumpridas, sendo assim aprovada e liberada a continuação da atividade.';
+  const PTE_TXT_NAO='Caso seja assinalado NÃO em algum dos itens acima, medidas alternativas de segurança devem ser adotadas e anotadas no campo Observações.';
+  const PTE_CONTENT=['uvs','dataEmissao','solicitante','setor','maoDeObra','empresa','empresaResponsavel','inicioData','inicioHora','terminoData','terminoHora','nFunc','tipos','instrumentos','descricao','simultaneas','impeditivas','emergencia','epis','episOutros','qualificacoes','qualifOutros','energias','isolamento','isolamentoQuais','condicoes','observacoes','apr'];
+
+  const pteList=()=>Array.isArray(state.ptes)?state.ptes:[];
+  const pteById=id=>pteList().find(p=>p.id===id)||null;
+  const pteSigned=s=>!!(s&&typeof s.signature==='string'&&(/^data:image\//.test(s.signature)||/^sstblob:/.test(s.signature)));
+  const pteContratada=p=>p?.maoDeObra==='Contratada';
+  const pteRequiredRoles=p=>PTE_ROLES.filter(r=>!r.opt&&(!r.onlyContratada||pteContratada(p)));
+  const pteVisibleRoles=p=>PTE_ROLES.filter(r=>!r.onlyContratada||pteContratada(p));
+  const pteMissingRoles=p=>pteRequiredRoles(p).filter(r=>!pteSigned(p?.aprovacao?.[r.k]));
+  function pteStatus(p){if(!p)return'—';if(p.cancelada)return'Cancelada';if(p.encerramento?.resultado)return'Encerrada';if(p.rascunho)return'Rascunho';return pteMissingRoles(p).length?'Aguardando liberação':'Liberada'}
+  function pteEnd(p){return p?.terminoData?new Date(`${p.terminoData}T${p.terminoHora||'23:59'}:00`):null}
+  function pteExpired(p){const e=pteEnd(p);return pteStatus(p)==='Liberada'&&!!e&&e<new Date()}
+  function pteStatusPill(p){const s=pteStatus(p),exp=pteExpired(p),cls=exp?'bad':({'Liberada':'ok','Encerrada':'ok','Cancelada':'bad'}[s]||'warn');return`<span class="status-pill ${cls}"><span class="dot"></span>${empEsc(exp?'Liberada · prazo vencido':s)}</span>`}
+  function pteTiposText(p){return PTE_TIPOS.filter(t=>p?.tipos?.[t.k]).map(t=>t.label+(t.extra&&p.tipos[t.extra]?` (${p.tipos[t.extra]})`:'')).join(', ')||'—'}
+  function pteDT(d,h){return d?`${fmtDate(d)}${h?' · '+h:''}`:'—'}
+  function pteTermoCount(p){const t=Array.isArray(p?.termo)?p.termo:[];return{n:t.filter(pteSigned).length,t:t.length}}
+  function pteStampIso(iso){return iso?ecStamp(new Date(iso)):'—'}
+  let ptePortalActor=null;
+  function pteActorName(){return ptePortalActor?.nome||currentUser?.name||currentUser?.username||'Usuário'}
+  function pteCanAdmin(){return !ptePortalActor&&checkPermission('Administrador')}
+  function pteCanForceEdit(){return !ptePortalActor&&checkPermission('Master')}
+
+  // ---- Regras de negócio (rodam dentro da transação do banco) ----
+  function pteApplyAction(st,a){
+    if(!Array.isArray(st.ptes))st.ptes=[];
+    if(!st.pteDeleted||typeof st.pteDeleted!=='object'||Array.isArray(st.pteDeleted))st.pteDeleted={};
+    const now=new Date().toISOString(),by=String(a.by||'');
+    const log=(p,acao)=>{if(!Array.isArray(p.historico))p.historico=[];p.historico.push({at:now,by,acao})};
+    const same=(x,y)=>normalizeText(x)===normalizeText(y);
+    if(a.type==='create'){
+      const dup=st.ptes.find(p=>p.id===a.pte.id);if(dup)return dup;
+      const year=new Date().getFullYear(),re=new RegExp('^PTE-APR-'+year+'/(\\d+)$');
+      const nums=st.ptes.map(p=>String(p.numero||'').match(re)).filter(Boolean).map(m=>Number(m[1]));
+      const p={...a.pte,numero:`PTE-APR-${year}/${String(Math.max(0,...nums)+1).padStart(3,'0')}`,createdAt:now,updatedAt:now,emitidoPor:by};
+      log(p,p.rascunho?'Rascunho criado':'PTE-APR emitida');
+      if(!p.rascunho&&!pteMissingRoles(p).length){p.liberadaEm=now;log(p,'PTE-APR liberada')}
+      st.ptes.push(p);return p;
+    }
+    const p=st.ptes.find(x=>x.id===a.id);
+    if(!p)throw new Error('PTE-APR não encontrada no banco. Atualize a lista e tente novamente.');
+    if(a.type==='delete'){st.ptes=st.ptes.filter(x=>x.id!==a.id);st.pteDeleted[a.id]=now;return null}
+    const s=pteStatus(p);
+    if(s==='Encerrada'||s==='Cancelada')throw new Error(`Esta PTE-APR está ${s.toLowerCase()} e não pode mais ser alterada.`);
+    if(a.type==='save'){
+      if(s==='Liberada'&&!a.force)throw new Error('Esta PTE-APR já foi liberada. Use Revalidar/Encerrar ou peça a um gestor para editar.');
+      PTE_CONTENT.forEach(k=>{if(a.fields&&Object.hasOwn(a.fields,k))p[k]=a.fields[k]});
+      const removed=new Set(a.termoRemoved||[]),old=Array.isArray(p.termo)?p.termo:[],oldById=new Map(old.map(x=>[x.id,x])),formIds=new Set((a.termo||[]).map(x=>x.id));
+      const termo=(a.termo||[]).map(e=>{const o=oldById.get(e.id);return(!e.signature&&pteSigned(o)&&same(o.nome,e.nome))?{...e,signature:o.signature,signedAt:o.signedAt}:e});
+      old.forEach(o=>{if(!formIds.has(o.id)&&!removed.has(o.id))termo.push(o)});
+      p.termo=termo;
+      p.aprovacao=p.aprovacao&&typeof p.aprovacao==='object'?p.aprovacao:{};
+      PTE_ROLES.forEach(r=>{const n=a.aprovacao?.[r.k];if(!n)return;const o=p.aprovacao[r.k];p.aprovacao[r.k]=(!n.signature&&pteSigned(o)&&same(o.nome,n.nome))?{...n,signature:o.signature,signedAt:o.signedAt}:n});
+      if(a.emitir&&p.rascunho){p.rascunho=false;log(p,'PTE-APR emitida')}
+      else log(p,s==='Liberada'?'Editada após a liberação':'Dados atualizados');
+    }else if(a.type==='sign'){
+      const r=PTE_ROLES.find(x=>x.k===a.role);if(!r)throw new Error('Função de assinatura inválida.');
+      if(!a.signature)throw new Error('Assinatura não informada.');
+      p.aprovacao=p.aprovacao&&typeof p.aprovacao==='object'?p.aprovacao:{};
+      p.aprovacao[a.role]={nome:a.nome,funcao:a.funcao||'',signature:a.signature,signedAt:now};
+      log(p,`Assinatura · ${r.label}: ${a.nome}`);
+    }else if(a.type==='termoAdd'){
+      p.termo=Array.isArray(p.termo)?p.termo:[];
+      if(!p.termo.some(x=>x.id===a.entry.id))p.termo.push({...a.entry,signedAt:a.entry.signature?now:''});
+      log(p,`Termo de responsabilidade · ${a.entry.nome} incluído${a.entry.signature?' e assinado':''}`);
+    }else if(a.type==='termoSign'){
+      const e=(p.termo||[]).find(x=>x.id===a.entryId);if(!e)throw new Error('Trabalhador não encontrado no termo desta PTE-APR.');
+      e.signature=a.signature;e.signedAt=now;log(p,`Termo de responsabilidade · ${e.nome} assinou`);
+    }else if(a.type==='revalidar'){
+      if(s!=='Liberada')throw new Error('Só é possível revalidar uma PTE-APR liberada.');
+      p.revalidacoes=Array.isArray(p.revalidacoes)?p.revalidacoes:[];
+      p.revalidacoes.push({at:now,terminoAnterior:{data:p.terminoData||'',hora:p.terminoHora||''},novoTermino:a.novoTermino?.data?a.novoTermino:null,emitente:{...a.emitente,signedAt:now},coemitente:a.coemitente?.signature?{...a.coemitente,signedAt:now}:null});
+      if(a.novoTermino?.data){p.terminoData=a.novoTermino.data;if(a.novoTermino.hora)p.terminoHora=a.novoTermino.hora}
+      log(p,`Revalidada por ${a.emitente?.nome||'—'}${a.novoTermino?.data?` · novo término ${a.novoTermino.data} ${a.novoTermino.hora||''}`:''}`);
+    }else if(a.type==='encerrar'){
+      if(s!=='Liberada')throw new Error('Só é possível encerrar uma PTE-APR liberada. Para as demais, use Cancelar.');
+      const enc=a.encerramento||{};
+      p.encerramento={...enc,at:now,solicitante:enc.solicitante?{...enc.solicitante,signedAt:now}:null,contratada:enc.contratada?{...enc.contratada,signedAt:now}:null};
+      log(p,`Encerrada · serviço ${String(enc.resultado||'').toLowerCase()}`);
+    }else if(a.type==='cancelar'){
+      p.cancelada={at:now,by,motivo:a.motivo||''};log(p,'Cancelada'+(a.motivo?`: ${a.motivo}`:''));
+    }else throw new Error('Ação desconhecida.');
+    if(s!=='Liberada'&&pteStatus(p)==='Liberada'){p.liberadaEm=now;log(p,'PTE-APR liberada')}
+    p.updatedAt=now;
+    return p;
+  }
+  window.pteApplyAction=pteApplyAction;
+  // Mescla usada pelo salvamento geral: um computador com dados antigos não
+  // apaga nem desfaz PTE-APR gravadas/assinadas em outro aparelho.
+  window.pteMergeStates=(fresh,mine)=>{
+    const t=x=>String(x?.updatedAt||x?.createdAt||'');
+    const deleted={...(fresh?.pteDeleted||{})};
+    Object.entries(mine?.pteDeleted||{}).forEach(([id,at])=>{if(String(at)>String(deleted[id]||''))deleted[id]=at});
+    const byId=new Map();
+    (fresh?.ptes||[]).forEach(p=>byId.set(p.id,p));
+    (mine?.ptes||[]).forEach(p=>{const o=byId.get(p.id);if(!o||t(p)>t(o))byId.set(p.id,p)});
+    mine.ptes=[...byId.values()].filter(p=>!(deleted[p.id]&&String(deleted[p.id])>=t(p)));
+    mine.pteDeleted=deleted;
+    return mine;
+  };
+  async function pteRun(action){
+    action.by=action.by||pteActorName();
+    if(window.firestorePteAction){
+      const r=await window.firestorePteAction(action);
+      state.ptes=Array.isArray(r.ptes)?r.ptes:[];state.pteDeleted=r.pteDeleted||{};
+      return r.id?pteById(r.id):null;
+    }
+    const p=pteApplyAction(state,JSON.parse(JSON.stringify(action)));
+    const ok=await saveState();
+    if(!ok)throw new Error(String(window.__lastSaveError?.message||'Falha ao salvar no banco de dados.'));
+    return p?pteById(p.id):null;
+  }
+  async function pteRefresh(){
+    if(!window.firestoreGetFreshDoc)return false;
+    const snap=await window.firestoreGetFreshDoc();
+    if(!snap||!snap.exists())throw new Error('Banco indisponível');
+    const fresh=JSON.parse(snap.data().json);
+    state.ptes=Array.isArray(fresh.ptes)?fresh.ptes:[];state.pteDeleted=fresh.pteDeleted||{};
+    if(Array.isArray(fresh.pteEmitters))state.pteEmitters=fresh.pteEmitters;
+    return true;
+  }
+  function pteErr(e){return String(e?.message||e?.code||e||'erro desconhecido')}
+
+  const PTE_CSS=`<style>
+    .pte-inline.brigade-mobile{min-height:0;padding:0;background:transparent}
+    .pte-inline .brigade-mobile-shell{max-width:820px}
+    .pte-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px}
+    .pte-chip{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:8px;padding:9px 10px;font-size:13px;font-weight:600;cursor:pointer;margin:0;line-height:1.25;background:var(--panel)}
+    .pte-chip input{width:18px!important;height:18px;flex:0 0 auto;margin:0;accent-color:var(--yellow)}
+    .pte-chip:has(input:checked){border-color:var(--yellow);background:rgba(245,183,0,.14)}
+    .pte-tipos{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+    .pte-tipo{position:relative;border:2px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;cursor:pointer;margin:0;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:700;font-size:13px}
+    .pte-tipo img{width:54px;height:45px;object-fit:contain;background:#fff;border-radius:6px;padding:2px}
+    .pte-tipo .ico{font-size:28px;line-height:45px;height:45px}
+    .pte-tipo input{position:absolute;opacity:0;pointer-events:none;width:1px!important;height:1px!important}
+    .pte-tipo:has(input:checked){border-color:var(--yellow);background:rgba(245,183,0,.14)}
+    .pte-tipo:has(input:checked)::after{content:'✔';position:absolute;top:4px;right:7px;color:var(--yellow);font-size:14px}
+    .pte-seg2{grid-template-columns:repeat(2,1fr)!important}
+    .pte-seg-y label:has(input:checked){background:var(--yellow)!important;border-color:var(--yellow)!important;color:var(--yellow-ink)!important}
+    .pte-dt{display:grid;grid-template-columns:1.35fr 1fr;gap:6px}
+    .pte-row{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--panel-2)}
+    .pte-row-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;font-weight:700}
+    .pte-sig-done{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px;color:#1d2329}
+    .pte-sig-done img{height:52px;max-width:170px;object-fit:contain}
+    .pte-sig-done small{color:#2e7d32;font-weight:700;flex:1}
+    .pte-note{background:rgba(224,142,50,.13);border-left:3px solid var(--amber);padding:8px 10px;border-radius:0 8px 8px 0;font-size:13px;line-height:1.4;margin:8px 0}
+    .pte-note.bad{background:rgba(214,85,61,.13);border-color:var(--red)}
+    .pte-note.ok{background:rgba(78,139,98,.14);border-color:var(--green)}
+    .pte-rec ol{margin:0;padding-left:20px;font-size:13px;line-height:1.5}
+    .pte-actions{display:flex;gap:8px;flex-wrap:wrap}
+    .pte-actions .btn{flex:1 1 150px}
+    .pte-foot{position:sticky;bottom:0;z-index:5;display:flex;gap:8px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;box-shadow:0 -6px 18px rgba(0,0,0,.18);margin-bottom:12px}
+    .pte-foot .btn{flex:1 1 140px;min-height:46px}
+    .pte-sl{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+    .pte-sl:last-child{border-bottom:0}
+    .pte-sl small{color:var(--ink-dim);display:block}
+    .pte-sl .ok{color:var(--green);font-weight:700;white-space:nowrap}
+    .pte-sl .pend{color:var(--amber);font-weight:700;white-space:nowrap}
+    .pte-h4{margin:14px 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-dim)}
+    .pte-item{display:block;width:100%;text-align:left;background:var(--panel-2);border:1px solid var(--line);border-left:4px solid var(--amber);border-radius:10px;padding:11px 12px;margin-bottom:8px;color:var(--ink);cursor:pointer;font:inherit}
+    .pte-item.lib{border-left-color:var(--green)}.pte-item.bad{border-left-color:var(--red)}.pte-item.fim{border-left-color:#6b7280}
+    .pte-item b{font-size:15px}.pte-item small{display:block;color:var(--ink-dim);margin-top:3px;line-height:1.35}
+    .pte-item .status-pill{float:right;font-size:11px}
+    .pte-grau{display:inline-block;font-weight:700;font-size:12px;padding:2px 8px;border-radius:10px}
+    .pte-grau.ok{background:#4E8B6233;color:var(--green)}.pte-grau.warn{background:#E08E3233;color:var(--amber)}.pte-grau.bad{background:#D6553D33;color:var(--red)}
+    .pte-big{width:100%;padding:16px!important;font-size:17px!important}
+    @media(max-width:480px){.pte-chips{grid-template-columns:1fr 1fr}.pte-chip{font-size:12px;padding:8px}.pte-tipos{grid-template-columns:repeat(3,1fr)}.pte-tipo{font-size:11.5px}}
+  </style>`;
+
+  // ---------------- Assinaturas (canvas criado só quando necessário) ----------------
+  function pteSigInner(sig,allowRedo=true){
+    if(pteSigned(sig))return`<div class="pte-sig-done"><img src="${empEsc(sig.signature)}" alt="Assinatura"><small>✔ Assinado${sig.signedAt?` em ${empEsc(pteStampIso(sig.signedAt))}`:''}</small>${allowRedo?'<button type="button" class="action-link" data-sig-open>Refazer</button>':''}</div>`;
+    return`<button type="button" class="btn secondary" data-sig-open style="width:100%">✍️ Assinar agora</button>`;
+  }
+  function pteSigBox(key,sig,allowRedo=true){return`<div class="pte-sig" data-sig="${empEsc(key)}">${pteSigInner(sig,allowRedo)}</div>`}
+  // Controla todos os campos de assinatura de um container.
+  function pteSigController(root){
+    const pads=new Map();let seq=0;
+    root.addEventListener('click',e=>{
+      const btn=e.target.closest('[data-sig-open]');if(!btn||!root.contains(btn))return;
+      const box=btn.closest('[data-sig]');if(!box)return;
+      const id=`pte-sig-c${Date.now().toString(36)}${++seq}`;
+      box.innerHTML=`<div class="ecp-sig"><canvas id="${id}"></canvas></div><div class="ecp-sig-foot"><small>Assine com o dedo ou caneta.</small><button type="button" class="btn secondary" id="${id}-clear">🧹 Limpar</button></div>`;
+      const canvas=box.querySelector('canvas');
+      pads.set(box.dataset.sig,{pad:setupSignatureCanvas(canvas,box.querySelector(`#${id}-clear`)),canvas});
+    });
+    return{
+      get(key){const x=pads.get(key);return x&&x.pad.isSigned()?ecCompactSignature(x.canvas):''},
+      open(key){const x=pads.get(key);return !!x},
+      drop(key){pads.delete(key)}
+    };
+  }
+
+  // ---------------- Formulário (emissão / preenchimento) ----------------
+  function ptePeopleDatalists(){
+    const emps=state.employees||[],terc=state.tercFuncionarios||[];
+    const setores=[...new Set([...(state.generalSectors||[]).map(s=>s.nome),...emps.map(e=>e.setor)].filter(Boolean))].sort((a,b)=>a.localeCompare(b,'pt-BR'));
+    const empresas=[...new Set((state.tercEmpresas||[]).map(e=>e.razaoSocial).filter(Boolean))];
+    return`<datalist id="pte-dl-pessoas">${emps.map(e=>`<option value="${empEsc(e.nome)}">${empEsc([e.cargo,e.setor].filter(Boolean).join(' · '))}</option>`).join('')}${terc.map(f=>`<option value="${empEsc(f.nome)}">Terceiro</option>`).join('')}</datalist><datalist id="pte-dl-setores">${setores.map(s=>`<option value="${empEsc(s)}">`).join('')}</datalist><datalist id="pte-dl-empresas">${empresas.map(s=>`<option value="${empEsc(s)}">`).join('')}</datalist>`;
+  }
+  function ptePersonLookup(nome){
+    const n=normalizeText(nome);if(!n)return null;
+    const e=(state.employees||[]).find(x=>normalizeText(x.nome)===n);if(e)return{funcao:e.cargo||'',matricula:e.matricula||''};
+    const t=(state.tercFuncionarios||[]).find(x=>normalizeText(x.nome)===n);if(t)return{funcao:t.funcao||t.cargo||'',matricula:t.cpf||''};
+    return null;
+  }
+  function pteAprRowHtml(r={}){
+    return`<div class="pte-row pte-apr-row"><div class="pte-row-head"><span class="pte-apr-num"></span><button type="button" class="action-link danger-link" data-rm-row>🗑️ Remover</button></div>
+      <div class="field"><label>Etapa da atividade *</label><input data-f="etapa" value="${empEsc(r.etapa||'')}" placeholder="Ex.: Montagem do andaime"></div>
+      <div class="field"><label>Identificação do perigo / risco e/ou aspecto / impacto *</label><textarea data-f="perigo" rows="2" placeholder="Riscos ocupacionais e ambientais (impactos)">${empEsc(r.perigo||'')}</textarea></div>
+      <div class="field"><label>Medidas de controle *</label><textarea data-f="medidas" rows="2">${empEsc(r.medidas||'')}</textarea></div>
+      <div class="field"><label>Grau de risco (considerando as medidas de controle) *</label><select data-f="grau"><option value="">Selecione</option>${PTE_GRAUS.map(g=>`<option ${r.grau===g.v?'selected':''}>${g.v}</option>`).join('')}</select></div></div>`;
+  }
+  function pteTermoRowHtml(t){
+    return`<div class="pte-row pte-termo-row" data-id="${empEsc(t.id)}"><div class="pte-row-head"><span class="pte-termo-num"></span><button type="button" class="action-link danger-link" data-rm-row>🗑️ Remover</button></div>
+      <div class="field"><label>Nome *</label><input data-f="nome" list="pte-dl-pessoas" value="${empEsc(t.nome||'')}" autocomplete="off" placeholder="Digite ou selecione"></div>
+      <div class="field-row"><div class="field"><label>Matrícula</label><input data-f="matricula" value="${empEsc(t.matricula||'')}" inputmode="numeric"></div><div class="field"><label>Observação / atividade</label><input data-f="obs" value="${empEsc(t.obs||'')}"></div></div>
+      <div class="field"><label>Assinatura</label>${pteSigBox('termo_'+t.id,t)}</div></div>`;
+  }
+  function pteFormHtml(p,isNew){
+    const v=k=>empEsc(p[k]??''),tipos=p.tipos||{},inst=Array.isArray(p.instrumentos)?p.instrumentos:[];
+    const today=new Date().toISOString().slice(0,10),nowT=new Date().toTimeString().slice(0,5);
+    const chips=(name,list,sel)=>`<div class="pte-chips">${list.map(x=>`<label class="pte-chip"><input type="checkbox" name="${name}" value="${empEsc(x)}" ${(sel||[]).includes(x)?'checked':''}>${empEsc(x)}</label>`).join('')}</div>`;
+    const cond=Array.isArray(p.condicoes)?p.condicoes:[];
+    const contr=pteContratada(p),aprov=p.aprovacao||{};
+    const step=(n,t)=>`<div class="ecp-step"><i>${n}</i>${t}</div>`;
+    return`${ptePeopleDatalists()}<form id="pte-form" novalidate>
+      <div class="mobile-card">${step(1,'Identificação e programação do trabalho')}
+        <div class="field-row"><div class="field"><label>UVS</label><input name="uvs" value="${v('uvs')}" placeholder="Unidade"></div><div class="field"><label>Data de emissão *</label><input type="date" name="dataEmissao" value="${v('dataEmissao')||today}"></div></div>
+        <div class="field-row"><div class="field"><label>Solicitante *</label><input name="solicitante" list="pte-dl-pessoas" autocomplete="off" value="${v('solicitante')}"></div><div class="field"><label>Setor *</label><input name="setor" list="pte-dl-setores" autocomplete="off" value="${v('setor')}"></div></div>
+        <div class="field"><label>Mão de obra *</label><div class="ecp-seg pte-seg2 pte-seg-y">${['Própria','Contratada'].map(o=>`<label><input type="radio" name="maoDeObra" value="${o}" ${(p.maoDeObra||'Própria')===o?'checked':''}>${o}</label>`).join('')}</div></div>
+        <div class="field-row" id="pte-contr-box" style="display:${contr?'':'none'}"><div class="field"><label>Empresa contratada *</label><input name="empresa" list="pte-dl-empresas" autocomplete="off" value="${v('empresa')}"></div><div class="field"><label>Responsável da contratada *</label><input name="empresaResponsavel" value="${v('empresaResponsavel')}"></div></div>
+        <div class="field-row"><div class="field"><label>Início *</label><div class="pte-dt"><input type="date" name="inicioData" value="${v('inicioData')||today}"><input type="time" name="inicioHora" value="${v('inicioHora')||nowT}"></div></div><div class="field"><label>Término *</label><div class="pte-dt"><input type="date" name="terminoData" value="${v('terminoData')||today}"><input type="time" name="terminoHora" value="${v('terminoHora')}"></div></div></div>
+        <div class="field"><label>Nº de funcionários envolvidos *</label><input type="number" min="1" inputmode="numeric" name="nFunc" value="${v('nFunc')}"></div>
+      </div>
+      <div class="mobile-card">${step(2,'Tipo de trabalho especial *')}
+        <div class="pte-tipos">${PTE_TIPOS.map(t=>`<label class="pte-tipo"><input type="checkbox" name="tipo_${t.k}" ${tipos[t.k]?'checked':''}>${PTE_ICONS[t.k]?`<img src="${PTE_ICONS[t.k]}" alt="">`:'<span class="ico">➕</span>'}${t.label}</label>`).join('')}</div>
+        ${PTE_TIPOS.filter(t=>t.extra).map(t=>`<div class="field" data-extra-for="${t.k}" style="margin-top:10px;display:${tipos[t.k]?'':'none'}"><label>${t.label} · ${t.extraLabel}${t.k==='outro'?' *':''}</label><input name="${t.extra}" value="${empEsc(tipos[t.extra]||'')}"></div>`).join('')}
+        <div class="pte-note" data-extra-for="confinado" style="display:${tipos.confinado?'':'none'}">🚧 Espaço confinado: além desta PTE-APR, emita a PET (NR-33) no módulo Espaço Confinado.</div>
+        <div class="pte-h4">Instrumentos / equipamentos de medição</div>
+        ${[0,1,2].map(i=>`<div class="field-row"><div class="field"><label>ID equip. ${i+1}</label><input name="inst_id_${i}" value="${empEsc(inst[i]?.id||'')}"></div><div class="field"><label>Certificado de calibração RBC nº</label><input name="inst_cal_${i}" value="${empEsc(inst[i]?.cal||'')}"></div></div>`).join('')}
+      </div>
+      <div class="mobile-card">${step(3,'Descrição e planejamento da atividade')}
+        <div class="field"><label>Descrição da atividade *</label><textarea name="descricao" rows="3" placeholder="O que será feito, onde, ferramentas e método de trabalho">${v('descricao')}</textarea></div>
+        <div class="field"><label>Atividades simultâneas que apresentem riscos</label><textarea name="simultaneas" rows="2">${v('simultaneas')}</textarea></div>
+        <div class="field"><label>Condições impeditivas para a atividade</label><textarea name="impeditivas" rows="2" placeholder="Ex.: chuva, ventos fortes, atmosfera fora dos limites">${v('impeditivas')}</textarea></div>
+        <div class="field"><label>Procedimento de emergência e resgate</label><textarea name="emergencia" rows="2">${v('emergencia')}</textarea></div>
+      </div>
+      <div class="mobile-card">${step(4,'Equipamento de segurança necessário (EPI/EPC)')}
+        ${chips('epis',PTE_EPIS,p.epis)}
+        <div class="field" style="margin-top:10px"><label>Outros</label><input name="episOutros" value="${v('episOutros')}"></div>
+      </div>
+      <div class="mobile-card">${step(5,'Qualificação, capacitação ou habilitação necessária')}
+        ${chips('qualificacoes',PTE_QUALIF,p.qualificacoes)}
+        <div class="field" style="margin-top:10px"><label>Outros</label><input name="qualifOutros" value="${v('qualifOutros')}"></div>
+      </div>
+      <div class="mobile-card">${step(6,'Equipamentos e/ou instalações (fontes de energia)')}
+        <div class="sub" style="font-size:12px;margin:-4px 0 8px">Elétrica / mecânica / térmica / pneumática / hidráulica</div>
+        ${chips('energias',PTE_ENERGIAS,p.energias)}
+        <div class="field" style="margin-top:12px"><label>Necessário isolamento de outras áreas/atividades?</label><div class="ecp-seg pte-seg2 pte-seg-y">${['Não','Sim'].map(o=>`<label><input type="radio" name="isolamento" value="${o}" ${(p.isolamento||'Não')===o?'checked':''}>${o}</label>`).join('')}</div></div>
+        <div class="field" id="pte-iso-box" style="display:${p.isolamento==='Sim'?'':'none'}"><label>Quais? *</label><input name="isolamentoQuais" value="${v('isolamentoQuais')}"></div>
+      </div>
+      <div class="mobile-card">${step(7,'Condições obrigatórias *')}
+        ${PTE_CONDICOES.map((item,i)=>`<div class="ecp-ck"><p>${i+1}. ${empEsc(item)}</p><div class="ecp-seg">${['Sim','Não','N.A.'].map(o=>`<label><input type="radio" name="cond_${i}" value="${o}" ${cond[i]?.resposta===o?'checked':''}>${o}</label>`).join('')}</div></div>`).join('')}
+        <div class="pte-note" id="pte-nao-note">${PTE_TXT_NAO}</div>
+        <div class="field"><label id="pte-obs-label">Observações</label><textarea name="observacoes" rows="3">${v('observacoes')}</textarea></div>
+      </div>
+      <div class="mobile-card">${step(8,'Detalhamento da tarefa e análise de risco (APR) *')}
+        <div class="sub" style="font-size:12px;margin:-4px 0 10px">Considere riscos ocupacionais e ambientais (impactos).</div>
+        <div id="pte-apr-rows"></div>
+        <button type="button" class="btn secondary" id="pte-add-apr" style="width:100%">+ Adicionar etapa</button>
+      </div>
+      <div class="mobile-card">${step(9,'Termo de responsabilidade para execução')}
+        <div class="pte-note ok">${PTE_TXT_TERMO}</div>
+        <div id="pte-termo-rows"></div>
+        <button type="button" class="btn secondary" id="pte-add-termo" style="width:100%">+ Adicionar trabalhador</button>
+        <div class="sub" style="font-size:12px;margin-top:8px">As assinaturas podem ser coletadas agora ou depois, abrindo a PTE-APR.</div>
+      </div>
+      <div class="mobile-card">${step(10,'Controle de aprovação da PTE-APR')}
+        <div class="pte-note ok">${PTE_TXT_APROV}</div>
+        ${PTE_ROLES.map(r=>{const a=aprov[r.k]||{};return`<div class="pte-row pte-role-row" data-role="${r.k}" style="${r.onlyContratada&&!contr?'display:none':''}"><div class="pte-row-head"><span>${r.label}${r.opt?' <small style="font-weight:400;color:var(--ink-dim)">(opcional)</small>':''}</span></div>
+          <div class="field-row"><div class="field"><label>Nome</label><input data-f="nome" list="pte-dl-pessoas" autocomplete="off" value="${empEsc(a.nome||(r.k==='solicitante'?p.solicitante||'':''))}"></div><div class="field"><label>Função</label><input data-f="funcao" value="${empEsc(a.funcao||'')}"></div></div>
+          <div class="field"><label>Assinatura</label>${pteSigBox('role_'+r.k,a)}</div></div>`}).join('')}
+        <div class="sub" style="font-size:12px">A PTE-APR é liberada automaticamente quando Solicitante, Emitente, Aprovador${contr?' e Responsável da contratada':''} assinarem.</div>
+      </div>
+      <div class="mobile-card pte-rec"><div class="ecp-step"><i>!</i>Recomendações gerais</div><ol>${PTE_RECOMENDACOES.map(x=>`<li>${empEsc(x)}</li>`).join('')}</ol></div>
+      <div class="pte-foot">
+        <button type="button" class="btn secondary" id="pte-cancel">← Voltar</button>
+        ${isNew||p.rascunho?'<button type="button" class="btn secondary" id="pte-draft">💾 Salvar rascunho</button>':''}
+        <button type="button" class="btn" id="pte-submit">${isNew||p.rascunho?'✅ Emitir PTE-APR':'💾 Salvar alterações'}</button>
+      </div>
+    </form>`;
+  }
+  // Monta o formulário em "host" e controla tudo. opts: {onCancel, onSaved}
+  function pteMountForm(host,p0,opts){
+    const isNew=!p0?.id,p=p0?JSON.parse(JSON.stringify(p0)):{};
+    host.innerHTML=pteFormHtml(p,isNew);
+    const form=host.querySelector('#pte-form'),sigs=pteSigController(form),termoRemoved=new Set();
+    const aprBox=form.querySelector('#pte-apr-rows'),termoBox=form.querySelector('#pte-termo-rows');
+    const renum=()=>{aprBox.querySelectorAll('.pte-apr-row').forEach((r,i,all)=>{r.querySelector('.pte-apr-num').textContent=`Etapa ${i+1}`;r.querySelector('[data-rm-row]').style.visibility=all.length>1?'visible':'hidden'});termoBox.querySelectorAll('.pte-termo-row').forEach((r,i)=>r.querySelector('.pte-termo-num').textContent=`👷 Trabalhador ${i+1}`)};
+    const addApr=r=>{aprBox.insertAdjacentHTML('beforeend',pteAprRowHtml(r));renum()};
+    const addTermo=t=>{termoBox.insertAdjacentHTML('beforeend',pteTermoRowHtml(t||{id:uid('ptt')}));renum()};
+    (Array.isArray(p.apr)&&p.apr.length?p.apr:[{}]).forEach(addApr);
+    (Array.isArray(p.termo)?p.termo:[]).forEach(addTermo);
+    if(isNew&&!termoBox.children.length)addTermo();
+    form.querySelector('#pte-add-apr').addEventListener('click',()=>{addApr({});aprBox.lastElementChild.querySelector('input').focus()});
+    form.querySelector('#pte-add-termo').addEventListener('click',()=>{addTermo();termoBox.lastElementChild.querySelector('input').focus()});
+    form.addEventListener('click',e=>{const rm=e.target.closest('[data-rm-row]');if(!rm)return;const row=rm.closest('.pte-row');if(row.classList.contains('pte-apr-row')&&aprBox.children.length<=1)return;if(row.classList.contains('pte-termo-row')){const sig=row.querySelector('.pte-sig-done');if(sig&&!confirm('Este trabalhador já assinou o termo. Remover mesmo assim?'))return;termoRemoved.add(row.dataset.id);sigs.drop('termo_'+row.dataset.id)}row.remove();renum()});
+    // Preenche função/matrícula a partir do cadastro de pessoas.
+    form.addEventListener('change',e=>{
+      const el=e.target;
+      if(el.dataset.f==='nome'){const info=ptePersonLookup(el.value),row=el.closest('.pte-row');if(info&&row){const m=row.querySelector('[data-f="matricula"]'),f=row.querySelector('[data-f="funcao"]');if(m&&!m.value)m.value=info.matricula;if(f&&!f.value)f.value=info.funcao}}
+      if(el.name==='solicitante'){const r=form.querySelector('.pte-role-row[data-role="solicitante"] [data-f="nome"]');if(r&&!r.value){r.value=el.value;r.dispatchEvent(new Event('change',{bubbles:true}))}const info=(state.employees||[]).find(x=>normalizeText(x.nome)===normalizeText(el.value)),s=form.querySelector('[name="setor"]');if(info?.setor&&!s.value)s.value=info.setor}
+      if(el.name==='empresaResponsavel'){const r=form.querySelector('.pte-role-row[data-role="contratada"] [data-f="nome"]');if(r&&!r.value)r.value=el.value}
+      if(el.name==='maoDeObra'){const c=el.value==='Contratada';form.querySelector('#pte-contr-box').style.display=c?'':'none';form.querySelector('.pte-role-row[data-role="contratada"]').style.display=c?'':'none'}
+      if(el.name==='isolamento')form.querySelector('#pte-iso-box').style.display=el.value==='Sim'?'':'none';
+      if(/^tipo_/.test(el.name||'')){const k=el.name.slice(5);form.querySelectorAll(`[data-extra-for="${k}"]`).forEach(x=>x.style.display=el.checked?'':'none')}
+      if(/^cond_/.test(el.name||''))markNao();
+    });
+    const markNao=()=>{const anyNao=PTE_CONDICOES.some((_,i)=>form.querySelector(`[name="cond_${i}"]:checked`)?.value==='Não');form.querySelector('#pte-nao-note').classList.toggle('bad',anyNao);form.querySelector('#pte-obs-label').textContent=anyNao?'Observações * (medidas alternativas de segurança adotadas)':'Observações'};
+    markNao();
+    const collect=()=>{
+      const fd=new FormData(form),g=k=>String(fd.get(k)||'').trim(),stamp=new Date().toISOString();
+      const tipos={};PTE_TIPOS.forEach(t=>{tipos[t.k]=!!fd.get('tipo_'+t.k);if(t.extra)tipos[t.extra]=tipos[t.k]?g(t.extra):''});
+      const maoDeObra=g('maoDeObra')||'Própria',contr=maoDeObra==='Contratada';
+      const fields={uvs:g('uvs'),dataEmissao:g('dataEmissao'),solicitante:g('solicitante'),setor:g('setor'),maoDeObra,empresa:contr?g('empresa'):'',empresaResponsavel:contr?g('empresaResponsavel'):'',
+        inicioData:g('inicioData'),inicioHora:g('inicioHora'),terminoData:g('terminoData'),terminoHora:g('terminoHora'),nFunc:g('nFunc'),tipos,
+        instrumentos:[0,1,2].map(i=>({id:g('inst_id_'+i),cal:g('inst_cal_'+i)})),
+        descricao:g('descricao'),simultaneas:g('simultaneas'),impeditivas:g('impeditivas'),emergencia:g('emergencia'),
+        epis:fd.getAll('epis').map(String),episOutros:g('episOutros'),qualificacoes:fd.getAll('qualificacoes').map(String),qualifOutros:g('qualifOutros'),
+        energias:fd.getAll('energias').map(String),isolamento:g('isolamento')||'Não',isolamentoQuais:g('isolamento')==='Sim'?g('isolamentoQuais'):'',
+        condicoes:PTE_CONDICOES.map((item,i)=>({item,resposta:g('cond_'+i)})),observacoes:g('observacoes'),
+        apr:[...aprBox.querySelectorAll('.pte-apr-row')].map(r=>({etapa:r.querySelector('[data-f="etapa"]').value.trim(),perigo:r.querySelector('[data-f="perigo"]').value.trim(),medidas:r.querySelector('[data-f="medidas"]').value.trim(),grau:r.querySelector('[data-f="grau"]').value})).filter(r=>r.etapa||r.perigo||r.medidas||r.grau)};
+      const oldTermo=new Map((p.termo||[]).map(x=>[x.id,x]));
+      const termo=[...termoBox.querySelectorAll('.pte-termo-row')].map(r=>{const id=r.dataset.id,nome=r.querySelector('[data-f="nome"]').value.trim(),o=oldTermo.get(id),ns=sigs.get('termo_'+id),keep=!ns&&pteSigned(o)&&normalizeText(o.nome)===normalizeText(nome);return{id,nome,matricula:r.querySelector('[data-f="matricula"]').value.trim(),obs:r.querySelector('[data-f="obs"]').value.trim(),signature:ns||(keep?o.signature:''),signedAt:ns?stamp:(keep?o.signedAt:'')}}).filter(t=>t.nome||t.signature);
+      const aprovacao={};
+      form.querySelectorAll('.pte-role-row').forEach(r=>{const k=r.dataset.role;if(k==='contratada'&&!contr)return;const nome=r.querySelector('[data-f="nome"]').value.trim(),o=p.aprovacao?.[k],ns=sigs.get('role_'+k),keep=!ns&&pteSigned(o)&&normalizeText(o.nome)===normalizeText(nome);aprovacao[k]={nome,funcao:r.querySelector('[data-f="funcao"]').value.trim(),signature:ns||(keep?o.signature:''),signedAt:ns?stamp:(keep?o.signedAt:'')}});
+      return{fields,termo,aprovacao};
+    };
+    const validate=d=>{
+      const f=d.fields,e=[];
+      if(!f.dataEmissao)e.push('Data de emissão');
+      if(!f.solicitante)e.push('Solicitante');
+      if(!f.setor)e.push('Setor');
+      if(f.maoDeObra==='Contratada'&&(!f.empresa||!f.empresaResponsavel))e.push('Empresa contratada e responsável');
+      if(!f.inicioData||!f.inicioHora)e.push('Data e hora de início');
+      if(!f.terminoData||!f.terminoHora)e.push('Data e hora de término');
+      if(f.inicioData&&f.terminoData&&`${f.terminoData}T${f.terminoHora||'00:00'}`<=`${f.inicioData}T${f.inicioHora||'00:00'}`)e.push('O término deve ser posterior ao início');
+      if(!(Number(f.nFunc)>0))e.push('Nº de funcionários envolvidos');
+      if(!PTE_TIPOS.some(t=>f.tipos[t.k]))e.push('Tipo de trabalho especial (marque ao menos um)');
+      if(f.tipos.outro&&!f.tipos.outroQual)e.push('Tipo de trabalho "Outro": informe qual');
+      if(!f.descricao)e.push('Descrição da atividade');
+      if(f.isolamento==='Sim'&&!f.isolamentoQuais)e.push('Isolamento de outras áreas: informe quais');
+      const semResp=f.condicoes.map((c,i)=>c.resposta?null:i+1).filter(Boolean);
+      if(semResp.length)e.push(`Condições obrigatórias sem resposta (itens ${semResp.join(', ')})`);
+      if(f.condicoes.some(c=>c.resposta==='Não')&&!f.observacoes)e.push('Observações: descreva as medidas alternativas de segurança (há item marcado "Não")');
+      if(!f.apr.length)e.push('APR: preencha ao menos uma etapa');
+      else if(f.apr.some(r=>!r.etapa||!r.perigo||!r.medidas||!r.grau))e.push('APR: todas as etapas precisam de etapa, perigo/risco, medidas de controle e grau de risco');
+      if(d.termo.some(t=>!t.nome))e.push('Termo de responsabilidade: informe o nome de todos os trabalhadores');
+      PTE_ROLES.forEach(r=>{const a=d.aprovacao[r.k];if(a&&a.signature&&!a.nome)e.push(`Aprovação: informe o nome do ${r.label.toLowerCase()} que assinou`)});
+      return e;
+    };
+    const buttons=()=>form.querySelectorAll('.pte-foot .btn');
+    const save=async mode=>{
+      const d=collect();
+      const emitir=mode==='emit';
+      if(mode!=='draft'){const errs=validate(d);if(errs.length){alert('Preencha os campos obrigatórios antes de '+(emitir?'emitir':'salvar')+':\n\n• '+errs.join('\n• '));return}}
+      else if(!d.fields.descricao&&!d.fields.solicitante){alert('Informe ao menos o solicitante ou a descrição da atividade para salvar o rascunho.');return}
+      const st=pteStatus(p);
+      if(!isNew&&st==='Liberada'&&!confirm('Esta PTE-APR já está liberada. As alterações ficarão registradas no histórico. Continuar?'))return;
+      buttons().forEach(b=>b.disabled=true);const main=form.querySelector('#pte-submit'),label=main.textContent;main.textContent='Salvando...';
+      try{
+        let saved;
+        if(isNew)saved=await pteRun({type:'create',pte:{id:uid('pte'),rascunho:!emitir,...d.fields,termo:d.termo,aprovacao:d.aprovacao,origem:ptePortalActor?'Portal celular':'Sistema'}});
+        else saved=await pteRun({type:'save',id:p.id,fields:d.fields,termo:d.termo,termoRemoved:[...termoRemoved],aprovacao:d.aprovacao,emitir,force:st==='Liberada'&&pteCanForceEdit()});
+        opts.onSaved&&opts.onSaved(saved);
+      }catch(err){console.error('Falha ao salvar PTE-APR:',err);alert('Não foi possível salvar a PTE-APR. Nada foi perdido nesta tela; confira a conexão e tente de novo.\n\nErro: '+pteErr(err));buttons().forEach(b=>b.disabled=false);main.textContent=label}
+    };
+    form.querySelector('#pte-submit').addEventListener('click',()=>save(isNew||p.rascunho?'emit':'update'));
+    form.querySelector('#pte-draft')?.addEventListener('click',()=>save('draft'));
+    form.querySelector('#pte-cancel').addEventListener('click',()=>{if(confirm('Sair sem salvar? As informações digitadas nesta tela serão perdidas.'))opts.onCancel&&opts.onCancel()});
+    window.scrollTo(0,0);
+  }
+
+  // ---------------- Modais de assinatura / ações ----------------
+  function pteSignerFields(prefix,nome='',funcao=''){return`<div class="field-row"><div class="field"><label>Nome *</label><input name="${prefix}nome" list="pte-dl-pessoas" autocomplete="off" value="${empEsc(nome)}"></div><div class="field"><label>Função</label><input name="${prefix}funcao" value="${empEsc(funcao)}"></div></div>`}
+  function pteModalPersonAutofill(ov){ov.addEventListener('change',e=>{const el=e.target;if(!/nome$/.test(el.name||''))return;const pre=el.name.slice(0,-4),info=ptePersonLookup(el.value),f=ov.querySelector(`[name="${pre}funcao"]`),m=ov.querySelector(`[name="${pre}matricula"]`);if(info){if(f&&!f.value)f.value=info.funcao;if(m&&!m.value)m.value=info.matricula}})}
+  function pteSignModal(p,role,done){
+    const r=PTE_ROLES.find(x=>x.k===role),cur=p.aprovacao?.[role]||{};
+    const nome=cur.nome||(role==='solicitante'?p.solicitante:role==='contratada'?p.empresaResponsavel:'')||'';
+    openModal(`${ptePeopleDatalists()}<h2>✍️ Assinatura · ${empEsc(r.label)}</h2><div class="note">${empEsc(p.numero)} · ${PTE_TXT_APROV}</div><form id="pte-sign-form">${pteSignerFields('',nome,cur.funcao||ptePersonLookup(nome)?.funcao||'')}<div class="field"><label>Assinatura *</label>${pteSigBox('s',null,false)}</div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">✅ Confirmar assinatura</button></div></form>`,ov=>{
+      const f=ov.querySelector('#pte-sign-form'),sig=pteSigController(f);pteModalPersonAutofill(ov);f.querySelector('[data-sig-open]').click();
+      f.addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(f)),s=sig.get('s');if(!String(d.nome||'').trim()){alert('Informe o nome.');return}if(!s){alert('Faça a assinatura.');return}
+        const b=f.querySelector('button.btn:not(.secondary)');b.disabled=true;b.textContent='Salvando...';
+        try{const saved=await pteRun({type:'sign',id:p.id,role,nome:d.nome.trim(),funcao:String(d.funcao||'').trim(),signature:s});closeModal();done(saved)}catch(err){alert('Não foi possível registrar a assinatura: '+pteErr(err));b.disabled=false;b.textContent='✅ Confirmar assinatura'}});
+    });
+  }
+  function pteTermoModal(p,entry,done){
+    openModal(`${ptePeopleDatalists()}<h2>👷 ${entry?'Assinar termo':'Adicionar trabalhador ao termo'}</h2><div class="note">${PTE_TXT_TERMO}</div><form id="pte-termo-form">${entry?`<p><strong>${empEsc(entry.nome)}</strong>${entry.matricula?` · Matrícula ${empEsc(entry.matricula)}`:''}</p>`:`<div class="field"><label>Nome *</label><input name="nome" list="pte-dl-pessoas" autocomplete="off"></div><div class="field-row"><div class="field"><label>Matrícula</label><input name="matricula" inputmode="numeric"></div><div class="field"><label>Observação / atividade</label><input name="obs"></div></div>`}<div class="field"><label>Assinatura do trabalhador *</label>${pteSigBox('s',null,false)}</div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">✅ Confirmar</button></div></form>`,ov=>{
+      const f=ov.querySelector('#pte-termo-form'),sig=pteSigController(f);pteModalPersonAutofill(ov);f.querySelector('[data-sig-open]').click();
+      f.addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(f)),s=sig.get('s');if(!entry&&!String(d.nome||'').trim()){alert('Informe o nome do trabalhador.');return}if(!s){alert('O trabalhador precisa assinar.');return}
+        const b=f.querySelector('button.btn:not(.secondary)');b.disabled=true;b.textContent='Salvando...';
+        try{const saved=entry?await pteRun({type:'termoSign',id:p.id,entryId:entry.id,signature:s}):await pteRun({type:'termoAdd',id:p.id,entry:{id:uid('ptt'),nome:d.nome.trim(),matricula:String(d.matricula||'').trim(),obs:String(d.obs||'').trim(),signature:s}});closeModal();done(saved)}catch(err){alert('Não foi possível salvar: '+pteErr(err));b.disabled=false;b.textContent='✅ Confirmar'}});
+    });
+  }
+  function pteRevalidarModal(p,done){
+    const em=p.aprovacao?.emitente||{},co=p.aprovacao?.coemitente||{};
+    openModal(`${ptePeopleDatalists()}<h2>🔁 Revalidar ${empEsc(p.numero)}</h2><div class="note">${PTE_TXT_REVAL}</div><form id="pte-reval-form"><div class="field"><label>Novo término (opcional) · atual: ${empEsc(pteDT(p.terminoData,p.terminoHora))}</label><div class="pte-dt"><input type="date" name="data"><input type="time" name="hora"></div></div><h3 style="margin:14px 0 6px">Emitente *</h3>${pteSignerFields('em_',em.nome||'',em.funcao||'')}<div class="field"><label>Assinatura do emitente *</label>${pteSigBox('em',null,false)}</div><h3 style="margin:14px 0 6px">Co-emitente (opcional)</h3>${pteSignerFields('co_',co.nome||'',co.funcao||'')}<div class="field"><label>Assinatura do co-emitente</label>${pteSigBox('co',null,false)}</div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">🔁 Revalidar</button></div></form>`,ov=>{
+      const f=ov.querySelector('#pte-reval-form'),sig=pteSigController(f);pteModalPersonAutofill(ov);f.querySelector('[data-sig="em"] [data-sig-open]').click();
+      f.addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(f)),se=sig.get('em'),sc=sig.get('co');
+        if(!String(d.em_nome||'').trim()||!se){alert('Nome e assinatura do emitente são obrigatórios.');return}
+        if(sc&&!String(d.co_nome||'').trim()){alert('Informe o nome do co-emitente.');return}
+        if(d.data&&`${d.data}T${d.hora||p.terminoHora||'23:59'}`<=`${p.inicioData}T${p.inicioHora||'00:00'}`){alert('O novo término deve ser posterior ao início.');return}
+        const b=f.querySelector('button.btn:not(.secondary)');b.disabled=true;b.textContent='Salvando...';
+        try{const saved=await pteRun({type:'revalidar',id:p.id,novoTermino:d.data?{data:d.data,hora:d.hora||p.terminoHora||''}:null,emitente:{nome:d.em_nome.trim(),funcao:String(d.em_funcao||'').trim(),signature:se},coemitente:sc?{nome:d.co_nome.trim(),funcao:String(d.co_funcao||'').trim(),signature:sc}:null});closeModal();done(saved)}catch(err){alert('Não foi possível revalidar: '+pteErr(err));b.disabled=false;b.textContent='🔁 Revalidar'}});
+    });
+  }
+  function pteEncerrarModal(p,done){
+    const contr=pteContratada(p),sol=p.aprovacao?.solicitante||{},ct=p.aprovacao?.contratada||{};
+    const nowLocal=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
+    openModal(`${ptePeopleDatalists()}<h2>🏁 Encerrar ${empEsc(p.numero)}</h2><form id="pte-enc-form"><div class="field"><label>O serviço desta PTE-APR foi *</label><div class="ecp-seg pte-seg2 pte-seg-y"><label><input type="radio" name="resultado" value="Concluído">Concluído</label><label><input type="radio" name="resultado" value="Não concluído">Não concluído</label></div></div><div class="field"><label>PTE-APR finalizada em *</label><input type="datetime-local" name="finalizadaEm" value="${nowLocal}"></div><div class="field"><label>Observações finais</label><textarea name="obsFinais" rows="3"></textarea></div><h3 style="margin:14px 0 6px">Solicitante *</h3>${pteSignerFields('so_',sol.nome||p.solicitante||'',sol.funcao||'')}<div class="field"><label>Assinatura do solicitante *</label>${pteSigBox('so',null,false)}</div>${contr?`<h3 style="margin:14px 0 6px">Responsável contratada *</h3>${pteSignerFields('ct_',ct.nome||p.empresaResponsavel||'',ct.funcao||'')}<div class="field"><label>Assinatura do responsável *</label>${pteSigBox('ct',null,false)}</div>`:''}<div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">🏁 Encerrar PTE-APR</button></div></form>`,ov=>{
+      const f=ov.querySelector('#pte-enc-form'),sig=pteSigController(f);pteModalPersonAutofill(ov);f.querySelector('[data-sig="so"] [data-sig-open]').click();
+      f.addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(f)),ss=sig.get('so'),sc=sig.get('ct');
+        if(!d.resultado){alert('Informe se o serviço foi concluído ou não.');return}
+        if(!d.finalizadaEm){alert('Informe a data e hora de finalização.');return}
+        if(!String(d.so_nome||'').trim()||!ss){alert('Nome e assinatura do solicitante são obrigatórios.');return}
+        if(contr&&(!String(d.ct_nome||'').trim()||!sc)){alert('Nome e assinatura do responsável da contratada são obrigatórios.');return}
+        if(d.resultado==='Não concluído'&&!String(d.obsFinais||'').trim()){alert('Descreva nas observações finais por que o serviço não foi concluído.');return}
+        const b=f.querySelector('button.btn:not(.secondary)');b.disabled=true;b.textContent='Salvando...';
+        try{const saved=await pteRun({type:'encerrar',id:p.id,encerramento:{resultado:d.resultado,finalizadaEm:d.finalizadaEm,obsFinais:String(d.obsFinais||'').trim(),solicitante:{nome:d.so_nome.trim(),funcao:String(d.so_funcao||'').trim(),signature:ss},contratada:contr?{nome:d.ct_nome.trim(),funcao:String(d.ct_funcao||'').trim(),signature:sc}:null}});closeModal();done(saved)}catch(err){alert('Não foi possível encerrar: '+pteErr(err));b.disabled=false;b.textContent='🏁 Encerrar PTE-APR'}});
+    });
+  }
+  function pteCancelarModal(p,done){
+    openModal(`<h2>🚫 Cancelar ${empEsc(p.numero)}</h2><form id="pte-cancel-form"><div class="field"><label>Motivo do cancelamento *</label><textarea name="motivo" rows="3" required></textarea></div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Voltar</button><button class="btn danger" style="background:var(--red);color:#fff">🚫 Cancelar PTE-APR</button></div></form>`,ov=>{
+      const f=ov.querySelector('#pte-cancel-form');
+      f.addEventListener('submit',async e=>{e.preventDefault();const motivo=String(new FormData(f).get('motivo')||'').trim();if(!motivo){alert('Informe o motivo.');return}try{const saved=await pteRun({type:'cancelar',id:p.id,motivo});closeModal();done(saved)}catch(err){alert('Não foi possível cancelar: '+pteErr(err))}});
+    });
+  }
+
+  // ---------------- Tela da PTE-APR (acompanhamento e assinaturas) ----------------
+  function pteDetailHtml(p){
+    const s=pteStatus(p),open=s!=='Encerrada'&&s!=='Cancelada',lib=s==='Liberada',tc=pteTermoCount(p),missing=pteMissingRoles(p);
+    const canEdit=open&&(s!=='Liberada'||pteCanForceEdit());
+    const sigRow=(label,sig,btn)=>`<div class="pte-sl"><div><strong>${empEsc(label)}</strong><small>${pteSigned(sig)?[sig.nome,sig.funcao,pteStampIso(sig.signedAt)].filter(Boolean).map(empEsc).join(' · '):empEsc(sig?.nome||'Não definido')}</small></div>${pteSigned(sig)?'<span class="ok">✔ Assinado</span>':btn}</div>`;
+    const kv=(k,val)=>`<div><span>${k}</span>${val}</div>`;
+    const termo=Array.isArray(p.termo)?p.termo:[],revs=Array.isArray(p.revalidacoes)?p.revalidacoes:[],enc=p.encerramento;
+    return`<div class="mobile-card ecp-head"><div><h2>📝 ${empEsc(p.numero)}</h2><div class="sub">${empEsc(pteTiposText(p))}</div></div>${pteStatusPill(p)}</div>
+      ${s==='Rascunho'?'<div class="pte-note">📝 Rascunho: complete o preenchimento e toque em <b>Emitir PTE-APR</b>.</div>':''}
+      ${s==='Aguardando liberação'?`<div class="pte-note">⏳ Aguardando assinatura de: <b>${empEsc(missing.map(r=>r.label).join(', '))}</b>. A atividade só pode começar após a liberação.</div>`:''}
+      ${lib&&!pteExpired(p)?'<div class="pte-note ok">✅ PTE-APR liberada. Atividade autorizada até o término programado.</div>':''}
+      ${pteExpired(p)?'<div class="pte-note bad">⛔ O prazo de término passou. Revalide a PTE-APR para continuar a atividade ou encerre-a.</div>':''}
+      ${p.cancelada?`<div class="pte-note bad">🚫 Cancelada em ${empEsc(pteStampIso(p.cancelada.at))} por ${empEsc(p.cancelada.by||'—')}: ${empEsc(p.cancelada.motivo||'')}</div>`:''}
+      <div class="mobile-card">
+        <div class="ecp-kv">${kv('Solicitante',empEsc(p.solicitante||'—'))}${kv('Setor',empEsc(p.setor||'—'))}${kv('Início',empEsc(pteDT(p.inicioData,p.inicioHora)))}${kv('Término',empEsc(pteDT(p.terminoData,p.terminoHora)))}${kv('Mão de obra',empEsc(p.maoDeObra||'—')+(pteContratada(p)?`<br><small>${empEsc(p.empresa||'')}</small>`:''))}${kv('Funcionários',empEsc(p.nFunc||'—'))}</div>
+        <div class="ecp-blk risk"><b>Descrição da atividade</b>${ecTxt(p.descricao)}</div>
+        ${(p.apr||[]).length?`<div class="ecp-blk eq"><b>APR · ${p.apr.length} etapa(s)</b>${p.apr.map((r,i)=>`${i+1}. ${empEsc(r.etapa)} <span class="pte-grau ${PTE_GRAUS.find(g=>g.v===r.grau)?.c||'warn'}">${empEsc(r.grau||'—')}</span>`).join('<br>')}</div>`:''}
+        <div class="pte-actions"><button class="btn secondary" data-pte-act="pdf">📄 Ver / imprimir PDF</button>${canEdit?`<button class="btn ${s==='Rascunho'?'':'secondary'}" data-pte-act="edit">✏️ ${s==='Rascunho'?'Continuar preenchimento':'Editar campos'}</button>`:''}</div>
+      </div>
+      <div class="mobile-card"><div class="ecp-step"><i>✍</i>Controle de aprovação</div>
+        ${pteVisibleRoles(p).map(r=>sigRow(r.label+(r.opt?' (opcional)':''),p.aprovacao?.[r.k],open?`<button class="btn" data-pte-sign="${r.k}">✍️ Assinar</button>`:'<span class="pend">—</span>')).join('')}
+      </div>
+      <div class="mobile-card"><div class="ecp-step"><i>👷</i>Termo de responsabilidade · ${tc.n}/${tc.t} assinado(s)</div>
+        ${termo.length?termo.map(t=>sigRow(t.nome+(t.matricula?` · ${t.matricula}`:''),{...t,nome:t.obs||''},open?`<button class="btn" data-pte-termo="${empEsc(t.id)}">✍️ Assinar</button>`:'<span class="pend">Sem assinatura</span>')).join(''):'<div class="sub">Nenhum trabalhador incluído.</div>'}
+        ${open?'<button class="btn secondary" data-pte-act="termoAdd" style="width:100%;margin-top:10px">+ Adicionar trabalhador e assinar</button>':''}
+      </div>
+      ${lib||revs.length?`<div class="mobile-card"><div class="ecp-step"><i>🔁</i>Revalidações (${revs.length})</div>
+        ${revs.map((r,i)=>`<div class="pte-sl"><div><strong>${i+1}ª revalidação · ${empEsc(pteStampIso(r.at))}</strong><small>Emitente: ${empEsc(r.emitente?.nome||'—')}${r.coemitente?` · Co-emitente: ${empEsc(r.coemitente.nome)}`:''}${r.novoTermino?` · Novo término: ${empEsc(pteDT(r.novoTermino.data,r.novoTermino.hora))}`:''}</small></div><span class="ok">✔</span></div>`).join('')||'<div class="sub">Nenhuma revalidação.</div>'}
+        ${lib?'<button class="btn secondary" data-pte-act="revalidar" style="width:100%;margin-top:10px">🔁 Revalidar PTE-APR</button>':''}
+      </div>`:''}
+      ${enc?`<div class="mobile-card"><div class="ecp-step"><i>🏁</i>Encerramento</div><div class="ecp-kv">${kv('Serviço',empEsc(enc.resultado))}${kv('Finalizada em',empEsc(enc.finalizadaEm?ecStamp(new Date(enc.finalizadaEm)):'—'))}</div>${enc.obsFinais?`<div class="ecp-blk"><b>Observações finais</b>${ecTxt(enc.obsFinais)}</div>`:''}${sigRow('Solicitante',enc.solicitante,'')}${enc.contratada?sigRow('Responsável contratada',enc.contratada,''):''}</div>`:''}
+      ${open?`<div class="mobile-card pte-actions">${lib?'<button class="btn" data-pte-act="encerrar">🏁 Encerrar PTE-APR</button>':''}<button class="btn secondary" data-pte-act="cancelar" style="color:var(--red)">🚫 Cancelar</button>${pteCanAdmin()?'<button class="btn secondary" data-pte-act="excluir" style="color:var(--red)">🗑️ Excluir</button>':''}</div>`:(pteCanAdmin()?'<div class="mobile-card pte-actions"><button class="btn secondary" data-pte-act="excluir" style="color:var(--red)">🗑️ Excluir registro</button></div>':'')}
+      <div class="mobile-card"><details class="ecp-space"><summary>🕘 Histórico (${(p.historico||[]).length})</summary><div style="margin-top:8px">${(p.historico||[]).slice().reverse().map(h=>`<div class="pte-sl"><div><strong style="font-weight:600">${empEsc(h.acao)}</strong><small>${empEsc(pteStampIso(h.at))} · ${empEsc(h.by||'—')}</small></div></div>`).join('')}</div></details></div>`;
+  }
+  // Monta a tela de acompanhamento. nav: {back, edit(p), rerender(p)}
+  function pteMountDetail(host,id,nav){
+    const p=pteById(id);
+    if(!p){host.innerHTML='<div class="mobile-card"><div class="empty">PTE-APR não encontrada. Ela pode ter sido excluída.</div><button class="btn secondary" data-back style="width:100%">← Voltar</button></div>';host.querySelector('[data-back]').onclick=nav.back;return}
+    host.innerHTML=`<div class="mobile-card" style="padding:10px 16px"><button class="btn secondary" data-back>← Voltar à lista</button> <button class="btn secondary" data-refresh title="Buscar assinaturas feitas em outros aparelhos">🔄 Atualizar</button></div>${pteDetailHtml(p)}`;
+    const again=saved=>nav.rerender(saved?.id||id);
+    host.querySelector('[data-back]').onclick=nav.back;
+    host.querySelector('[data-refresh]').onclick=async e=>{e.currentTarget.disabled=true;try{await pteRefresh()}catch(err){alert('Não foi possível atualizar: '+pteErr(err))}again()};
+    host.querySelectorAll('[data-pte-sign]').forEach(b=>b.onclick=()=>pteSignModal(p,b.dataset.pteSign,again));
+    host.querySelectorAll('[data-pte-termo]').forEach(b=>b.onclick=()=>pteTermoModal(p,(p.termo||[]).find(t=>t.id===b.dataset.pteTermo),again));
+    host.querySelectorAll('[data-pte-act]').forEach(b=>b.onclick=async()=>{
+      const act=b.dataset.pteAct;
+      if(act==='pdf')ptePrint(p);
+      else if(act==='edit')nav.edit(p);
+      else if(act==='termoAdd')pteTermoModal(p,null,again);
+      else if(act==='revalidar')pteRevalidarModal(p,again);
+      else if(act==='encerrar')pteEncerrarModal(p,again);
+      else if(act==='cancelar')pteCancelarModal(p,again);
+      else if(act==='excluir'){if(!confirm(`Excluir definitivamente a ${p.numero}? Esta ação não pode ser desfeita.`))return;try{await pteRun({type:'delete',id:p.id});nav.back()}catch(err){alert('Não foi possível excluir: '+pteErr(err))}}
+    });
+    window.scrollTo(0,0);
+  }
+  function pteItemHtml(p){
+    const s=pteStatus(p),cls=pteExpired(p)||s==='Cancelada'?'bad':s==='Liberada'?'lib':s==='Encerrada'?'fim':'',tc=pteTermoCount(p);
+    return`<button type="button" class="pte-item ${cls}" data-open-pte="${empEsc(p.id)}">${pteStatusPill(p)}<b>${empEsc(p.numero)}</b><small>${empEsc(pteTiposText(p))}</small><small>📝 ${empEsc(String(p.descricao||'—').slice(0,110))}</small><small>📅 ${empEsc(pteDT(p.inicioData,p.inicioHora))} → ${empEsc(pteDT(p.terminoData,p.terminoHora))} · 👤 ${empEsc(p.solicitante||'—')} · 👷 ${tc.n}/${tc.t}</small></button>`;
+  }
+  const pteSortRecent=(a,b)=>String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||''));
+
+  // ---------------- PDF ----------------
+  const PTE_PDF_CSS=`
+    @page{size:A4;margin:8mm 8mm 10mm}
+    *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body{font:9.3px/1.32 Arial,Helvetica,sans-serif;color:#111;margin:0;background:#fff}
+    .wrap{max-width:194mm;margin:0 auto;position:relative}
+    table{width:100%;border-collapse:collapse;margin:0 0 5px;position:relative;z-index:1}
+    td,th{border:1px solid #333;padding:3px 5px;vertical-align:top;text-align:left}
+    tr{break-inside:avoid}
+    .sh td,.sh th,th.sh{background:#1d2329;color:#fff;font-weight:700;text-transform:uppercase;font-size:8.8px;letter-spacing:.03em}
+    .l{font-weight:700;font-size:8.2px;text-transform:uppercase;white-space:nowrap;background:#eef0f2}
+    .cb{display:inline-block;width:9px;height:9px;border:1px solid #111;margin-right:4px;vertical-align:-1px;text-align:center;font:700 8px/8px Arial}
+    .cb.on:after{content:'X'}
+    .hd td{vertical-align:middle}
+    .hd .logo{width:110px;text-align:center}.hd .logo img{max-width:100px;max-height:52px;object-fit:contain}
+    .hd h1{margin:0;font-size:19px;letter-spacing:.06em}.hd .t{font-size:10.5px;font-weight:700}
+    .hd .id{width:150px;font-size:9px}.hd .id b{display:block;font-size:12px;margin-top:2px}
+    .tp{text-align:center;width:20%}.tp img{width:40px;height:34px;object-fit:contain;display:block;margin:0 auto 2px}
+    .sig img{max-height:30px;max-width:120px;object-fit:contain;display:block}
+    .gr-Baixo{color:#1f6b3a;font-weight:700}.gr-Médio{color:#8a4b00;font-weight:700}.gr-Alto,.gr-Crítico{color:#a02b19;font-weight:700}
+    .c{text-align:center}.mut{color:#666}
+    .rec{font-size:8.8px}.rec div{margin:1px 0}
+    .wm{position:fixed;top:38%;left:0;right:0;text-align:center;font:900 64px Arial;color:rgba(200,40,30,.13);transform:rotate(-26deg);z-index:0;pointer-events:none;white-space:nowrap}
+    .auth{margin-top:6px;border-top:1px dashed #999;padding-top:4px;font-size:8px;color:#555;display:flex;justify-content:space-between;gap:10px}
+    @media screen{body{background:#e9ecef}.wrap{background:#fff;padding:9mm;margin:10px auto;box-shadow:0 2px 12px rgba(0,0,0,.15)}}
+    @media print{.wrap{padding:0;max-width:none}}
+  `;
+  function ptePdfBody(p){
+    const E=empEsc,cb=on=>`<span class="cb ${on?'on':''}"></span>`,txt=v=>v?E(v).replace(/\n/g,'<br>'):'&nbsp;',t=p.tipos||{},inst=p.instrumentos||[],cond=p.condicoes||[];
+    const s=pteStatus(p),wm=s==='Rascunho'?'RASCUNHO':s==='Cancelada'?'CANCELADA':s==='Aguardando liberação'?'NÃO LIBERADA':'';
+    const sigImg=x=>pteSigned(x)?`<img src="${E(x.signature)}" alt="">`:'';
+    const dt=iso=>iso?ecStamp(new Date(iso)):'';
+    const grid=(list,sel,cols)=>{const rows=[];for(let i=0;i<list.length;i+=cols)rows.push(list.slice(i,i+cols));return rows.map(r=>`<tr>${r.map(x=>`<td>${cb((sel||[]).includes(x))}${E(x.toUpperCase())}</td>`).join('')}${'<td></td>'.repeat(cols-r.length)}</tr>`).join('')};
+    const termo=(p.termo||[]).length?p.termo:[{},{},{}];
+    const revs=(p.revalidacoes||[]);
+    const enc=p.encerramento||{};
+    const verif=ecHash(JSON.stringify([p.id,p.numero,p.updatedAt,(p.historico||[]).length]));
+    return`${wm?`<div class="wm">${wm}</div>`:''}
+    <table class="hd"><tr><td class="logo"><img src="${state.companyLogo||FIXED_SYSTEM_LOGO}" alt=""></td><td class="c"><h1>PTE-APR</h1><div class="t">Permissão de Trabalho Especial com Análise Preliminar de Riscos</div>${companyTopLine()}</td><td class="id">ID PTE-APR:<b>${E(p.numero)}</b>Situação: <b style="font-size:10px">${E(pteExpired(p)?'Liberada · prazo vencido':s)}</b></td></tr></table>
+    <table>
+      <tr><td class="l">UVS</td><td>${txt(p.uvs)}</td><td class="l">Data de emissão</td><td>${E(fmtDate(p.dataEmissao))}</td></tr>
+      <tr><td class="l">Solicitante</td><td>${txt(p.solicitante)}</td><td class="l">Setor</td><td>${txt(p.setor)}</td></tr>
+      <tr><td class="l">Mão de obra</td><td colspan="3">${cb(p.maoDeObra!=='Contratada')}PRÓPRIA &nbsp; ${cb(p.maoDeObra==='Contratada')}CONTRATADA &nbsp; (Empresa: ${txt(p.empresa)} &nbsp; Responsável: ${txt(p.empresaResponsavel)})</td></tr>
+      <tr><td class="l">Programação do trabalho</td><td colspan="3">Início: <b>${E(pteDT(p.inicioData,p.inicioHora))}</b> &nbsp;&nbsp; Término: <b>${E(pteDT(p.terminoData,p.terminoHora))}</b> &nbsp;&nbsp; Nº func. envolvidos: <b>${E(p.nFunc||'')}</b></td></tr>
+    </table>
+    <table><tr>${PTE_TIPOS.map(x=>`<td class="tp">${PTE_ICONS[x.k]?`<img src="${PTE_ICONS[x.k]}" alt="">`:''}${cb(t[x.k])}<b>${E(x.label.toUpperCase())}</b>${x.extra?`<br><span class="mut">${x.k==='outro'?'QUAL?':'TIPO:'}</span> ${txt(t[x.extra])}`:''}</td>`).join('')}</tr></table>
+    <table><tr class="sh"><td colspan="4">Instrumentos de medição</td></tr>${[0,1,2].map(i=>`<tr><td class="l">ID equip. ${i+1}</td><td>${txt(inst[i]?.id)}</td><td class="l">CAL RBC Nº</td><td>${txt(inst[i]?.cal)}</td></tr>`).join('')}</table>
+    <table>
+      <tr><td class="l" style="width:30%">Descrição da atividade</td><td>${txt(p.descricao)}</td></tr>
+      <tr><td class="l">Atividades simultâneas que apresentem riscos</td><td>${txt(p.simultaneas)}</td></tr>
+      <tr><td class="l">Condições impeditivas para atividade</td><td>${txt(p.impeditivas)}</td></tr>
+      <tr><td class="l">Procedimento de emergência e resgate</td><td>${txt(p.emergencia)}</td></tr>
+    </table>
+    <table><tr class="sh"><td colspan="4">Equipamento de segurança necessário (EPI/EPC)</td></tr>${grid(PTE_EPIS,p.epis,4)}<tr><td colspan="4"><b>OUTROS:</b> ${txt(p.episOutros)}</td></tr></table>
+    <table><tr class="sh"><td colspan="3">Qualificação, capacitação ou habilitação necessária</td></tr>${grid(PTE_QUALIF,p.qualificacoes,3)}<tr><td colspan="3"><b>OUTROS:</b> ${txt(p.qualifOutros)}</td></tr></table>
+    <table><tr class="sh"><td colspan="6">Equipamentos e/ou instalações (fontes de energia elétrica/mecânica/térmica/pneumática/hidráulica)</td></tr>${grid(PTE_ENERGIAS,p.energias,6)}<tr><td colspan="6"><b>NECESSÁRIO ISOLAMENTO DE OUTRAS ÁREAS/ATIVIDADES?</b> &nbsp; ${cb(p.isolamento!=='Sim')}NÃO &nbsp; ${cb(p.isolamento==='Sim')}SIM &nbsp; QUAIS? ${txt(p.isolamentoQuais)}</td></tr></table>
+    <table><tr class="sh"><td class="c" style="width:34px">Sim</td><td class="c" style="width:34px">Não</td><td class="c" style="width:34px">NA</td><td>Condições obrigatórias</td></tr>${PTE_CONDICOES.map((item,i)=>{const r=cond[i]?.resposta;return`<tr><td class="c">${r==='Sim'?'X':''}</td><td class="c">${r==='Não'?'X':''}</td><td class="c">${r==='N.A.'?'X':''}</td><td>${E(item.toUpperCase())}</td></tr>`}).join('')}<tr><td colspan="4" style="font-size:8.3px"><b>${E(PTE_TXT_NAO.toUpperCase())}</b></td></tr><tr><td colspan="4"><b>OBSERVAÇÕES:</b> ${txt(p.observacoes)}</td></tr></table>
+    <table><tr class="sh"><td colspan="4">Detalhamento da tarefa e análise de risco · considerar riscos ocupacionais e ambientais (impactos)</td></tr><tr><td class="l" style="width:24%">Etapa da atividade</td><td class="l" style="width:28%">Identificação do perigo / risco e/ou aspecto / impacto</td><td class="l">Medidas de controle</td><td class="l" style="width:13%">Grau de risco<br><span style="font-weight:400;text-transform:none">(considerando medidas de controle)</span></td></tr>${((p.apr||[]).length?p.apr:[{},{},{}]).map(r=>`<tr><td>${txt(r.etapa)}</td><td>${txt(r.perigo)}</td><td>${txt(r.medidas)}</td><td class="gr-${E(r.grau||'')}">${txt(r.grau)}</td></tr>`).join('')}</table>
+    <table><tr><td class="rec"><b><u>RECOMENDAÇÕES GERAIS:</u></b>${PTE_RECOMENDACOES.map((x,i)=>`<div>${i+1} – ${E(x)}</div>`).join('')}</td></tr></table>
+    <table><tr class="sh"><td colspan="4">Termo de responsabilidade para execução das atividades</td></tr><tr><td colspan="4" style="font-size:8.6px">${E(PTE_TXT_TERMO)}</td></tr><tr><td class="l">Nome</td><td class="l" style="width:14%">Matrícula</td><td class="l" style="width:24%">Assinatura</td><td class="l" style="width:24%">Observação/atividade</td></tr>${termo.map(x=>`<tr><td>${txt(x.nome)}</td><td>${txt(x.matricula)}</td><td class="sig">${sigImg(x)}${x.signedAt?`<span class="mut" style="font-size:7.5px">${E(dt(x.signedAt))}</span>`:''}</td><td>${txt(x.obs)}</td></tr>`).join('')}</table>
+    <table><tr class="sh"><td colspan="5">Controle de aprovação da PTE-APR</td></tr><tr><td colspan="5" style="font-size:8.6px">${E(PTE_TXT_APROV)}</td></tr><tr><td class="l" style="width:22%"></td><td class="l">Nome</td><td class="l" style="width:17%">Função</td><td class="l" style="width:21%">Assinatura</td><td class="l" style="width:14%">Data</td></tr>${PTE_ROLES.map(r=>{const a=p.aprovacao?.[r.k]||{};return`<tr><td class="l">${E(r.label.toUpperCase())}${r.onlyContratada?' (SE APLICÁVEL)':''}</td><td>${txt(a.nome)}</td><td>${txt(a.funcao)}</td><td class="sig">${sigImg(a)}</td><td>${E(dt(a.signedAt))}</td></tr>`}).join('')}</table>
+    <table><tr class="sh"><td colspan="5">Controle de revalidação da PTE-APR</td></tr><tr><td colspan="5" style="font-size:8.6px">${E(PTE_TXT_REVAL)}</td></tr><tr><td class="l" style="width:22%"></td><td class="l">Nome</td><td class="l" style="width:17%">Função</td><td class="l" style="width:21%">Assinatura</td><td class="l" style="width:14%">Data</td></tr>${(revs.length?revs:[{}]).map((r,i)=>`${revs.length?`<tr><td colspan="5" class="mut">${i+1}ª revalidação${r.novoTermino?` · novo término: ${E(pteDT(r.novoTermino.data,r.novoTermino.hora))}`:''}</td></tr>`:''}<tr><td class="l">EMITENTE</td><td>${txt(r.emitente?.nome)}</td><td>${txt(r.emitente?.funcao)}</td><td class="sig">${sigImg(r.emitente)}</td><td>${E(dt(r.emitente?.signedAt))}</td></tr><tr><td class="l">CO-EMITENTE</td><td>${txt(r.coemitente?.nome)}</td><td>${txt(r.coemitente?.funcao)}</td><td class="sig">${sigImg(r.coemitente)}</td><td>${E(dt(r.coemitente?.signedAt))}</td></tr>`).join('')}</table>
+    <table><tr class="sh"><td colspan="5">Controle de encerramento da PTE-APR</td></tr><tr><td class="l" style="width:22%"></td><td class="l">Nome</td><td class="l" style="width:17%">Função</td><td class="l" style="width:21%">Assinatura</td><td class="l" style="width:14%">Data</td></tr><tr><td class="l">SOLICITANTE</td><td>${txt(enc.solicitante?.nome)}</td><td>${txt(enc.solicitante?.funcao)}</td><td class="sig">${sigImg(enc.solicitante)}</td><td>${E(dt(enc.solicitante?.signedAt))}</td></tr><tr><td class="l">RESPONSÁVEL CONTRATADA (SE APLICÁVEL)</td><td>${txt(enc.contratada?.nome)}</td><td>${txt(enc.contratada?.funcao)}</td><td class="sig">${sigImg(enc.contratada)}</td><td>${E(dt(enc.contratada?.signedAt))}</td></tr><tr><td colspan="5"><b>OBSERVAÇÕES FINAIS:</b> ${txt(enc.obsFinais)}</td></tr><tr><td colspan="5"><b>PTE-APR FINALIZADA EM:</b> ${E(enc.finalizadaEm?ecStamp(new Date(enc.finalizadaEm)):'____/____/____ ____h____')} &nbsp;&nbsp;&nbsp; <b>O SERVIÇO DESTA PTE-APR FOI:</b> ${cb(enc.resultado==='Concluído')}CONCLUÍDO &nbsp; ${cb(enc.resultado==='Não concluído')}NÃO CONCLUÍDO</td></tr></table>
+    <div class="auth"><span>Emitida por ${E(p.emitidoPor||'—')} (${E(p.origem||'Sistema')}) em ${E(dt(p.createdAt))}${p.liberadaEm?` · Liberada em ${E(dt(p.liberadaEm))}`:''}</span><span>Verificação: ${verif} · Gerado em ${E(ecStamp())}</span></div>`;
+  }
+  function ptePrint(p){
+    if(!p)return;
+    const w=window.open('','_blank');
+    if(!w){alert('Permita a abertura de janelas (pop-ups) para gerar o PDF.');return}
+    const printer=`<script>(function(){var imgs=[].slice.call(document.images),n=imgs.length,c=0;function go(){setTimeout(function(){window.print()},350)}if(!n)return go();imgs.forEach(function(i){if(i.complete){if(++c>=n)go()}else{i.onload=i.onerror=function(){if(++c>=n)go()}}})})();<\/script>`;
+    w.document.open();w.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${empEsc(p.numero)} · PTE-APR</title><style>${PTE_PDF_CSS}</style></head><body><div class="wrap">${ptePdfBody(p)}</div>${printer}</body></html>`);w.document.close();
+  }
+
+  // ---------------- Abas do sistema ----------------
+  let pteSysView={mode:'list',id:null};
+  function pteGoList(view){currentModule='pte';currentTab='pte-list';pteSysView=view||{mode:'list',id:null};renderShell()}
+  function pteKpis(){
+    const all=pteList(),st=all.map(p=>({p,s:pteStatus(p)})),month=new Date().toISOString().slice(0,7);
+    return{aguardando:st.filter(x=>x.s==='Aguardando liberação').length,liberadas:st.filter(x=>x.s==='Liberada'&&!pteExpired(x.p)).length,vencidas:st.filter(x=>pteExpired(x.p)).length,rascunhos:st.filter(x=>x.s==='Rascunho').length,encerradasMes:st.filter(x=>x.s==='Encerrada'&&String(x.p.encerramento?.at||'').slice(0,7)===month).length,total:all.length};
+  }
+  function renderPteDash(root){
+    const k=pteKpis(),open=pteList().filter(p=>['Rascunho','Aguardando liberação','Liberada'].includes(pteStatus(p))).sort(pteSortRecent);
+    const byTipo=PTE_TIPOS.map(t=>({t,n:pteList().filter(p=>p.tipos?.[t.k]).length}));
+    const kpi=(icon,cls,n,label)=>`<div class="annual-kpi"><div class="annual-kpi-icon ${cls}">${icon}</div><div><div class="num">${n}</div><div class="label">${label}</div></div></div>`;
+    root.innerHTML=`${PTE_CSS}<div class="page-head"><div><h2>📝 PTE-APR · Painel Geral</h2><div class="sub">Permissões de Trabalho Especial com Análise Preliminar de Riscos.</div></div><button class="btn" id="pte-dash-new">+ Emitir PTE-APR</button></div>
+      <div class="annual-kpis emp-kpis" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">${kpi('✅','green',k.liberadas,'Liberadas em vigor')}${kpi('⏳','amber',k.aguardando,'Aguardando liberação')}${kpi('⛔','amber',k.vencidas,'Prazo vencido')}${kpi('📝','blue',k.rascunhos,'Rascunhos')}${kpi('🏁','green',k.encerradasMes,'Encerradas no mês')}</div>
+      <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔥 PTE-APR por tipo de trabalho</h3><span>${k.total} no total</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;padding:14px">${byTipo.map(x=>`<div style="display:flex;align-items:center;gap:10px;background:var(--panel-2);border-radius:10px;padding:10px">${PTE_ICONS[x.t.k]?`<img src="${PTE_ICONS[x.t.k]}" style="width:40px;height:34px;object-fit:contain;background:#fff;border-radius:6px">`:'<span style="font-size:24px">➕</span>'}<div><div style="font-size:20px;font-weight:700">${x.n}</div><div style="font-size:12px;color:var(--ink-dim)">${x.t.label}</div></div></div>`).join('')}</div></div>
+      <div class="panel"><div class="panel-head"><h3>📋 Em andamento</h3><span>${open.length}</span></div><div style="padding:12px">${open.length?open.map(pteItemHtml).join(''):'<div class="empty">Nenhuma PTE-APR em andamento.</div>'}</div></div>`;
+    root.querySelector('#pte-dash-new').onclick=()=>pteGoList({mode:'form',id:null});
+    root.querySelectorAll('[data-open-pte]').forEach(b=>b.onclick=()=>pteGoList({mode:'detail',id:b.dataset.openPte}));
+  }
+  function pteFiltered(root){
+    const q=normalizeText(root.dataset.pteSearch||''),st=root.dataset.pteStatus||'',tp=root.dataset.pteTipo||'';
+    return pteList().filter(p=>{const s=pteExpired(p)?'Prazo vencido':pteStatus(p);return(!q||normalizeText([p.numero,p.descricao,p.solicitante,p.setor,p.empresa,p.uvs,(p.termo||[]).map(t=>t.nome).join(' ')].join(' ')).includes(q))&&(!st||s===st||(st==='Liberada'&&pteStatus(p)==='Liberada'))&&(!tp||p.tipos?.[tp])}).sort(pteSortRecent);
+  }
+  function renderPteList(root){
+    const nav={back:()=>{pteSysView={mode:'list',id:null};renderPteList(root)},edit:p=>{pteSysView={mode:'form',id:p.id};renderPteList(root)},rerender:id=>{pteSysView={mode:'detail',id};renderPteList(root)}};
+    if(pteSysView.mode==='form'){
+      root.innerHTML=`${PTE_CSS}${ECP_CSS}<div class="page-head"><div><h2>${pteSysView.id?'✏️ Preencher PTE-APR':'📝 Emitir PTE-APR'}</h2><div class="sub">Permissão de Trabalho Especial com Análise Preliminar de Riscos</div></div></div><div class="brigade-mobile pte-inline"><div class="brigade-mobile-shell" id="pte-host"></div></div>`;
+      const cur=pteSysView.id?pteById(pteSysView.id):null;
+      pteMountForm(root.querySelector('#pte-host'),cur,{onCancel:()=>cur?nav.rerender(cur.id):nav.back(),onSaved:saved=>nav.rerender(saved?.id)});
+      return;
+    }
+    if(pteSysView.mode==='detail'){
+      root.innerHTML=`${PTE_CSS}${ECP_CSS}<div class="brigade-mobile pte-inline"><div class="brigade-mobile-shell" id="pte-host"></div></div>`;
+      pteMountDetail(root.querySelector('#pte-host'),pteSysView.id,nav);
+      return;
+    }
+    const rows=pteFiltered(root),E=empEsc;
+    root.innerHTML=`${PTE_CSS}<div class="page-head"><div><h2>📝 Gestão de PTE-APR</h2><div class="sub">Emissão, assinaturas, liberação, revalidação e encerramento.</div></div><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn secondary" id="pte-refresh">🔄 Atualizar</button><button class="btn" id="pte-new">+ Emitir PTE-APR</button></div></div>
+      <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${rows.length} de ${pteList().length}</span></div><div class="pgr-filter-row"><div class="field"><label>Pesquisar</label><input id="pte-search" value="${E(root.dataset.pteSearch||'')}" placeholder="Número, atividade, solicitante, setor, trabalhador"></div><div class="field"><label>Situação</label><select id="pte-status"><option value="">Todas</option>${['Rascunho','Aguardando liberação','Liberada','Prazo vencido','Encerrada','Cancelada'].map(x=>`<option ${root.dataset.pteStatus===x?'selected':''}>${x}</option>`).join('')}</select></div><div class="field"><label>Tipo</label><select id="pte-tipo"><option value="">Todos</option>${PTE_TIPOS.map(t=>`<option value="${t.k}" ${root.dataset.pteTipo===t.k?'selected':''}>${t.label}</option>`).join('')}</select></div><button class="btn secondary" id="pte-clear">🧹 Limpar</button></div></div>
+      <div class="panel">${rows.length?`<div style="overflow:auto"><table><thead><tr><th>📝 PTE-APR</th><th>🛠️ Atividade</th><th>🔥 Tipo</th><th>📅 Programação</th><th>👤 Solicitante / Setor</th><th>✍️ Assinaturas</th><th>🚦 Situação</th><th>⚙️ Ações</th></tr></thead><tbody>${rows.map(p=>{const tc=pteTermoCount(p),miss=pteMissingRoles(p);return`<tr><td><strong>${E(p.numero)}</strong><br><small>${E(fmtDate(p.dataEmissao))}</small></td><td style="max-width:280px">${E(String(p.descricao||'—').slice(0,140))}</td><td style="font-size:12px">${E(pteTiposText(p))}</td><td style="font-size:12px">${E(pteDT(p.inicioData,p.inicioHora))}<br>→ ${E(pteDT(p.terminoData,p.terminoHora))}</td><td>${E(p.solicitante||'—')}<br><small>${E(p.setor||'')}${pteContratada(p)?` · ${E(p.empresa||'')}`:''}</small></td><td style="font-size:12px">Aprovação: ${miss.length?`<span style="color:var(--amber)">faltam ${miss.length}</span>`:'<span style="color:var(--green)">✔ completa</span>'}<br>Termo: ${tc.n}/${tc.t}</td><td>${pteStatusPill(p)}</td><td class="row-actions"><button class="action-link" data-open-pte="${E(p.id)}">📂 Abrir</button><button class="action-link" data-pdf-pte="${E(p.id)}">📄 PDF</button></td></tr>`}).join('')}</tbody></table></div>`:'<div class="empty">Nenhuma PTE-APR encontrada.</div>'}</div>`;
+    const bindF=(sel,key,ev)=>root.querySelector(sel).addEventListener(ev,e=>{root.dataset[key]=e.target.value;const pos=e.target.selectionStart;renderPteList(root);const el=root.querySelector(sel);el.focus();if(pos!=null&&el.setSelectionRange)try{el.setSelectionRange(pos,pos)}catch(_){}});
+    bindF('#pte-search','pteSearch','input');bindF('#pte-status','pteStatus','change');bindF('#pte-tipo','pteTipo','change');
+    root.querySelector('#pte-clear').onclick=()=>{delete root.dataset.pteSearch;delete root.dataset.pteStatus;delete root.dataset.pteTipo;renderPteList(root)};
+    root.querySelector('#pte-new').onclick=()=>{pteSysView={mode:'form',id:null};renderPteList(root)};
+    root.querySelector('#pte-refresh').onclick=async e=>{e.currentTarget.disabled=true;try{await pteRefresh()}catch(err){alert('Não foi possível atualizar: '+pteErr(err))}renderPteList(root)};
+    root.querySelectorAll('[data-open-pte]').forEach(b=>b.onclick=()=>nav.rerender(b.dataset.openPte));
+    root.querySelectorAll('[data-pdf-pte]').forEach(b=>b.onclick=()=>ptePrint(pteById(b.dataset.pdfPte)));
+  }
+  // Emitentes autorizados a usar o portal do celular.
+  const pteEmitterEmp=x=>(state.employees||[]).find(e=>e.id===x?.employeeId)||null;
+  function renderPteEmitentes(root){
+    const list=Array.isArray(state.pteEmitters)?state.pteEmitters:[],E=empEsc,admin=checkPermission('Master');
+    root.innerHTML=`<div class="page-head"><div><h2>👷 Emitentes autorizados (portal do celular)</h2><div class="sub">Quem está nesta lista entra no portal de PTE-APR com o próprio nome e a matrícula do Cadastro Geral como senha.</div></div>${admin?'<button class="btn" id="pte-em-new">+ Autorizar emitente</button>':''}</div>
+      <div class="panel">${list.length?`<table><thead><tr><th>👷 Nome</th><th>🪪 Matrícula</th><th>💼 Cargo / Setor</th><th>🚦 Situação</th>${admin?'<th>⚙️ Ações</th>':''}</tr></thead><tbody>${list.map(x=>{const e=pteEmitterEmp(x);return`<tr><td><strong>${E(e?.nome||'Funcionário removido')}</strong></td><td>${E(e?.matricula||'—')}</td><td>${E(e?.cargo||'—')}<br><small>${E(e?.setor||'')}</small></td><td><span class="status-pill ${x.ativo!==false&&e?'ok':'bad'}"><span class="dot"></span>${x.ativo!==false&&e?'Ativo':'Inativo'}</span></td>${admin?`<td class="row-actions"><button class="action-link" data-em-toggle="${E(x.id)}">${x.ativo!==false?'⏸️ Inativar':'▶️ Ativar'}</button><button class="action-link danger-link" data-em-del="${E(x.id)}">🗑️ Remover</button></td>`:''}</tr>`}).join('')}</tbody></table>`:'<div class="empty">Nenhum emitente autorizado. Usuários do sistema com acesso ao módulo também podem emitir pelo celular, entrando com o próprio login.</div>'}</div>`;
+    root.querySelector('#pte-em-new')?.addEventListener('click',()=>{
+      const used=new Set(list.map(x=>x.employeeId)),emps=(state.employees||[]).filter(e=>!used.has(e.id)).sort((a,b)=>String(a.nome).localeCompare(String(b.nome),'pt-BR'));
+      openModal(`<h2>👷 Autorizar emitente de PTE-APR</h2><form id="pte-em-form"><div class="field"><label>Funcionário do Cadastro Geral *</label><select name="employeeId" required><option value="">Selecione</option>${emps.map(e=>`<option value="${e.id}">${E(e.nome)} · Matrícula ${E(e.matricula||'não cadastrada')} · ${E(e.cargo||'—')}</option>`).join('')}</select></div><div class="note">A matrícula do Cadastro Geral será a senha de acesso ao portal.</div><div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">💾 Salvar</button></div></form>`,ov=>ov.querySelector('#pte-em-form').addEventListener('submit',async e=>{e.preventDefault();const id=new FormData(e.target).get('employeeId'),emp=(state.employees||[]).find(x=>x.id===id);if(!emp){alert('Selecione o funcionário.');return}if(!String(emp.matricula||'').trim()){alert('Cadastre a matrícula deste funcionário no Cadastro Geral antes de autorizá-lo.');return}if(!Array.isArray(state.pteEmitters))state.pteEmitters=[];state.pteEmitters.push({id:uid('pteem'),employeeId:emp.id,ativo:true,createdAt:new Date().toISOString()});await saveState();closeModal();renderPteEmitentes(root)}));
+    });
+    root.querySelectorAll('[data-em-toggle]').forEach(b=>b.onclick=async()=>{const x=list.find(y=>y.id===b.dataset.emToggle);if(!x)return;x.ativo=x.ativo===false;await saveState();renderPteEmitentes(root)});
+    root.querySelectorAll('[data-em-del]').forEach(b=>b.onclick=async()=>{if(!confirm('Remover este emitente do portal?'))return;state.pteEmitters=list.filter(y=>y.id!==b.dataset.emDel);await saveState();renderPteEmitentes(root)});
+  }
+  function ptePortalUrl(){let base=String(state.ptePortalPublicUrl||state.ecPortalPublicUrl||'').trim();if(!base&&(location.protocol==='http:'||location.protocol==='https:'))base=location.href;if(!base)return'';try{const u=new URL(base);u.search='';u.hash='pte-portal';return u.href}catch(e){return''}}
+  function renderPtePortalSettings(root){
+    const url=ptePortalUrl(),qr=url?`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(url)}`:'',E=empEsc;
+    root.innerHTML=`<div class="page-head"><div><h2>📱 Portal de emissão pelo celular</h2><div class="sub">Link e QR Code para emitir, assinar e acompanhar PTE-APR no celular.</div></div></div>
+      <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔗 Endereço público</h3></div><div style="padding:16px"><div class="field"><label>Endereço HTTPS onde o sistema foi publicado</label><input id="pte-public-url" type="url" value="${E(state.ptePortalPublicUrl||state.ecPortalPublicUrl||'')}" placeholder="https://eguilherme88-wq.github.io/sistema-sst/"></div><button class="btn" id="pte-save-url">💾 Salvar endereço</button></div></div>
+      <div class="panel"><div class="panel-head"><h3>📱 Acesso ao portal</h3></div><div style="padding:16px;text-align:center">${qr?`<img src="${qr}" alt="QR Code do portal" style="width:220px;height:220px;background:#fff;padding:10px;border-radius:10px"><p style="word-break:break-all;font-size:13px">${E(url)}</p><div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap"><button class="btn secondary" id="pte-copy">📋 Copiar link</button><a class="btn" href="${E(url)}" target="_blank" rel="noopener">↗️ Abrir portal</a></div>`:'<div class="empty">Informe o endereço público para gerar o QR Code.</div>'}
+      <div class="note" style="margin-top:14px;text-align:left">No celular, abra o link e use <b>Adicionar à tela inicial</b> para usar o portal como aplicativo. Entram no portal os emitentes autorizados (nome + matrícula) e os usuários do sistema com acesso ao módulo PTE-APR.</div></div></div>`;
+    root.querySelector('#pte-save-url').onclick=async()=>{state.ptePortalPublicUrl=root.querySelector('#pte-public-url').value.trim();await saveState();renderPtePortalSettings(root)};
+    root.querySelector('#pte-copy')?.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(url);alert('Link copiado.')}catch(e){prompt('Copie o link:',url)}});
+  }
+
+  // ---------------- Portal do celular (#pte-portal) ----------------
+  function isPtePortalMode(){return location.hash.startsWith('#pte-portal')}
+  let ptePortalView={mode:'home',id:null};
+  function ptePortalSession(){
+    if(currentUser&&getAvailableModules(currentUser).includes('pte'))return{nome:currentUser.name||currentUser.username,origem:'usuario'};
+    let s=null;try{s=JSON.parse(sessionStorage.getItem('sst-pte-session')||'null')}catch(e){}
+    const em=(state.pteEmitters||[]).find(x=>x.id===s?.emitterId&&x.ativo!==false),emp=pteEmitterEmp(em);
+    return em&&emp?{nome:emp.nome,employeeId:emp.id,emitterId:em.id,origem:'emitente'}:null;
+  }
+  function renderPtePortal(){
+    const app=document.getElementById('app');
+    document.title='PTE-APR · Portal';
+    const sess=ptePortalSession();
+    const shell=inner=>`${ECP_CSS}${PTE_CSS}<div class="brigade-mobile"><div class="brigade-mobile-shell">${inner}</div></div>`;
+    if(!sess){
+      ptePortalActor=null;
+      const act=(state.pteEmitters||[]).filter(x=>x.ativo!==false&&pteEmitterEmp(x)).map(x=>({x,e:pteEmitterEmp(x)})).sort((a,b)=>String(a.e.nome).localeCompare(String(b.e.nome),'pt-BR'));
+      app.innerHTML=shell(`<div class="mobile-card" style="text-align:center"><img class="brand-logo" src="${state.companyLogo||FIXED_SYSTEM_LOGO}" alt="Logo" style="height:64px;margin:0 auto 8px"><h2 style="margin:4px 0">📝 PTE-APR</h2><div class="sub">Permissão de Trabalho Especial com Análise Preliminar de Riscos</div></div>
+        <div class="mobile-card"><form id="pte-login"><div class="field"><label>Emitente autorizado</label><select name="emitterId" required><option value="">Selecione seu nome</option>${act.map(a=>`<option value="${empEsc(a.x.id)}">${empEsc(a.e.nome)}</option>`).join('')}</select></div><div class="field"><label>Matrícula (senha)</label><input type="password" name="matricula" required inputmode="numeric" autocomplete="off"></div><button class="btn pte-big">Entrar</button></form>${act.length?'':'<div class="empty" style="margin-top:10px">Nenhum emitente autorizado. Cadastre em PTE-APR › Emitentes autorizados, ou entre pelo sistema com seu usuário.</div>'}<p class="sub" style="font-size:12px;margin-top:12px">Usuários do sistema: faça login no sistema neste aparelho e abra este link novamente.</p></div>`);
+      app.querySelector('#pte-login').addEventListener('submit',e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),em=act.find(a=>a.x.id===d.emitterId);if(!em||String(em.e.matricula||'').trim()!==String(d.matricula||'').trim()){alert('Emitente ou matrícula inválidos.');return}sessionStorage.setItem('sst-pte-session',JSON.stringify({emitterId:em.x.id}));ptePortalView={mode:'home',id:null};renderPtePortal()});
+      return;
+    }
+    ptePortalActor=sess.origem==='emitente'?{nome:sess.nome}:null;
+    const nav={back:()=>{ptePortalView={mode:'home',id:null};renderPtePortal()},edit:p=>{ptePortalView={mode:'form',id:p.id};renderPtePortal()},rerender:id=>{ptePortalView={mode:'detail',id};renderPtePortal()}};
+    if(ptePortalView.mode==='form'){
+      app.innerHTML=shell(`<div class="mobile-card ecp-head"><div><h2>${ptePortalView.id?'✏️ Preencher PTE-APR':'📝 Nova PTE-APR'}</h2><div class="sub">Emitente: <strong>${empEsc(sess.nome)}</strong></div></div></div><div id="pte-host"></div>`);
+      const cur=ptePortalView.id?pteById(ptePortalView.id):null;
+      const host=app.querySelector('#pte-host');
+      pteMountForm(host,cur,{onCancel:()=>cur?nav.rerender(cur.id):nav.back(),onSaved:saved=>nav.rerender(saved?.id)});
+      if(!cur){const em=host.querySelector('.pte-role-row[data-role="emitente"]');if(em&&sess.nome){em.querySelector('[data-f="nome"]').value=sess.nome;const info=ptePersonLookup(sess.nome);if(info)em.querySelector('[data-f="funcao"]').value=info.funcao}}
+      return;
+    }
+    if(ptePortalView.mode==='detail'){app.innerHTML=shell('<div id="pte-host"></div>');pteMountDetail(app.querySelector('#pte-host'),ptePortalView.id,nav);return}
+    const all=pteList().slice().sort(pteSortRecent),open=all.filter(p=>['Rascunho','Aguardando liberação','Liberada'].includes(pteStatus(p))),closed=all.filter(p=>!open.includes(p)).slice(0,10);
+    app.innerHTML=shell(`<div class="mobile-card ecp-head"><div><h2>📝 PTE-APR</h2><div class="sub">${empEsc(sess.nome)}</div></div>${sess.origem==='emitente'?'<button class="btn secondary" id="pte-logout">Sair</button>':''}</div>
+      <div class="mobile-card"><button class="btn pte-big" id="pte-new">+ Emitir nova PTE-APR</button></div>
+      <div class="mobile-card"><div class="ecp-head" style="margin-bottom:10px"><h3 style="margin:0">Em andamento (${open.length})</h3><button class="btn secondary" id="pte-refresh">🔄</button></div>${open.length?open.map(pteItemHtml).join(''):'<div class="sub">Nenhuma PTE-APR em andamento.</div>'}</div>
+      ${closed.length?`<div class="mobile-card"><details class="ecp-space"><summary>🗂️ Encerradas / canceladas recentes</summary><div style="margin-top:10px">${closed.map(pteItemHtml).join('')}</div></details></div>`:''}`);
+    app.querySelector('#pte-logout')?.addEventListener('click',()=>{sessionStorage.removeItem('sst-pte-session');ptePortalActor=null;renderPtePortal()});
+    app.querySelector('#pte-new').onclick=()=>{ptePortalView={mode:'form',id:null};renderPtePortal()};
+    app.querySelector('#pte-refresh').onclick=async e=>{e.currentTarget.disabled=true;try{await pteRefresh()}catch(err){alert('Não foi possível atualizar: '+pteErr(err))}renderPtePortal()};
+    app.querySelectorAll('[data-open-pte]').forEach(b=>b.onclick=()=>nav.rerender(b.dataset.openPte));
+  }
+  window.addEventListener('hashchange',()=>{if(!loaded)return;if(isPtePortalMode()){closeModal();ptePortalView={mode:'home',id:null};renderPtePortal()}});
+  // ================= FIM PTE-APR =================
+
   function render(){
     if(!loaded) {
       loadState();
@@ -17068,6 +17843,11 @@ function renderPcmsoDash(root){
       return;
     }
     fdsPortalActive=false;
+    if(isPtePortalMode()){
+      renderPtePortal();
+      return;
+    }
+    ptePortalActor=null;
     if(isEcPortalMode()){
       renderEcPetPortal();
       return;
