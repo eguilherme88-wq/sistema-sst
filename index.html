@@ -5560,25 +5560,41 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
   }
   // Agrupamento da árvore: "setor" (Setor → Cargo → Funcionários/Procedimentos)
   // ou "cargo" (Cargo → Procedimentos). O setor vem do cadastro do funcionário.
-  const RM_SEM_SETOR = 'Sem setor informado';
-  const RM_SEM_FUNC = 'Cargos sem funcionários vinculados';
+  const RM_SEM_SETOR = 'Cargos sem setor no Cadastro de Setores';
+  const RM_FORA = 'Funcionários com setor diferente do Cadastro de Setores';
+  const RM_FORA_KEY = '\u0000fora';
+  // Setor → cargos conforme Geral / Pessoas › Cadastro de Setores (setor.cargoIds → Cadastro de Cargos).
   function roleMatrixSectorTree(lista){
-    const cargos = new Set(lista.map(m => String(m.cargo||'').trim()).filter(Boolean));
-    const setores = new Map(); // setor -> Map(cargo -> [funcionários])
-    const comFunc = new Set();
-    (state.employees || []).forEach(e => {
-      const c = String(e.cargo||'').trim();
-      if(!cargos.has(c)) return;
-      const st = String(e.setor||'').trim() || RM_SEM_SETOR;
-      if(!setores.has(st)) setores.set(st, new Map());
-      const m = setores.get(st); if(!m.has(c)) m.set(c, []); m.get(c).push(e);
-      comFunc.add(c);
+    const nt = v => String(v||'').normalize('NFD').replace(/[̀-ͯ]/g,'').trim().toLowerCase();
+    const cargosMatriz = [...new Set(lista.map(m => String(m.cargo||'').trim()).filter(Boolean))];
+    const porNome = new Map(cargosMatriz.map(c => [nt(c), c]));
+    const jobs = new Map((state.generalJobs || []).map(j => [j.id, j]));
+    const usados = new Set();
+    const out = [];
+    (state.generalSectors || []).slice().sort((x,y)=>String(x.nome||'').localeCompare(String(y.nome||''),'pt-BR')).forEach(sec => {
+      const cargos = [...new Set((Array.isArray(sec.cargoIds) ? sec.cargoIds : []).map(id => jobs.get(id)).filter(Boolean)
+        .map(j => porNome.get(nt(j.nome))).filter(Boolean))].sort((x,y)=>x.localeCompare(y,'pt-BR'));
+      if(!cargos.length) return;
+      cargos.forEach(c => usados.add(c));
+      out.push([String(sec.nome||'').trim() || '—', cargos.map(c => [c, roleMatrixEmployeesFor(c, sec.nome)])]);
     });
-    const ordem = [...setores.keys()].sort((x,y) => x===RM_SEM_SETOR ? 1 : y===RM_SEM_SETOR ? -1 : x.localeCompare(y,'pt-BR'));
-    const out = ordem.map(st => [st, [...setores.get(st).entries()].sort((x,y)=>x[0].localeCompare(y[0],'pt-BR'))]);
-    const semFunc = [...cargos].filter(c => !comFunc.has(c)).sort((x,y)=>x.localeCompare(y,'pt-BR'));
-    if(semFunc.length) out.push([RM_SEM_FUNC, semFunc.map(c => [c, []])]);
+    const sem = cargosMatriz.filter(c => !usados.has(c)).sort((x,y)=>x.localeCompare(y,'pt-BR'));
+    // Funcionários de cargos que têm setor, mas cadastrados em outro setor (ou sem setor).
+    const fora = [...usados].sort((x,y)=>x.localeCompare(y,'pt-BR')).map(c => [c, roleMatrixEmployeesFor(c, RM_FORA_KEY)]).filter(([,emps]) => emps.length);
+    if(fora.length) out.push([RM_FORA, fora]);
+    if(sem.length) out.push([RM_SEM_SETOR, sem.map(c => [c, roleMatrixEmployeesFor(c, null)])]);
     return out;
+  }
+  // Funcionários do cargo; dentro de um setor, só os cadastrados naquele setor.
+  function roleMatrixEmployeesFor(cargo, setor){
+    const nt = v => String(v||'').normalize('NFD').replace(/[̀-ͯ]/g,'').trim().toLowerCase();
+    let setoresDoCargo = null;
+    if(setor === RM_FORA_KEY){
+      const job = (state.generalJobs || []).find(j => nt(j.nome) === nt(cargo));
+      setoresDoCargo = new Set((state.generalSectors || []).filter(sec => job && Array.isArray(sec.cargoIds) && sec.cargoIds.includes(job.id)).map(sec => nt(sec.nome)));
+    }
+    return (state.employees || []).filter(e => String(e.cargo||'').trim() === cargo && (setor == null || (setoresDoCargo ? !setoresDoCargo.has(nt(e.setor)) : nt(e.setor) === nt(setor))))
+      .sort((a,b) => String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'));
   }
   function renderRoleMatrixTree(lista, qProc, norm, by){
     by = by === 'cargo' ? 'cargo' : 'setor';
@@ -5597,14 +5613,14 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     let corpo, resumo;
     if(by === 'setor'){
       const arvore = roleMatrixSectorTree(lista);
-      const nSet = arvore.filter(([st]) => st !== RM_SEM_FUNC).length;
+      const nSet = arvore.filter(([st]) => st !== RM_SEM_SETOR && st !== RM_FORA).length;
       resumo = `🏢 ${nSet} setor${nSet===1?'':'es'} · ${porCargo.size} cargo${porCargo.size===1?'':'s'} · ${total.toLocaleString('pt-BR')} vínculos`;
       corpo = arvore.map(([st, cargos]) => {
         const nF = cargos.reduce((a,[,emps]) => a + emps.length, 0);
-        const icone = st === RM_SEM_FUNC ? '📭' : st === RM_SEM_SETOR ? '❔' : '🏢';
+        const icone = st === RM_SEM_SETOR ? '❔' : st === RM_FORA ? '⚠️' : '🏢';
         return `<details class="rm-sector" ${qProc?'open':''}>
-          <summary><span class="rm-caret">▶</span>${icone} ${empEsc(st)}<span class="rm-count">${cargos.length} cargo${cargos.length===1?'':'s'}${st===RM_SEM_FUNC?'':` · 👥 ${nF} funcionário${nF===1?'':'s'}`}</span></summary>
-          <div class="rm-children">${cargos.map(([c, emps]) => cargoNode(c, st===RM_SEM_FUNC ? null : st, emps.length)).join('')}</div>
+          <summary><span class="rm-caret">▶</span>${icone} ${empEsc(st)}<span class="rm-count">${cargos.length} cargo${cargos.length===1?'':'s'} · 👥 ${nF} funcionário${nF===1?'':'s'}</span></summary>
+          <div class="rm-children">${cargos.map(([c, emps]) => cargoNode(c, st===RM_SEM_SETOR ? null : st===RM_FORA ? RM_FORA_KEY : st, emps.length)).join('')}</div>
         </details>`;
       }).join('');
     } else {
@@ -5632,15 +5648,14 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
       if(!body || body.dataset.filled) return;
       const cargo = decodeURIComponent(det.dataset.rmCargo);
       const setor = det.dataset.rmSetor != null ? decodeURIComponent(det.dataset.rmSetor) : null;
-      const emps = (state.employees || []).filter(e => String(e.cargo||'').trim() === cargo && (setor == null || (String(e.setor||'').trim() || RM_SEM_SETOR) === setor))
-        .sort((a,b) => String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'));
+      const emps = roleMatrixEmployeesFor(cargo, setor);
       let itens = porCargo.get(cargo) || [];
       if(qProc) itens = itens.filter(m => norm([m.procCodigo, m.procedimento].join(' ')).includes(qProc));
       const grupos = new Map();
       itens.forEach(m => { const g = roleMatrixGroupOf(m); if(!grupos.has(g)) grupos.set(g, []); grupos.get(g).push(m); });
       const ordem = [...grupos.keys()].sort((a,b) => (a==='Manuais'?-1:b==='Manuais'?1:a.localeCompare(b,'pt-BR')));
       const funcNode = emps.length ? `<details class="rm-group rm-emps" ${by==='setor'&&!qProc?'open':''}><summary><span class="rm-caret">▶</span>👥 Funcionários<span class="rm-count">${emps.length}</span></summary>
-          <ul class="rm-children" style="border-left:0;padding-left:0">${emps.map(e => `<li>🧑 <span><strong>${empEsc(e.nome||'—')}</strong> <span style="color:var(--ink-dim)">· Matrícula ${empEsc(e.matricula||'—')}${setor==null && e.setor ? ' · ' + empEsc(e.setor) : ''}</span></span></li>`).join('')}</ul>
+          <ul class="rm-children" style="border-left:0;padding-left:0">${emps.map(e => `<li>🧑 <span><strong>${empEsc(e.nome||'—')}</strong> <span style="color:var(--ink-dim)">· Matrícula ${empEsc(e.matricula||'—')}${(setor==null || setor===RM_FORA_KEY) ? ' · Setor: ' + empEsc(e.setor || 'não informado') : ''}</span></span></li>`).join('')}</ul>
           <div style="padding:4px 0 6px 22px"><button type="button" class="action-link" data-rm-tree-track="${encodeURIComponent(cargo)}">📋 Abrir acompanhamento deste cargo</button></div></details>` : '';
       body.innerHTML = funcNode + (ordem.length ? ordem.map(g => {
         const arr = grupos.get(g).slice().sort((a,b) => String(a.procedimento||'').localeCompare(String(b.procedimento||''),'pt-BR',{numeric:true}));
