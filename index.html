@@ -4684,52 +4684,164 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     });
   }
 
+  // ===== Logomarcas dos relatórios =====
+  // state.companyLogo = logo principal (padrão). state.reportLogos = logos adicionais,
+  // cada uma com a lista de relatórios em que aparece (um relatório só pode estar em uma).
+  const REPORT_LOGO_CATALOG = [
+    { key:"funcionarios",          mod:"Geral / Pessoas",     nome:"Cadastro de Funcionários (PDF)" },
+    { key:"treino-integracao",     mod:"Treinamentos",        nome:"Ficha de Integração de SST do Funcionário" },
+    { key:"treino-acompanhamento", mod:"Treinamentos",        nome:"Acompanhamento de Procedimentos por Função" },
+    { key:"pcmso-anual",           mod:"PCMSO",               nome:"Relatório Analítico Anual do PCMSO" },
+    { key:"cipa-edital",           mod:"CIPA",                nome:"Edital da eleição" },
+    { key:"cipa-votantes",         mod:"CIPA",                nome:"Relatório de votantes" },
+    { key:"cipa-boletim",          mod:"CIPA",                nome:"Boletim de apuração" },
+    { key:"cipa-ata",              mod:"CIPA",                nome:"Atas" },
+    { key:"cipa-placa",            mod:"CIPA",                nome:"Placa da CIPA" },
+    { key:"epi-ficha",             mod:"EPI",                 nome:"Ficha de Entrega de EPI" },
+    { key:"incendio-inspecao",     mod:"Incêndio",            nome:"Relatório de inspeção" },
+    { key:"ec-docs",               mod:"Espaço Confinado",    nome:"Inventário e Permissão de Entrada (PET)" },
+    { key:"nr15",                  mod:"NR-15",               nome:"Laudo / Relatório NR-15" },
+    { key:"fds",                   mod:"FDS",                 nome:"Fichas, lista, cartaz QR e portal de FDS" },
+    { key:"pte",                   mod:"PTE",                 nome:"PTE-APR e portal da PTE" }
+  ];
+  function reportLogoEntry(key){
+    return (Array.isArray(state.reportLogos) ? state.reportLogos : []).find(l => l && l.img && Array.isArray(l.reports) && l.reports.includes(key)) || null;
+  }
+  function reportLogoSrc(key){ const l = key ? reportLogoEntry(key) : null; return l ? l.img : (state.companyLogo || null); }
+  // Lê a imagem escolhida e reduz para no máximo 500 px (PNG). SVG é mantido como está.
+  function processReportLogoFile(file, done, fail){
+    if(!file) return;
+    if(file.size > 3*1024*1024){ fail("⚠️ Arquivo muito grande. Escolha uma imagem de até 3 MB."); return; }
+    const reader = new FileReader();
+    reader.onload = () => {
+      const raw = reader.result;
+      if(file.type === "image/svg+xml"){
+        if(String(raw).length > 400*1024){ fail("⚠️ Este SVG é muito grande para o banco de dados. Use um PNG ou JPG."); return; }
+        done(raw); return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height; const max = 500;
+        if(w > max || h > max){ const r = Math.min(max/w, max/h); w = Math.round(w*r); h = Math.round(h*r); }
+        const canvas = document.createElement("canvas"); canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        done(canvas.toDataURL("image/png"));
+      };
+      img.onerror = () => fail("⚠️ Não foi possível ler esta imagem.");
+      img.src = raw;
+    };
+    reader.onerror = () => fail("⚠️ Erro ao ler o arquivo.");
+    reader.readAsDataURL(file);
+  }
+
   function renderAdminLogoV2(root){
     if(!currentUser || !["Administrador","Master"].includes(currentUser.role)){
       root.innerHTML = `<div class="panel"><div class="empty">🔒 Você não possui acesso ao módulo de logomarcas.</div></div>`;
       return;
     }
-    const card = (cfg) => {
-      const logo = state[cfg.key];
-      return `<div class="panel" style="max-width:620px;">
-        <div class="panel-head"><h3>${cfg.icon} ${cfg.title}</h3><span class="status-pill ${cfg.allowed?'ok':'warn'}"><span class="dot"></span>${cfg.allowed?'Edição liberada':'Somente visualização'}</span></div>
-        <div style="padding:18px;display:flex;flex-direction:column;gap:14px;">
-          <div id="${cfg.prefix}-preview" style="border:1px dashed var(--line);border-radius:8px;padding:18px;display:flex;align-items:center;justify-content:center;min-height:105px;background:var(--panel-2);">
-            ${logo ? `<img src="${logo}" alt="${cfg.title}" style="max-height:88px;max-width:100%;object-fit:contain;">` : `<span style="color:var(--ink-dim);font-size:13px;">Nenhuma imagem cadastrada.</span>`}
+    if(!Array.isArray(state.reportLogos)) state.reportLogos = [];
+    const extras = state.reportLogos;
+    const thumb = (src, h=56) => src ? `<img src="${src}" alt="" style="max-height:${h}px;max-width:100%;object-fit:contain;">` : `<span style="color:var(--ink-dim);font-size:13px;">Sem imagem</span>`;
+    const nomeRel = k => (REPORT_LOGO_CATALOG.find(r => r.key === k) || {}).nome || k;
+    const naPrincipal = REPORT_LOGO_CATALOG.filter(r => !reportLogoEntry(r.key));
+    root.innerHTML = `
+      <div class="page-head"><div><h2>🖼️ Administração · Logomarcas dos Relatórios</h2><div class="sub">A logomarca do cabeçalho do sistema é fixa. Aqui você define quais logos aparecem em cada relatório.</div></div>
+        <button class="btn" id="btn-add-report-logo">+ Adicionar logo</button></div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;align-items:start;">
+        <div class="panel">
+          <div class="panel-head"><h3>⭐ Logo principal</h3><span class="status-pill ok"><span class="dot"></span>Padrão</span></div>
+          <div style="padding:18px;display:flex;flex-direction:column;gap:12px;">
+            <div id="report-logo-preview" style="border:1px dashed var(--line);border-radius:8px;padding:16px;display:flex;align-items:center;justify-content:center;min-height:100px;background:var(--panel-2);">${state.companyLogo ? thumb(state.companyLogo, 84) : '<span style="color:var(--ink-dim);font-size:13px;">Nenhuma imagem cadastrada.</span>'}</div>
+            <div class="sub">Usada em todos os relatórios que <strong>não</strong> estiverem marcados em uma logo adicional (${naPrincipal.length} de ${REPORT_LOGO_CATALOG.length} relatórios).</div>
+            <div class="field"><label>Selecionar imagem (PNG, JPG, SVG ou WEBP · até 3 MB)</label><input type="file" id="report-logo-file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"></div>
+            <div id="report-logo-status" style="font-size:12px;color:var(--ink-dim);"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="report-logo-save" disabled>💾 Salvar logo principal</button>${state.companyLogo?`<button class="btn secondary" id="report-logo-remove">🗑️ Remover</button>`:''}</div>
           </div>
-          <div class="sub">${cfg.description}</div>
-          ${cfg.allowed ? `<div class="field"><label>Selecionar imagem (PNG, JPG, SVG ou WEBP · até 3 MB)</label><input type="file" id="${cfg.prefix}-file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"></div>
-          <div id="${cfg.prefix}-status" style="font-size:12px;color:var(--ink-dim);"></div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" id="${cfg.prefix}-save" disabled>💾 Salvar ${cfg.buttonName}</button>${logo?`<button class="btn secondary" id="${cfg.prefix}-remove">🗑️ Remover</button>`:''}</div>` : `<div class="pgr-hint warn">🔒 Apenas o Administrador pode alterar a logomarca do cabeçalho do sistema.</div>`}
         </div>
+        ${extras.map(l => `<div class="panel">
+          <div class="panel-head"><h3>🏷️ ${empEsc(l.nome || 'Logo adicional')}</h3><span>${(l.reports||[]).length} relatório${(l.reports||[]).length===1?'':'s'}</span></div>
+          <div style="padding:18px;display:flex;flex-direction:column;gap:12px;">
+            <div style="border:1px dashed var(--line);border-radius:8px;padding:16px;display:flex;align-items:center;justify-content:center;min-height:100px;background:var(--panel-2);">${thumb(l.img, 84)}</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">${(l.reports||[]).length ? l.reports.map(k => `<span class="ca-tag">${empEsc(nomeRel(k))}</span>`).join('') : '<span class="sub">Nenhum relatório marcado — esta logo não aparece em nenhum lugar.</span>'}</div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn secondary" data-edit-report-logo="${l.id}">✏️ Editar</button><button class="btn secondary" data-del-report-logo="${l.id}">🗑️ Remover</button></div>
+          </div>
+        </div>`).join('')}
+      </div>
+      <div class="panel" style="margin-top:16px;">
+        <div class="panel-head"><h3>📋 Logo usada em cada relatório</h3><span>${REPORT_LOGO_CATALOG.length} relatórios</span></div>
+        <div style="overflow:auto"><table><thead><tr><th>Módulo</th><th>Relatório</th><th>Logo</th><th style="width:140px">Imagem</th></tr></thead><tbody>
+          ${REPORT_LOGO_CATALOG.map(r => { const l = reportLogoEntry(r.key); return `<tr><td>${empEsc(r.mod)}</td><td>${empEsc(r.nome)}</td><td>${l ? `🏷️ ${empEsc(l.nome||'Logo adicional')}` : '⭐ Logo principal'}</td><td>${thumb(l ? l.img : state.companyLogo, 32)}</td></tr>`; }).join('')}
+        </tbody></table></div>
       </div>`;
-    };
-    const reportCfg = {key:"companyLogo",prefix:"report-logo",icon:"📄",title:"Logomarca dos relatórios",buttonName:"logo dos relatórios",allowed:true,description:"Exibida nos relatórios, fichas, atas, matrizes e documentos gerados pelo sistema. Administrador e Master podem modificar."};
-    root.innerHTML = `<div class="page-head"><div><h2>🖼️ Administração · Logomarca dos Relatórios</h2><div class="sub">A logomarca do cabeçalho do sistema é fixa. Administrador e Master podem alterar somente a imagem usada nos relatórios.</div></div></div>
-      <div style="display:grid;grid-template-columns:minmax(320px,620px);gap:16px;align-items:start;">${card(reportCfg)}</div>`;
 
-    const wire = (cfg) => {
-      if(!cfg.allowed) return;
-      const input=root.querySelector(`#${cfg.prefix}-file`), save=root.querySelector(`#${cfg.prefix}-save`), status=root.querySelector(`#${cfg.prefix}-status`), preview=root.querySelector(`#${cfg.prefix}-preview`);
-      let pending=null;
-      input?.addEventListener("change",()=>{
-        const file=input.files?.[0]; pending=null; save.disabled=true; if(!file) return;
-        if(file.size>3*1024*1024){status.textContent="⚠️ Arquivo muito grande. Escolha uma imagem de até 3 MB.";return;}
-        status.textContent="Processando imagem...";
-        const reader=new FileReader();
-        reader.onload=()=>{
-          const raw=reader.result;
-          const ready=(url)=>{pending=url;preview.innerHTML=`<img src="${url}" alt="Pré-visualização" style="max-height:88px;max-width:100%;object-fit:contain;">`;status.textContent="Pronto para salvar.";save.disabled=false;};
-          if(file.type==="image/svg+xml"){ready(raw);return;}
-          const img=new Image(); img.onload=()=>{let w=img.width,h=img.height;const max=500;if(w>max||h>max){const ratio=Math.min(max/w,max/h);w=Math.round(w*ratio);h=Math.round(h*ratio);}const canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;canvas.getContext("2d").drawImage(img,0,0,w,h);ready(canvas.toDataURL("image/png"));};
-          img.onerror=()=>{status.textContent="⚠️ Não foi possível ler esta imagem.";}; img.src=raw;
-        };
-        reader.onerror=()=>{status.textContent="⚠️ Erro ao ler o arquivo.";}; reader.readAsDataURL(file);
+    // Logo principal
+    let pending = null;
+    const input = root.querySelector('#report-logo-file'), save = root.querySelector('#report-logo-save'), status = root.querySelector('#report-logo-status'), preview = root.querySelector('#report-logo-preview');
+    input?.addEventListener('change', () => {
+      pending = null; save.disabled = true; status.textContent = 'Processando imagem...';
+      processReportLogoFile(input.files?.[0], url => { pending = url; preview.innerHTML = thumb(url, 84); status.textContent = 'Pronto para salvar.'; save.disabled = false; }, msg => { status.textContent = msg; });
+    });
+    save?.addEventListener('click', async () => { if(!pending) return; state.companyLogo = pending; await saveState(); alert('Logomarca salva com sucesso.'); render(); });
+    root.querySelector('#report-logo-remove')?.addEventListener('click', async () => { if(!confirm('Remover a logo principal? Os relatórios sem logo adicional ficarão sem logomarca.')) return; state.companyLogo = null; await saveState(); render(); });
+    // Logos adicionais
+    root.querySelector('#btn-add-report-logo')?.addEventListener('click', () => openReportLogoModal());
+    root.querySelectorAll('[data-edit-report-logo]').forEach(b => b.addEventListener('click', () => openReportLogoModal(b.dataset.editReportLogo)));
+    root.querySelectorAll('[data-del-report-logo]').forEach(b => b.addEventListener('click', async () => {
+      const l = state.reportLogos.find(x => x.id === b.dataset.delReportLogo); if(!l) return;
+      if(!confirm(`Remover a logo "${l.nome||'Logo adicional'}"? Os relatórios dela voltam a usar a logo principal.`)) return;
+      state.reportLogos = state.reportLogos.filter(x => x.id !== l.id); await saveState(); render();
+    }));
+  }
+
+  function openReportLogoModal(id){
+    if(!Array.isArray(state.reportLogos)) state.reportLogos = [];
+    const cur = state.reportLogos.find(l => l.id === id) || null;
+    let img = cur?.img || null;
+    const outra = k => state.reportLogos.find(l => l.id !== cur?.id && Array.isArray(l.reports) && l.reports.includes(k));
+    const mods = [...new Set(REPORT_LOGO_CATALOG.map(r => r.mod))];
+    openModal(`
+      <h3>${cur ? '✏️ Editar logo' : '🏷️ Adicionar logo'}</h3>
+      <form id="report-logo-form">
+        <div class="field"><label>Nome da logo *</label><input name="nome" required value="${empEsc(cur?.nome||'')}" placeholder="Ex: Solví, Essencis Catarinense, Cliente X"></div>
+        <div class="field"><label>Imagem ${cur ? '(escolha outra só se quiser trocar)' : '*'} · PNG, JPG, SVG ou WEBP até 3 MB</label><input type="file" id="report-logo-modal-file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp"></div>
+        <div id="report-logo-modal-preview" style="border:1px dashed var(--line);border-radius:8px;padding:12px;display:flex;align-items:center;justify-content:center;min-height:80px;background:var(--panel-2);margin-bottom:6px;">${img ? `<img src="${img}" alt="" style="max-height:70px;max-width:100%;object-fit:contain;">` : '<span style="color:var(--ink-dim);font-size:13px;">Nenhuma imagem selecionada.</span>'}</div>
+        <div id="report-logo-modal-status" style="font-size:12px;color:var(--ink-dim);margin-bottom:10px;"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin:6px 0 8px;"><label style="margin:0;font-weight:700;">Em quais relatórios esta logo aparece?</label>
+          <label style="display:flex;align-items:center;gap:6px;margin:0;cursor:pointer;font-size:13px;"><input type="checkbox" id="report-logo-all" style="width:auto"> Marcar todos</label></div>
+        <div style="max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:8px 12px;">
+          ${mods.map(m => `<div style="margin:6px 0 10px;"><div style="font-size:12px;font-weight:700;color:var(--ink-dim);text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px;">${empEsc(m)}</div>
+            ${REPORT_LOGO_CATALOG.filter(r => r.mod === m).map(r => { const o = outra(r.key); return `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;margin:0;cursor:pointer;font-weight:400;"><input type="checkbox" name="reports" value="${r.key}" style="width:auto" ${cur?.reports?.includes(r.key)?'checked':''}> <span>${empEsc(r.nome)}${o ? ` <small style="color:var(--ink-dim)">(hoje: ${empEsc(o.nome||'outra logo')} — será movido para esta)</small>` : ''}</span></label>`; }).join('')}
+          </div>`).join('')}
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn secondary" onclick="window.closeModal()">Cancelar</button>
+          <button type="submit" class="btn">💾 Salvar logo</button>
+        </div>
+      </form>`, ov => {
+      const form = ov.querySelector('#report-logo-form');
+      const all = ov.querySelector('#report-logo-all');
+      const boxes = () => [...form.querySelectorAll('input[name="reports"]')];
+      const sync = () => { const b = boxes(), n = b.filter(x => x.checked).length; all.checked = n === b.length; all.indeterminate = n > 0 && n < b.length; };
+      all.addEventListener('change', () => { boxes().forEach(x => x.checked = all.checked); sync(); });
+      boxes().forEach(x => x.addEventListener('change', sync)); sync();
+      const st = ov.querySelector('#report-logo-modal-status'), pv = ov.querySelector('#report-logo-modal-preview');
+      ov.querySelector('#report-logo-modal-file').addEventListener('change', e => {
+        st.textContent = 'Processando imagem...';
+        processReportLogoFile(e.target.files?.[0], url => { img = url; pv.innerHTML = `<img src="${url}" alt="" style="max-height:70px;max-width:100%;object-fit:contain;">`; st.textContent = 'Imagem pronta.'; }, msg => { st.textContent = msg; });
       });
-      save?.addEventListener("click",async()=>{if(!pending)return;state[cfg.key]=pending;await saveState();alert("Logomarca salva com sucesso.");render();});
-      root.querySelector(`#${cfg.prefix}-remove`)?.addEventListener("click",async()=>{if(!confirm("Remover esta logomarca?"))return;state[cfg.key]=null;await saveState();render();});
-    };
-    wire(reportCfg);
+      form.addEventListener('submit', async e => {
+        e.preventDefault();
+        const nome = String(new FormData(form).get('nome') || '').trim();
+        if(!nome){ alert('Informe o nome da logo.'); return; }
+        if(!img){ alert('Escolha a imagem da logo.'); return; }
+        const reports = boxes().filter(x => x.checked).map(x => x.value);
+        // Um relatório só pode estar em uma logo adicional.
+        state.reportLogos.forEach(l => { if(l.id !== cur?.id && Array.isArray(l.reports)) l.reports = l.reports.filter(k => !reports.includes(k)); });
+        if(cur) Object.assign(cur, { nome, img, reports, updatedAt: new Date().toISOString() });
+        else state.reportLogos.push({ id: uid('logo'), nome, img, reports, createdAt: new Date().toISOString() });
+        await saveState(); window.closeModal(); render();
+      });
+    });
   }
 
   function renderAdminPermissions(root){
@@ -5277,7 +5389,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         .ass{display:flex;gap:40px;margin-top:56px;text-align:center}.ass div{flex:1;border-top:1px solid #333;padding-top:6px}
         @media print{body{margin:12mm}}
       </style></head><body>
-      ${reportLogoImgTag(80)}
+      ${reportLogoImgTag(80, "treino-integracao")}
       <h1>Ficha de Integração de SST do Funcionário</h1>
       <div style="color:#555;">Capacitação inicial na admissão — NR-01, item 1.7.1</div>
       <h2>Identificação</h2>
@@ -6328,7 +6440,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     })).join('');
     w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Matriz - ${cargo}</title><style>
       body{font-family:Arial,sans-serif;color:#202124;margin:24px}h1{font-size:22px;margin:0 0 5px}h2{font-size:16px;margin:24px 0 8px}.meta{color:#666;font-size:12px;margin-bottom:18px}table{width:100%;border-collapse:collapse;font-size:10px}th,td{border:1px solid #bbb;padding:7px;text-align:left;vertical-align:top}th{background:#eee}@page{size:landscape;margin:10mm}@media print{button{display:none}}
-      </style></head><body>${reportLogoImgTag(84)}<h1>Relatório de Acompanhamento de Procedimentos</h1><div class="meta">Cargo: <strong>${cargo}</strong>${funcionarioSelecionado?` · Funcionário: <strong>${funcionarioSelecionado.nome||'—'}</strong> · Matrícula: <strong>${funcionarioSelecionado.matricula||'—'}</strong>`:' · Todos os funcionários'} · Emitido em ${new Date().toLocaleString('pt-BR')}</div>
+      </style></head><body>${reportLogoImgTag(84, "treino-acompanhamento")}<h1>Relatório de Acompanhamento de Procedimentos</h1><div class="meta">Cargo: <strong>${cargo}</strong>${funcionarioSelecionado?` · Funcionário: <strong>${funcionarioSelecionado.nome||'—'}</strong> · Matrícula: <strong>${funcionarioSelecionado.matricula||'—'}</strong>`:' · Todos os funcionários'} · Emitido em ${new Date().toLocaleString('pt-BR')}</div>
       <h2>Procedimentos vinculados</h2><table><thead><tr><th>Procedimento</th><th>Tipo</th><th>Carga</th><th>Periodicidade</th><th>Detalhamento</th></tr></thead><tbody>${procedureRows||'<tr><td colspan="5">Nenhum procedimento.</td></tr>'}</tbody></table>
       <h2>Acompanhamento dos funcionários</h2><table><thead><tr><th>Funcionário</th><th>Matrícula</th><th>Procedimento</th><th>Situação</th><th>Realizado em</th><th>Próxima realização</th></tr></thead><tbody>${employeeRows||'<tr><td colspan="6">Nenhum funcionário deste cargo.</td></tr>'}</tbody></table>
       <script>window.onload=()=>setTimeout(()=>window.print(),250);<\/script></body></html>`);
@@ -8198,7 +8310,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     const w=window.open("","_blank","width=1000,height=800");if(!w){alert("Permita pop-ups para gerar o PDF.");return;}
     const esc=x=>String(x||"—").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
     w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Relatório Analítico PCMSO ${year}</title><style>body{font-family:Arial,sans-serif;margin:28px;color:#222}h1{font-size:20px}h2{font-size:15px;border-bottom:1px solid #bbb;padding-bottom:5px;margin-top:22px}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #bbb;padding:6px;text-align:left}th{background:#eee}.note{white-space:pre-wrap;font-size:12px}.foot{margin-top:30px;font-size:10px;color:#555}@media print{body{margin:12mm}}</style></head><body>
-      ${reportLogoImgTag(84)}
+      ${reportLogoImgTag(84, "pcmso-anual")}
       <h1>Relatório Analítico Anual do PCMSO · NR-7</h1><p>Ano-base: <strong>${year}</strong></p>
       <h2>1. Exames clínicos realizados</h2><p>Total: ${d.clinical.length}</p>
       <h2>2. Exames complementares realizados</h2><table><tr><th>Tipo</th><th>Quantidade</th></tr>${Object.entries(d.types).map(([t,n])=>`<tr><td>${esc(t)}</td><td>${n}</td></tr>`).join("")}</table>
@@ -8628,7 +8740,7 @@ function renderPcmsoDash(root){
       .resumo{display:flex;flex-wrap:wrap;gap:6px;font-size:10px}.resumo span{border:1px solid #ccc;border-radius:12px;padding:3px 9px}
       .foot{margin-top:18px;font-size:9px;color:#777}
       @media print{body{margin:0}}
-    </style></head><body>${reportLogoImgTag(70)}
+    </style></head><body>${reportLogoImgTag(70, "funcionarios")}
       <h1>Cadastro de Funcionários</h1>
       <div class="meta">Total listado: <strong>${list.length}</strong> de ${total} colaborador${total===1?'':'es'}${filtros.length ? ` · Filtros: <strong>${filtros.map(esc).join(' · ')}</strong>` : ' · Sem filtros'}<br>Emitido em ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
       <table><thead><tr><th class="c">Nº</th><th>Colaborador</th><th>Matrícula</th><th>Cargo</th><th>Setor</th><th>Telefone</th><th>E-mail</th><th class="c">Admissão</th></tr></thead>
@@ -8638,9 +8750,10 @@ function renderPcmsoDash(root){
       <script>window.onload=()=>setTimeout(()=>window.print(),250);<\/script></body></html>`);
     w.document.close();
   }
-  function reportLogoImgTag(maxHeight){
+  function reportLogoImgTag(maxHeight, key){
     const h = maxHeight || 84;
-    const img = state.companyLogo ? `<img src="${state.companyLogo}" alt="Logomarca da empresa" style="display:block;max-height:${h}px;max-width:${Math.round(h*3.2)}px;object-fit:contain;margin-bottom:10px;">` : '';
+    const src = reportLogoSrc(key);
+    const img = src ? `<img src="${src}" alt="Logomarca da empresa" style="display:block;max-height:${h}px;max-width:${Math.round(h*3.2)}px;object-fit:contain;margin-bottom:10px;">` : '';
     return img + companyReportBlock();
   }
   // ===================== Geral · Cadastro da Empresa (usado por todos os módulos) =====================
@@ -11246,7 +11359,7 @@ function renderPcmsoDash(root){
         .ass div{flex:1;border-top:1px solid #333;padding-top:6px}
         @media print{body{margin:12mm}}
       </style></head><body>
-      ${reportLogoImgTag(84)}
+      ${reportLogoImgTag(84, "cipa-votantes")}
       <h1>Relatório de Votantes — Eleição da CIPA</h1>
       <div class="meta">Gestão: <strong>${esc(el.gestao)}</strong> · Data da eleição: ${fmtDate(el.dataEleicao)} · Situação da urna: <strong>${esc(el.urnaStatus)}</strong><br>
         Eleitores aptos: <strong>${d.aptos}</strong> · Votaram: <strong>${d.votaram.length}</strong> · Pendentes/abstenções: <strong>${d.pendentes.length}</strong> · Participação: <strong>${d.participacao}%</strong><br>
@@ -11317,7 +11430,7 @@ function renderPcmsoDash(root){
 
   <div class="doc-header">
     <div style="display:flex;align-items:center;">
-      <div style="margin-bottom:-10px;">${reportLogoImgTag(84)}</div>
+      <div style="margin-bottom:-10px;">${reportLogoImgTag(84, "cipa-edital")}</div>
     </div>
     <div class="doc-tag">
       Edital de Convocação<br>
@@ -11453,7 +11566,7 @@ function renderPcmsoDash(root){
 
   <div class="doc-header">
     <div style="display:flex;align-items:center;">
-      <div style="margin-bottom:-10px;">${reportLogoImgTag(84)}</div>
+      <div style="margin-bottom:-10px;">${reportLogoImgTag(84, "cipa-boletim")}</div>
     </div>
     <div class="doc-tag">
       Boletim de Urna Eletrônica<br>
@@ -11580,7 +11693,7 @@ function renderPcmsoDash(root){
   function placaCipaHtml(d){
     const p=ensureCipaPlaca(), emp=companyData(), esc=empEsc;
     const nome=emp.nomeFantasia||emp.razaoSocial||"";
-    const marca=state.companyLogo?`<img src="${state.companyLogo}" alt="${esc(nome||'Logomarca')}">`:(nome?`<span class="placa-marca-texto">${esc(nome)}</span>`:"");
+    const marca=reportLogoSrc("cipa-placa")?`<img src="${reportLogoSrc("cipa-placa")}" alt="${esc(nome||'Logomarca')}">`:(nome?`<span class="placa-marca-texto">${esc(nome)}</span>`:"");
     return `<div class="placa-cipa">
       <div class="placa-quadro">
         <div class="placa-topo">${marca}</div>
@@ -12509,7 +12622,7 @@ function renderPcmsoDash(root){
 
   <div class="doc-header">
     <div style="display:flex;align-items:center;">
-      <div style="margin-bottom:-10px;">${reportLogoImgTag(84)}</div>
+      <div style="margin-bottom:-10px;">${reportLogoImgTag(84, "cipa-ata")}</div>
     </div>
     <div class="doc-tag">
       Ata Nº ${String(numeroAta).padStart(3,'0')}/${anoAta}<br>
@@ -14091,7 +14204,7 @@ function renderPcmsoDash(root){
     const totalUnits=deliveries.reduce((sum,d)=>sum+(Number(d.quantidade)||1),0);
     const rows=deliveries.map(d=>{const item=itemById(d.itemId),quantity=Number(d.quantidade)||1;return `<tr><td>${fmtDate(d.dataEntrega)}</td><td>${pgrEpiIcon(item?.nome)} ${empEsc(item?.nome||'EPI removido')}</td><td>${empEsc(item?.ca||'—')}</td><td>${quantity}</td><td>${fmtDate(d.dataValidade||item?.validadeCA)}</td><td>${d.signatureMethod==='convencional'?'✍️ Assinatura convencional<br><small>Pendente na ficha impressa</small>':d.biometricVerifiedAt?`✅ ${d.biometricMethod==='WebAuthn/facial'?'Biometria facial':'Biometria digital'}<br><small>${fmtDateTime(d.biometricVerifiedAt)}</small>`:'⚠️ Sem assinatura registrada'}</td></tr>`;}).join('');
     const needsManualSignature=deliveries.some(d=>d.signatureMethod==='convencional');
-    return `${forPrint?(reportLogoImgTag(84)+'<h1>Ficha de Entrega de EPI</h1>'):'<h3>📄 Ficha de Entrega de EPI</h3>'}<section class="sheet-identification"><strong>👤 ${empEsc(employee.nome)}</strong><br>Matrícula: ${empEsc(employee.matricula||'não informada')} · Função: ${empEsc(employee.cargo||employee.funcao||'não informada')} · Setor: ${empEsc(employee.setor||'não informado')}</section><p class="sheet-declaration">Declaro ter recebido os Equipamentos de Proteção Individual relacionados abaixo, com orientação para uso, guarda e conservação, conforme as normas e procedimentos aplicáveis.</p><div style="overflow:auto"><table class="data-table sheet-table"><thead><tr><th>Entrega</th><th>Equipamento</th><th>CA</th><th>Qtd.</th><th>Validade CA</th><th>Forma de assinatura</th></tr></thead><tbody>${rows||'<tr><td colspan="6" style="text-align:center">Nenhuma entrega registrada.</td></tr>'}</tbody></table></div><p><strong>${deliveries.length}</strong> registro${deliveries.length===1?'':'s'} · <strong>${totalUnits}</strong> unidade${totalUnits===1?'':'s'} fornecida${totalUnits===1?'':'s'}.</p>${needsManualSignature?'<div style="margin-top:55px;border-top:1px solid #333;padding-top:8px;text-align:center;max-width:420px;margin-left:auto;margin-right:auto;">Assinatura convencional do funcionário<br><small>Confirmo o recebimento dos EPIs relacionados nesta ficha.</small></div>':''}`;
+    return `${forPrint?(reportLogoImgTag(84, "epi-ficha")+'<h1>Ficha de Entrega de EPI</h1>'):'<h3>📄 Ficha de Entrega de EPI</h3>'}<section class="sheet-identification"><strong>👤 ${empEsc(employee.nome)}</strong><br>Matrícula: ${empEsc(employee.matricula||'não informada')} · Função: ${empEsc(employee.cargo||employee.funcao||'não informada')} · Setor: ${empEsc(employee.setor||'não informado')}</section><p class="sheet-declaration">Declaro ter recebido os Equipamentos de Proteção Individual relacionados abaixo, com orientação para uso, guarda e conservação, conforme as normas e procedimentos aplicáveis.</p><div style="overflow:auto"><table class="data-table sheet-table"><thead><tr><th>Entrega</th><th>Equipamento</th><th>CA</th><th>Qtd.</th><th>Validade CA</th><th>Forma de assinatura</th></tr></thead><tbody>${rows||'<tr><td colspan="6" style="text-align:center">Nenhuma entrega registrada.</td></tr>'}</tbody></table></div><p><strong>${deliveries.length}</strong> registro${deliveries.length===1?'':'s'} · <strong>${totalUnits}</strong> unidade${totalUnits===1?'':'s'} fornecida${totalUnits===1?'':'s'}.</p>${needsManualSignature?'<div style="margin-top:55px;border-top:1px solid #333;padding-top:8px;text-align:center;max-width:420px;margin-left:auto;margin-right:auto;">Assinatura convencional do funcionário<br><small>Confirmo o recebimento dos EPIs relacionados nesta ficha.</small></div>':''}`;
   }
 
   function printEpiEmployeeSheet(employeeId){
@@ -14417,7 +14530,7 @@ function renderPcmsoDash(root){
     const row=(k,v)=>`<div class="fr-kv"><span>${k}</span><strong>${v||'—'}</strong></div>`;
     const pill=r=>`<span class="fr-pill ${r==='Aprovado'?'ok':r==='Atenção'?'warn':'bad'}">${r==='Aprovado'?'✓ Aprovado':r==='Reprovado'?'✕ Reprovado':empEsc(r||'—')}</span>`;
     return `<div class="fr-doc">
-      <div class="fr-top">${state.companyLogo?`<img src="${state.companyLogo}" alt="Logomarca da empresa">`:''}<div>${companyTopLine()}<h1>Relatório de inspeção</h1><div class="fr-sub">Equipamento de emergência · NR-23</div></div><div class="fr-id">Nº ${empEsc(String(insp.id||'').slice(-8).toUpperCase())}<br>${fmtDate(insp.dataInspecao)}</div></div>
+      <div class="fr-top">${reportLogoSrc("incendio-inspecao")?`<img src="${reportLogoSrc("incendio-inspecao")}" alt="Logomarca da empresa">`:''}<div>${companyTopLine()}<h1>Relatório de inspeção</h1><div class="fr-sub">Equipamento de emergência · NR-23</div></div><div class="fr-id">Nº ${empEsc(String(insp.id||'').slice(-8).toUpperCase())}<br>${fmtDate(insp.dataInspecao)}</div></div>
       <div class="fr-result ${cls}"><div><span>Resultado da inspeção</span><strong>${res==='Aprovado'?'✓':res==='Reprovado'?'✕':'!'} ${empEsc(res)}</strong></div><div class="fr-counts">${checks.length} itens · <b class="ok">${ok} aprovados</b> · <b class="bad">${bad} reprovados</b>${att?` · <b class="warn">${att} atenção</b>`:''}</div></div>
       <h2>Equipamento</h2>
       <div class="fr-grid">${row('Identificação',empEsc(eq?.identificador))}${row('Tipo',empEsc([eq?.tipo,eq?.agenteExtintor].filter(Boolean).join(' · ')))}${row('Grupo',empEsc(eq?fireEquipGroup(eq):''))}${row('Localização',empEsc(eq?.localizacao))}${row('Periodicidade',eq?.periodicidadeInspMeses?`${eq.periodicidadeInspMeses} ${Number(eq.periodicidadeInspMeses)===1?'mês':'meses'}`:'')}${row('Próxima inspeção',fmtDate(insp.proximaInspecao))}</div>
@@ -14714,7 +14827,7 @@ function renderPcmsoDash(root){
     w.document.open();w.document.write(ecReportDoc(title,body,true));w.document.close();
   }
   function ecDocHeader({title,subtitle,code,rev,date,extra=''}){
-    return `<header class="dh"><div class="dh-logo"><img src="${state.companyLogo||FIXED_SYSTEM_LOGO}" alt="Logo"></div><div class="dh-title">${companyTopLine()}<div class="dh-kicker">SEGURANÇA E SAÚDE NO TRABALHO · NR-33</div><h1>${title}</h1><div class="dh-sub">${subtitle}</div></div><table class="dh-meta"><tr><th>Documento</th><td>${empEsc(code)}</td></tr><tr><th>Revisão</th><td>${empEsc(rev)}</td></tr><tr><th>Emissão</th><td>${empEsc(date)}</td></tr>${extra}</table></header><div class="stripe"></div>`;
+    return `<header class="dh"><div class="dh-logo"><img src="${reportLogoSrc("ec-docs")||FIXED_SYSTEM_LOGO}" alt="Logo"></div><div class="dh-title">${companyTopLine()}<div class="dh-kicker">SEGURANÇA E SAÚDE NO TRABALHO · NR-33</div><h1>${title}</h1><div class="dh-sub">${subtitle}</div></div><table class="dh-meta"><tr><th>Documento</th><td>${empEsc(code)}</td></tr><tr><th>Revisão</th><td>${empEsc(rev)}</td></tr><tr><th>Emissão</th><td>${empEsc(date)}</td></tr>${extra}</table></header><div class="stripe"></div>`;
   }
   function ecSec(n,title){return `<h2 class="sec"><span class="n">${n}</span>${title}</h2>`}
 
@@ -15156,7 +15269,7 @@ function renderPcmsoDash(root){
     const rtProf=p?.profissao||'';
     const rtVig=p?.anoVigencia?String(p.anoVigencia):'—';
     const cssStr=s=>'"'+String(s??'').replace(/\\/g,'\\\\').replace(/"/g,'\\"').replace(/\n/g,' ')+'"';
-    const logo=state.companyLogo||FIXED_SYSTEM_LOGO;
+    const logo=reportLogoSrc("nr15")||FIXED_SYSTEM_LOGO;
     const pill=(cls,t)=>`<span class="pill ${cls}">${E(t)}</span>`;
     const resPill=r=>r==='Insalubridade caracterizada'?pill('bad','CARACTERIZADA'):r==='Não caracterizada'?pill('ok','NÃO CARACTERIZADA'):pill('warn','AGUARDANDO');
     const vigPill=()=>vig.ok?pill('ok','VIGENTE'):pill('bad',vig.label.toUpperCase());
@@ -16723,7 +16836,7 @@ function renderPcmsoDash(root){
     </style></head><body>${body}<script>(function(){var imgs=[].slice.call(document.images),n=imgs.length,c=0;function go(){setTimeout(function(){window.print()},200)}if(!n)return go();imgs.forEach(function(i){if(i.complete){if(++c>=n)go()}else{i.onload=i.onerror=function(){if(++c>=n)go()}}})})();<\/script></body></html>`);
     w.document.close();
   }
-  function fdsLogo(){ return state.companyLogo||FIXED_SYSTEM_LOGO; }
+  function fdsLogo(){ return reportLogoSrc("fds")||FIXED_SYSTEM_LOGO; }
   function fdsPrintSummary(id){
     const f=fdsById(id); if(!f) return;
     const url=fdsPortalUrl("",f.id),qr=fdsQrSrc(url,200);
@@ -17647,7 +17760,7 @@ function renderPcmsoDash(root){
     try{
       const get=window.firestoreGetFreshDoc||window.firestoreGetDoc;
       const snap=await get();
-      if(snap?.exists?.()){ const d=JSON.parse(snap.data().json||"{}"); state.fdsList=Array.isArray(d.fdsList)?d.fdsList:[]; if(d.companyLogo) state.companyLogo=d.companyLogo; }
+      if(snap?.exists?.()){ const d=JSON.parse(snap.data().json||"{}"); state.fdsList=Array.isArray(d.fdsList)?d.fdsList:[]; if(d.companyLogo) state.companyLogo=d.companyLogo; if(Array.isArray(d.reportLogos)) state.reportLogos=d.reportLogos; }
       fdsPortalError="";
     }catch(e){ console.warn("Portal FDS: leitura do servidor falhou",e); fdsPortalError=String(e?.code||e?.message||e); }
     finally{ fdsPortalFetching=false; fdsPortalFetchedAt=Date.now(); }
@@ -17714,7 +17827,7 @@ function renderPcmsoDash(root){
       const snap=await get();
       if(snap?.exists?.()){
         const d=JSON.parse(snap.data().json||"{}");
-        ["cipaCATs","cipaPlaca","companyLogo","company"].forEach(k=>{ if(k in d) state[k]=d[k]; });
+        ["cipaCATs","cipaPlaca","companyLogo","reportLogos","company"].forEach(k=>{ if(k in d) state[k]=d[k]; });
       }
       placaPortalErro=""; placaPortalAtualizadoEm=new Date();
     }catch(e){ console.warn("Placa CIPA: leitura do servidor falhou",e); placaPortalErro="Sem conexão com o servidor. Exibindo os últimos dados carregados."; }
@@ -18397,7 +18510,7 @@ function renderPcmsoDash(root){
     const enc=p.encerramento||{};
     const verif=ecHash(JSON.stringify([p.id,p.numero,p.updatedAt,(p.historico||[]).length]));
     return`${wm?`<div class="wm">${wm}</div>`:''}
-    <table class="hd"><tr><td class="logo"><img src="${state.companyLogo||FIXED_SYSTEM_LOGO}" alt=""></td><td class="c"><h1>PTE-APR</h1><div class="t">Permissão de Trabalho Especial com Análise Preliminar de Riscos</div>${companyTopLine()}</td><td class="id">ID PTE-APR:<b>${E(p.numero)}</b>Situação: <b style="font-size:10px">${E(pteExpired(p)?'Liberada · prazo vencido':s)}</b></td></tr></table>
+    <table class="hd"><tr><td class="logo"><img src="${reportLogoSrc("pte")||FIXED_SYSTEM_LOGO}" alt=""></td><td class="c"><h1>PTE-APR</h1><div class="t">Permissão de Trabalho Especial com Análise Preliminar de Riscos</div>${companyTopLine()}</td><td class="id">ID PTE-APR:<b>${E(p.numero)}</b>Situação: <b style="font-size:10px">${E(pteExpired(p)?'Liberada · prazo vencido':s)}</b></td></tr></table>
     <table>
       <tr><td class="l">UVS</td><td>${txt(p.uvs)}</td><td class="l">Data de emissão</td><td>${E(fmtDate(p.dataEmissao))}</td></tr>
       <tr><td class="l">Solicitante</td><td>${txt(p.solicitante)}</td><td class="l">Setor</td><td>${txt(p.setor)}</td></tr>
@@ -18533,7 +18646,7 @@ function renderPcmsoDash(root){
     if(!sess){
       ptePortalActor=null;
       const act=(state.pteEmitters||[]).filter(x=>x.ativo!==false&&pteEmitterEmp(x)).map(x=>({x,e:pteEmitterEmp(x)})).sort((a,b)=>String(a.e.nome).localeCompare(String(b.e.nome),'pt-BR'));
-      app.innerHTML=shell(`<div class="mobile-card" style="text-align:center"><img class="brand-logo" src="${state.companyLogo||FIXED_SYSTEM_LOGO}" alt="Logo" style="height:64px;margin:0 auto 8px"><h2 style="margin:4px 0">📝 PTE-APR</h2><div class="sub">Permissão de Trabalho Especial com Análise Preliminar de Riscos</div></div>
+      app.innerHTML=shell(`<div class="mobile-card" style="text-align:center"><img class="brand-logo" src="${reportLogoSrc("pte")||FIXED_SYSTEM_LOGO}" alt="Logo" style="height:64px;margin:0 auto 8px"><h2 style="margin:4px 0">📝 PTE-APR</h2><div class="sub">Permissão de Trabalho Especial com Análise Preliminar de Riscos</div></div>
         <div class="mobile-card"><form id="pte-login"><div class="field"><label>Emitente autorizado</label><select name="emitterId" required><option value="">Selecione seu nome</option>${act.map(a=>`<option value="${empEsc(a.x.id)}">${empEsc(a.e.nome)}</option>`).join('')}</select></div><div class="field"><label>Matrícula (senha)</label><input type="password" name="matricula" required inputmode="numeric" autocomplete="off"></div><button class="btn pte-big">Entrar</button></form>${act.length?'':'<div class="empty" style="margin-top:10px">Nenhum emitente autorizado. Cadastre em PTE-APR › Emitentes autorizados, ou entre pelo sistema com seu usuário.</div>'}<p class="sub" style="font-size:12px;margin-top:12px">Usuários do sistema: faça login no sistema neste aparelho e abra este link novamente.</p></div>`);
       app.querySelector('#pte-login').addEventListener('submit',e=>{e.preventDefault();const d=Object.fromEntries(new FormData(e.target)),em=act.find(a=>a.x.id===d.emitterId);if(!em||String(em.e.matricula||'').trim()!==String(d.matricula||'').trim()){alert('Emitente ou matrícula inválidos.');return}sessionStorage.setItem('sst-pte-session',JSON.stringify({emitterId:em.x.id}));ptePortalView={mode:'home',id:null};renderPtePortal()});
       return;
