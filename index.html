@@ -5479,6 +5479,8 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     const listaFiltrada = all.filter(m => (!qCargo || normalizeText(cargoDe(m)).includes(qCargo)) && (!cargosComProc || cargosComProc.has(cargoDe(m))));
     const totalCargos = new Set(all.map(cargoDe).filter(Boolean)).size;
     const view = root.dataset.rmView || 'tabela';
+    const cargosFiltradosSet = new Set(listaFiltrada.map(cargoDe).filter(Boolean));
+    const funcsVinculados = (state.employees || []).filter(e => cargosFiltradosSet.has(String(e.cargo || '').trim())).length;
     const totalCargosFiltrados = new Set(listaFiltrada.map(cargoDe).filter(Boolean)).size;
     root.innerHTML = `
       <div class="page-head">
@@ -5492,7 +5494,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         </div>
       </div>
       <div class="panel annual-filter-panel" style="margin-bottom:14px;">
-        <div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${totalCargosFiltrados} de ${totalCargos} cargo${totalCargos===1?'':'s'}</span></div>
+        <div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${totalCargosFiltrados} de ${totalCargos} cargo${totalCargos===1?'':'s'} · ${funcsVinculados} funcionário${funcsVinculados===1?'':'s'} vinculado${funcsVinculados===1?'':'s'}</span></div>
         <div class="annual-filter-row" style="grid-template-columns:minmax(220px,1fr) minmax(260px,1.3fr) auto;align-items:end;">
           <div><label>Cargo / Função</label><input id="role-matrix-search-cargo" type="search" value="${empEsc(root.dataset.rmCargo||'')}" placeholder="Pesquisar cargo..."></div>
           <div><label>Procedimento</label><input id="role-matrix-search-proc" type="search" list="role-matrix-search-proc-list" value="${empEsc(root.dataset.rmProc||'')}" placeholder="Código ou nome do procedimento..."><datalist id="role-matrix-search-proc-list">${(state.procedureCatalog||[]).map(p=>`<option value="${empEsc(procedureLabel(p))}">`).join('')}</datalist></div>
@@ -5515,6 +5517,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     root.querySelector('#role-matrix-clear')?.addEventListener('click', () => { root.dataset.rmCargo=''; root.dataset.rmProc=''; refresh(); });
     root.querySelectorAll('[data-rm-view]').forEach(b => b.addEventListener('click', () => { root.dataset.rmView = b.dataset.rmView; refresh(); }));
     if(view === 'arvore') attachRoleMatrixTree(root, listaFiltrada, qProc, normalizeText);
+    root.querySelectorAll('[data-role-emp-count]').forEach(b => b.addEventListener('click', () => openRoleEmployeeTrackingModal(decodeURIComponent(b.dataset.roleEmpCount))));
     // Seleção múltipla de cargos para remoção em lote.
     const selAll = root.querySelector('#rm-sel-all');
     { const h = document.querySelector('header'); const pos = h ? getComputedStyle(h).position : ''; root.style.setProperty('--rm-sticky-top', (h && (pos==='sticky'||pos==='fixed')) ? h.offsetHeight + 'px' : '0px'); }
@@ -5563,7 +5566,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
       <div class="rm-tree">${cargos.map(([cargo, itens]) => {
         const shown = qProc ? itens.filter(m => norm([m.procCodigo, m.procedimento].join(' ')).includes(qProc)) : itens;
         return `<details class="rm-cargo" data-rm-cargo="${encodeURIComponent(cargo)}" ${qProc?'open':''}>
-          <summary><span class="rm-caret">▶</span>👤 ${empEsc(cargo)}<span class="rm-count">${qProc?`${shown.length} de `:''}${itens.length} procedimento${itens.length===1?'':'s'}</span></summary>
+          <summary><span class="rm-caret">▶</span>👤 ${empEsc(cargo)}<span class="rm-count">${(() => { const n = (state.employees || []).filter(e => String(e.cargo || '').trim() === cargo).length; return `👥 ${n} funcionário${n===1?'':'s'} · `; })()}${qProc?`${shown.length} de `:''}${itens.length} procedimento${itens.length===1?'':'s'}</span></summary>
           <div class="rm-children" data-rm-body></div>
         </details>`;
       }).join('')}</div>`;
@@ -6196,13 +6199,16 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
       .sort((a,b) => a.localeCompare(b, 'pt-BR'));
     const totais = new Map();
     list.forEach(m => { const c = String(m.cargo || '').trim(); totais.set(c, (totais.get(c) || 0) + 1); });
+    // Mesma regra da tela "Funcionários vinculados": cargo do funcionário igual ao cargo da matriz.
+    const funcs = new Map();
+    (state.employees || []).forEach(e => { const c = String(e.cargo || '').trim(); if(c) funcs.set(c, (funcs.get(c) || 0) + 1); });
     return `
       ${allowActions ? `<div class="rm-bulk-bar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line);position:sticky;top:var(--rm-sticky-top,0px);z-index:5;background:var(--panel);border-radius:12px 12px 0 0;">
         <span id="rm-sel-info" style="font-size:13px;color:var(--ink-dim);">Marque os cargos para remover vários de uma vez.</span>
         <button type="button" class="btn secondary" id="rm-remove-selected" style="margin-left:auto;" disabled>🗑️ Remover selecionados</button>
       </div>` : ''}
       <table>
-        <thead><tr>${allowActions?'<th style="width:44px"><input type="checkbox" id="rm-sel-all" title="Selecionar todos os cargos listados" style="width:auto;cursor:pointer"></th>':''}<th>Cargo / Função</th><th>Procedimentos vinculados</th><th>Procedimentos</th>${allowActions?'<th>Ações</th>':''}</tr></thead>
+        <thead><tr>${allowActions?'<th style="width:44px"><input type="checkbox" id="rm-sel-all" title="Selecionar todos os cargos listados" style="width:auto;cursor:pointer"></th>':''}<th>Cargo / Função</th><th>Funcionários vinculados</th><th>Procedimentos vinculados</th><th>Procedimentos</th>${allowActions?'<th>Ações</th>':''}</tr></thead>
         <tbody>
           ${cargos.map(cargo=>{
             const total = totais.get(cargo) || 0;
@@ -6210,6 +6216,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
             <tr>
               ${allowActions?`<td><input type="checkbox" class="rm-sel" data-rm-sel="${encodeURIComponent(cargo)}" style="width:auto;cursor:pointer" aria-label="Selecionar ${empEsc(cargo)}"></td>`:''}
               <td><strong>${cargo}</strong></td>
+              <td>${(() => { const n = funcs.get(cargo) || 0; return n ? `<button type="button" class="action-link" data-role-emp-count="${encodeURIComponent(cargo)}" title="Ver os funcionários deste cargo" style="font-weight:700;">👥 ${n} funcionário${n===1?'':'s'}</button>` : `<span style="color:var(--ink-dim);">— nenhum</span>`; })()}</td>
               <td>${total} procedimento${total === 1 ? '' : 's'}</td>
               <td><button type="button" class="btn secondary" data-view-role-procedures="${encodeURIComponent(cargo)}">👁️ Ver procedimentos</button></td>
               ${allowActions?`<td><div style="display:flex;gap:8px;flex-wrap:wrap;"><button type="button" class="btn secondary" data-edit-role-cargo="${encodeURIComponent(cargo)}">✏️ Editar</button></div></td>`:''}
