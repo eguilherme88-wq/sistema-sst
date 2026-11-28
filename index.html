@@ -17772,14 +17772,26 @@ function renderPcmsoDash(root){
     const all=pteList(),st=all.map(p=>({p,s:pteStatus(p)})),month=new Date().toISOString().slice(0,7);
     return{aguardando:st.filter(x=>x.s==='Aguardando liberação').length,liberadas:st.filter(x=>x.s==='Liberada'&&!pteExpired(x.p)).length,vencidas:st.filter(x=>pteExpired(x.p)).length,rascunhos:st.filter(x=>x.s==='Rascunho').length,encerradasMes:st.filter(x=>x.s==='Encerrada'&&String(x.p.encerramento?.at||'').slice(0,7)===month).length,total:all.length};
   }
+  let pteDashFilter='andamento';
+  const PTE_DASH_FILTERS=[
+    {k:'andamento',label:'⏳ Em andamento',f:s=>['Rascunho','Aguardando liberação','Liberada'].includes(s)},
+    {k:'liberadas',label:'✅ Liberadas',f:s=>s==='Liberada'},
+    {k:'concluidas',label:'🏁 Concluídas',f:(s,p)=>s==='Encerrada'&&p.encerramento?.resultado==='Concluído'},
+    {k:'naoconcluidas',label:'⚠️ Não concluídas',f:(s,p)=>s==='Encerrada'&&p.encerramento?.resultado!=='Concluído'},
+    {k:'canceladas',label:'🚫 Canceladas',f:s=>s==='Cancelada'},
+    {k:'todas',label:'📋 Todas',f:()=>true}
+  ];
   function renderPteDash(root){
-    const k=pteKpis(),open=pteList().filter(p=>['Rascunho','Aguardando liberação','Liberada'].includes(pteStatus(p))).sort(pteSortRecent);
+    const k=pteKpis(),flt=PTE_DASH_FILTERS.find(x=>x.k===pteDashFilter)||PTE_DASH_FILTERS[0];
+    const cnt=x=>pteList().filter(p=>x.f(pteStatus(p),p)).length;
+    const open=pteList().filter(p=>flt.f(pteStatus(p),p)).sort(pteSortRecent);
     const byTipo=PTE_TIPOS.map(t=>({t,n:pteList().filter(p=>p.tipos?.[t.k]).length}));
     const kpi=(icon,cls,n,label)=>`<div class="annual-kpi"><div class="annual-kpi-icon ${cls}">${icon}</div><div><div class="num">${n}</div><div class="label">${label}</div></div></div>`;
     root.innerHTML=`${PTE_CSS}<div class="page-head"><div><h2>📝 PTE-APR · Painel Geral</h2><div class="sub">Permissões de Trabalho Especial com Análise Preliminar de Riscos.</div></div><button class="btn" id="pte-dash-new">+ Emitir PTE-APR</button></div>
       <div class="annual-kpis emp-kpis" style="grid-template-columns:repeat(auto-fit,minmax(160px,1fr))">${kpi('✅','green',k.liberadas,'Liberadas em vigor')}${kpi('⏳','amber',k.aguardando,'Aguardando liberação')}${kpi('⛔','amber',k.vencidas,'Prazo vencido')}${kpi('📝','blue',k.rascunhos,'Rascunhos')}${kpi('🏁','green',k.encerradasMes,'Encerradas no mês')}</div>
       <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>🔥 PTE-APR por tipo de trabalho</h3><span>${k.total} no total</span></div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;padding:14px">${byTipo.map(x=>`<div style="display:flex;align-items:center;gap:10px;background:var(--panel-2);border-radius:10px;padding:10px">${PTE_ICONS[x.t.k]?`<img src="${PTE_ICONS[x.t.k]}" style="width:40px;height:34px;object-fit:contain;background:#fff;border-radius:6px">`:'<span style="font-size:24px">➕</span>'}<div><div style="font-size:20px;font-weight:700">${x.n}</div><div style="font-size:12px;color:var(--ink-dim)">${x.t.label}</div></div></div>`).join('')}</div></div>
-      <div class="panel"><div class="panel-head"><h3>📋 Em andamento</h3><span>${open.length}</span></div><div style="padding:12px">${open.length?open.map(pteItemHtml).join(''):'<div class="empty">Nenhuma PTE-APR em andamento.</div>'}</div></div>`;
+      <div class="panel"><div class="panel-head"><h3>📋 PTE-APR · ${flt.label.replace(/^\S+\s/,'')}</h3><span>${open.length}</span></div><div class="pte-dash-filtros" style="display:flex;gap:8px;flex-wrap:wrap;padding:12px 12px 0">${PTE_DASH_FILTERS.map(x=>`<button type="button" class="btn ${x.k===flt.k?'':'secondary'}" data-dash-flt="${x.k}" style="padding:8px 12px">${x.label} <b style="opacity:.75">${cnt(x)}</b></button>`).join('')}</div><div style="padding:12px">${open.length?open.map(pteItemHtml).join(''):`<div class="empty">Nenhuma PTE-APR em "${flt.label.replace(/^\S+\s/,'')}".</div>`}</div></div>`;
+    root.querySelectorAll('[data-dash-flt]').forEach(b=>b.onclick=()=>{pteDashFilter=b.dataset.dashFlt;renderPteDash(root)});
     root.querySelector('#pte-dash-new').onclick=()=>pteGoList({mode:'form',id:null});
     root.querySelectorAll('[data-open-pte]').forEach(b=>b.onclick=()=>pteGoList({mode:'detail',id:b.dataset.openPte}));
   }
