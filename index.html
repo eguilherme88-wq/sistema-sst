@@ -2718,6 +2718,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
   const MODULE_TABS = {
     trainings: [
       { id: "train-dash", name: "📊 Dashboard Treinamentos" },
+      { id: "proc-catalog", name: "📑 Cadastro de Procedimentos" },
       { id: "role-matrix", name: "📋 Matriz de Procedimento por Função" },
       { id: "train-list", name: "🎓 Matriz de Cursos" },
       { id: "annual-plan", name: "📅 Plano Anual de Treinamento" },
@@ -3408,6 +3409,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
   // Aplica migrações/valores-padrão em uma base carregada (de qualquer origem)
   // para manter compatibilidade com estados salvos por versões anteriores.
   function applyStateMigrations(){
+    ensureProcedureCatalog();
     // O Processo Eleitoral não é mais vinculado ao Plano de Ação: remove as
     // ações que eram geradas automaticamente para as etapas da eleição.
     if(Array.isArray(state.cipaActions)){
@@ -5454,6 +5456,131 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     `;
   }
 
+
+  // ===== Cadastro de Procedimentos (módulo Treinamentos) =====
+  // Catálogo de procedimentos/normas internas. A carga inicial vem da planilha
+  // "Procedimentos.xlsx" e é incluída uma única vez em cada base (por código).
+  const PROCEDURE_SEED = [["COD-001","Código de Conduta Solví"],["MA2S","Manual para Protocolo de Ambientes Seguros e Saudáveis"],["MES","Modelo de Empresariamento Solví"],["MGAS","Manual do Sistema de Gestão Antissuborno - Intranet"],["MGI","Manual do Sistema de Gestão Integrado"],["MGR","Manual de Gestão de Riscos Corporativos - INTRANET"],["MOPS-01","Prevenção de Incêndio"],["PAF-ADM-01","Controle de Malotes"],["PAF-AE-01","Programas Academia de Excelência"],["PAF-AE-02","Treinamento e Desenvolvimento"],["PAF-AQ-01","Compras de materiais, produtos, peças e ativos"],["PAF-AQ-03","Gestão de Estoque"],["PAF-AQ-07","Cotações, Compras, Vendas e Leilão de Equipamentos"],["PAF-AQ-08","Cadastro e Controle de Equipamentos"],["PAF-AQ-12","Despesas com viagens, compras de passagens e reservas de hotel"],["PAF-AQ-13","Contratação e Utilização de Veículos Leves"],["PAF-CM-01","Comunicação Interna e Externa"],["PAF-CM-02","Pesquisa de Satisfação dos Clientes Privados"],["PAF-CM-03","Avaliação de Serviços Prestados"],["PAF-CM-04","Tratamento de Manifestação de Clientes"],["PAF-CON-01","Fechamentos Contábeis"],["PAF-CON-02","Contabilização das Despesas Antecipadas"],["PAF-CON-03","Lançamentos Contabéis Manuais"],["PAF-CON-04","Apuração, Registro e Pagamento do IRPJ e CSLL"],["PAF-CON-05","Projetos de Investimento do Ativo Imobilizado"],["PAF-CON-06","Auditoria das Demonstrações Financeiras"],["PAF-CON-07","Ativo Imobilizado / Intangível / Arrendamento Mercantil"],["PAF-CON-08","Atendimento à Fiscalização"],["PAF-CON-09","Provisão para crédito de liquidação duvidosa e perdas efetivas"],["PAF-CON-10","Demonstrações Contábeis de Empresas com Contabilidade Própria ou Terceirizada"],["PAF-CON-11","Manutenção do Plano de Contas"],["PAF-CON-12","Lançamentos Contábeis das Doações Feitas ao Instituto Solvi"],["PAF-CON-13","Registro de Partes Relacionadas"],["PAF-CON-14","Gerenciamento das Conciliações"],["PAF-CON-15","Provisão para Fechamento e Pós-Fechamento de Aterros"],["PAF-CON-16","Provisão para Transporte, Tratamento e Destinação de Chorume de Aterro Sanitário"],["PAF-DP-01","Movimentação de Pessoal"],["PAF-DP-02","Encargos e Rotinas Legais"],["PAF-DP-03","Folha de Pagamento"],["PAF-DP-04","Gestão dos benefícios"],["PAF-DP-05","Data Base de Categoria Laboral"],["PAF-DP-06","Afastamentos"],["PAF-DP-07","Frequência ao Serviço e Controle de Afastamento"],["PAF-DP-08","Desconto de Infrações de Trânsito em Folha"],["PAF-EP-01","Governança de RPA"],["PAF-FIN-04","Cadastro de cliente, análise de crédito e contas a receber"],["PAF-FIN-05","Cadastro de Clientes, Elaboração e Registro da Medição no SAP"],["PAF-FIN-06","Faturamento de Medição e Emissão da Nota Fiscal"],["PAF-FIN-07","Cobrança de Clientes Privados"],["PAF-FIN-09","Processo de Aprovação de Compras - Central"],["PAF-FIN-10","Acompanhamento de Contrato Público"],["PAF-FIN-12","Lançamento de Documentos a Pagar"],["PAF-FIN-13","Contas a Receber"],["PAF-FIN-14","Fluxo do Processo de Pagamento"],["PAF-FIN-15","Apontamento de Título em Cartório de Protesto"],["PAF-FIN-16","Pagamentos em Moeda Estrangeira"],["PAF-FIN-17","Processo de Administração de Caixa"],["PAF-FIN-18","Administração de Operações Financeiras"],["PAF-FIN-19","Financiamento via Finame"],["PAF-FIN-20","Fundo Fixo"],["PAF-FIN-21","Contratos de Mútuos"],["PAF-FIN-22","Financiamento de Projetos"],["PAF-FIN-23","Financiamento Veículos, Máquinas e Equipamentos"],["PAF-FIS-01","Cadastro de Dados Mestre SAP"],["PAF-FIS-04","Lançamentos de Notas Fiscais de Entradas Saídas de Mercadorias"],["PAF-FIS-05","Retenção do ISS"],["PAF-FIS-06","Retenção do PIS - COFINS e do CSLL de Pessoas Jurídicas"],["PAF-FIS-07","Retenção do INSS Retido na Fonte"],["PAF-FIS-08","Imposto de Renda Retido na Fonte"],["PAF-FIS-09","Emissão da Nota Fiscal Eletrônica Estadual"],["PAF-FIS-10","Cancelamento de Notas Fiscais de Serviços Emitidas / Recebidas"],["PAF-FIS-11","Apuração e Recolhimento de Impostos e Contribuições"],["PAF-FIS-12","Certidões Negativas de Débitos Tributários"],["PAF-FIS-13","Cadastros Fiscais em Órgãos Públicos"],["PAF-FIS-14","Apuração do ICMS"],["PAF-FIS-15","Apuração do ISSQN Sobre Faturamento"],["PAF-FIS-16","Apuração do PIS - COFINS"],["PAF-GPI-01","Controle de mão de obra própria em projetos de investimentos (CAPEX)"],["PAF-GPI-02","Gestão de Projetos de Investimentos"],["PAF-II-01","Criação de Centro de Custo"],["PAF-II-02","Tratativas Gerenciais"],["PAF-II-03","Consolidação Gerencial"],["PAF-IS-01","Doações e Patrocínios"],["PAF-JR-01","Análise e revisão dos contratos"],["PAF-JR-02","Atos societários, Procurações e Abertura e Encerramento de Filiais"],["PAF-JR-03","Processos Judiciais e Administrativos"],["PAF-JR-04","Gestão de Créditos a Receber e Reajustes Contratuais"],["PAF-JR-06","Due diligence de pessoas físicas e jurídicas"],["PAF-JR-09","Atendimento das Demandas Jurídicas"],["PAF-JR-14","Pagamentos Judiciais de Fornecedores"],["PAF-JR-16","Tratamento de Bloqueios e Penhoras Judiciais Intercompanies"],["PAF-JR-17","Diretriz Trabalhista"],["PAF-JR-18","Reclamações Trabalhistas"],["PAF-JR-19","Assinatura Eletrônica de Documentos"],["PAF-PA-01-CENT","Segurança Patrimonial"],["PAF-PLN-01","Acompanhamento da Execução do Orçamento"],["PAF-PLN-02","Planejamento do Orçamento Corporativo"],["PAF-PLN-03","Controle Orçamentário - OPEX"],["PAF-RH-01","Recursos Humanos"],["PAF-RH-02","Recrutamento e Seleção"],["PAF-RH-04","CICLO PCV - Programa Criação Valor - FORECAST"],["PAF-RH-05","Alçada de Desligamento"],["PAF-RH-06","Alçadas Movimentação de Pessoal - Promoção e Aumento"],["PAF-RH-07","Integração"],["PAF-RH-08","Mobilidade Terrestre"],["PAF-RH-09","Contratação e Utilização de Veículos Leves (versão atualizada PAF - AQ - 13 siclope e Intranet)","Apenas Intranet"],["PAF-RH-10","Home Office para Contingência ao COVID-19"],["PAF-RH-11","Avaliação de Desempenho"],["PAF-RL-01","Negociações Coletivas"],["PAF-SEG-01","Seguro Garantia de Obrigações Contratuais"],["PAF-SEG-04","Comunicação de Sinistros - Frota de Veículos."],["PAF-SEG-05","Comunicação de Sinistros - Patrimonial"],["PAF-SEG-06","Comunicação de Sinistros - Responsabilidade Civil"],["PAF-TI-01","Atribuição de Perfil de Acesso SAP Produção"],["PAF-TI-02","Abertura de Chamado no Service Desk"],["PAF-TI-03","Controle de Acesso Físico ao Data Center e CPDs"],["PAF-TI-04","Definição do Perfil de Acesso ao Sistema SAP ECC"],["PAF-TI-05","Gestão de Acesso à Rede e Conectividade"],["PAF-TI-06","Monitoramento da Infraestrutura de TI"],["PAF-TI-07","Registro das Tentativas de Violação de Segurança"],["PAF-TI-08","Registro de Ocorrências do Ambiente de Produção"],["PAF-TI-09","Trilha de Auditoria de Servidores"],["PAF-TI-10","Disponibilização do Ambiente de Teste"],["PAF-TI-11","Implantação das Alterações de Sistemas"],["PAF-TI-12","Cópia de Segurança"],["PAF-TI-13","Teste de Restore - Recuperação de Backup"],["PAF-TI-14","Autorização de Exceção a Segurança da Informação"],["PAF-TI-15","Manutenção de Banco de Dados"],["PAF-TI-16","Tratamento da Informação"],["PAF-TI-17","Plano de Contingência"],["PAF-TI-18","Segurança da Informação"],["PAF-TI-19","Acesso aos Ativos de Informação"],["PAF-TI-20","Uso do Correio Eletrônico"],["PAF-TI-21","Segurança Física dos Ativos de Informação"],["PAF-TI-22","Uso da Internet"],["PAF-TI-23","Segurança da Rede"],["PAF-TI-24","BACKUP - Cópia de Segurança"],["PAF-TI-25","Plano de Continuidade Operacional para Ataques Cibernéticos"],["PAF-TI-26","Aquisição e Uso de Desktops e Notebooks"],["PAF-TI-27","Aquisição e Uso de Software"],["PAF-TI-28","Gestão de Mudanças - Atualização em Produção"],["PAF-TI-29","Solicitação de Abertura de Projeto"],["PAF-TI-30","Criação de Empresa / Filial"],["PAF-TI-31","Mídias Removíveis"],["PAF-TI-32","Gerenciamento de Incidentes"],["PAF-TI-33","Gerenciamento de Problemas"],["PAF-TI-34","Utilização de Telefonia Móvel Corporativa"],["PCO-001","Governança das Normas - Disponível no Intranet"],["PCO-002","Despesas de Viagens Locomoção e Telefonia"],["PCO-003","Anticorrupção - Disponível no Intranet"],["PCO-004","Gestão de Consequências - Disponível no Intranet"],["PCO-005","Transferência Internacional de Colaboradores"],["PCO-006","Programa de Estágio - Nacional"],["PCO-008","Ciclo do PVC e Regras para o Pagamento do PPR - Intranet"],["PCO-009","Concessão de Benefícios - Intranet"],["PCO-010","Transferência Nacional de Colaboradores"],["PCO-013","Cotas de Pessoa com Deficiência - PcD"],["PCO-014","Cotas de Jovem Aprendiz"],["PCO-015","Retenção de Talentos"],["PCO-016","Gestão de Riscos - Intranet"],["PCO-017","Administração de Seguros"],["PCO-018","Recrutamento e Seleção"],["PCO-019","Antissuborno - Intranet"],["PCO-020","Gestão de Cargos e Salários - Intranet"],["PCO-021","Programa de Trainee - Nacional"],["PCO-022","Comunicação"],["POC-001","Receitas"],["POC-002","Administração de Tributos"],["POC-003","Segurança da Informação"],["POC-004","Segurança Física Patrimonial"],["POC-005","Gestão de Capex - Intranet"],["POC-006","Gestão de Ativo Imobilizado"],["POC-007","Compras de Materiais e Contratação de Serviços"],["POC-008","Perfil de Acesso"],["POC-009","Auditoria Interna"],["POC-010","Alteração de Critério Contábil"],["POC-011","Conflito de Interesses - INTRANET"],["POC-012","Doação e Patrocínio"],["POC-013","Atos societários"],["POC-014","Interação com o Poder Publico"],["POC-015","Presentes, Brindes e Hospitalidades"],["POC-016","Avaliação de Terceiros - INTRANET"],["POC-017","Alçadas de Aprovação"],["POC-018","Perdas Estimadas de Clientes"],["POC-019","Governança de TI"],["POC-020","Privacidade de Dados Pessoais"],["POC-021","Administração da Equipe Comercial (Siclope)"],["POC-022","Contas a pagar"],["POC-023","Administração de pessoal"],["POC-024","Gestão de Estoque e Almoxarifado"],["POC-025","Gestão Jurídica"],["PRO-MN-02","Manutenção Preventiva"],["PRO-MN-03","Cadastro, Identificação e Laudo de Controle de Equipamentos de Monitoramento e Medição (EMM)"],["PTO-AS-03","Verificação e Fiscalização do Aterro Sanitário"],["PTO-AS-04","Controle e Fiscalização dos Serviços de Pesagem de Veículos"],["PTO-AS-05","Operação com Equipamentos - Aterro Sanitário"],["PTO-AS-06","Operação de Aterro Sanitário"],["PTO-AS-07","Conservação de Aterro"],["PTO-AS-08","Utilização do Aterro Sanitário"],["PTO-AS-09","Visitas a Central"],["PTO-AS-10","Carregamento e Transporte de Lixiviado"],["PTO-AS-11","Aquisição e utilização correta de ácido sulfúrico."],["PTO-AS-12","Aterro de Resíduos Sólidos Urbanos - Estação de Tratamento de Lixiviado"],["PTO-AS-14","Monitoramento de Efluentes, Águas Superficiais e Águas Subterrâneas"],["PTO-AS-16","Inspeção de Resíduos"],["PTO-AS-17","Cobertura Temporária de Aterros Sanitários / Industriais com Mantas Sintéticas"],["PTO-AS-18","Cálculo da Taxa de Depreciação e Amortização de Aterros"],["PTO-AS-19","Homologação de Fabricantes de Geomembrana de PEAD."],["PTO-AS-20","Elaboração de Projeto Conceitual, Básico e Executivo de Aterro de Resíduos Classe IIA"],["PTO-AS-22","Fornecimento de Geomembrana PEAD"],["PTO-AS-23","Medição de vazão de geração de chorume em aterros de resíduos."],["PTO-AS-24","Programa de Monitoramento Geotécnico de Aterros"],["PTO-AS-25","Gestão de Chorume"],["PTO-AS-26","Instalação de Geomembranas de PEAD em Impermebilização de Aterros e Lagoas"],["PTO-AS-27","Programa de Monitoramento das Águas"],["PTO-AS-28","Monitoramento de Radioatividade"],["PTO-AS-30","Análise Expedita de Resíduos"],["PTO-AS-31","Planejamento de Realização do Serviço de Aterro"],["PTO-AS-32","Critérios de Aceitabilidade de Resíduos"],["PTO-AS-33","Planejamento e Realização dos Serviços de ETE"],["PTO-AS-34","Descarga de resíduos sólidos em aterro"],["PTO-AS-35","Execução, sinalização de pátios de descarga e controle de velocidade em atividades de aterros."],["PTO-AS-36","Recebimento de Escórias de Alumínio"],["PTO-BL-01","Planejamento e Realização do Serviço de Blendagem para Co-processamento"],["PTO-GI-01","Auditoria SGI"],["PTO-GI-02","Informações Documentadas"],["PTO-GI-04","Gestão de Não Conformidades SGI-SGAS"],["PTO-GI-06","Objetivos e Metas do Sistema de Gestão"],["PTO-GI-07","Reuniões de Análise Crítica SGI"],["PTO-GI-08","Programa de Gestão De Melhorias"],["PTO-GI-09","Auditorias Técnicas"],["PTO-GI-10","Identificação de Riscos e Oportunidades da Qualidade"],["PTO-GI-11","Controle de Produto Não Conforme"],["PTO-GI-12","Gestão de Mudanças SGI/SGAS"],["PTO-GI-15","Auditoria do Sistema de Gestão Antissuborno - SGAS"],["PTO-GI-16","Reunião de Análise Crítica SGAS"],["PTO-MA-01","Gerenciamento de Resíduos Internos - Versão atualizada Siclope"],["PTO-MA-02","Identificação de Aspectos e Classificação de Impactos Ambientais"],["PTO-MA-03","Requisitos Legais e Outros Requisitos"],["PTO-MR-01","Projeto e Desenvolvimento Tecnológico"],["PTO-RC-01","Processos Relacionados a Clientes"],["PTO-RC-02","Novo Negócio Público"],["PTO-RC-03","Prospecção Comercial Para Tratamento, Valorização e Disposição Final de Resíduos"],["PTO-RC-06","Elaboração de Proposta Técnica"],["PTO-RC-08","Armazenamento de Documentos de Contratos Públicos"],["PTO-RC-09","Processos relacionados ao CREA"],["PTO-ST-02","Comunicação, Investigação e Análise de Acidentes, Quase Acidentes e Desvios Críticos"],["PTO-ST-03-CENT","Plano de Atendimento a Emergências"],["PTO-ST-04","Teste de Alcoolemia"],["PTO-ST-05","Observação Comportamental"],["PTO-ST-06","Identificação de Perigos e Avaliação de Riscos de Saúde e Segurança Ocupacional"],["PTO-ST-08","Laudos Ocupacionais"],["PTO-ST-09","Permissão de Trabalho Especial e Análise Preliminar de Riscos"],["PTO-ST-10","Gestão de Terceiros"],["PTO-ST-11","Inspeção de Segurança"]];
+  let procedureSeedPendingSave = false;
+  function procedureIdFromCode(code){ return "proc_" + String(code||"").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,""); }
+  function procedureTipoFromCode(code){
+    const c = String(code||"").toUpperCase();
+    if(/^PAF/.test(c)) return "PAF";
+    if(/^PCO/.test(c)) return "PCO";
+    if(/^POC/.test(c)) return "POC";
+    if(/^PTO/.test(c)) return "PTO";
+    if(/^PRO/.test(c)) return "PRO";
+    if(/^MOPS/.test(c)) return "MOPS";
+    if(/^COD/.test(c)) return "Código";
+    return "Manual";
+  }
+  function ensureProcedureCatalog(){
+    if(!Array.isArray(state.procedureCatalog)) state.procedureCatalog = [];
+    if(state.procedureCatalogSeeded) return;
+    const existing = new Set(state.procedureCatalog.map(p => normalizeText(p.codigo)));
+    const now = new Date().toISOString();
+    PROCEDURE_SEED.forEach(([codigo, titulo, obs]) => {
+      if(existing.has(normalizeText(codigo))) return;
+      state.procedureCatalog.push({ id: procedureIdFromCode(codigo), codigo, titulo, tipo: procedureTipoFromCode(codigo), revisao: "", ativo: true, observacoes: obs || "", createdAt: now });
+    });
+    state.procedureCatalogSeeded = true;
+    procedureSeedPendingSave = true;
+  }
+  function procedureLabel(p){ return `${p.codigo} - ${p.titulo}`; }
+
+  function renderProcedureCatalog(root){
+    ensureProcedureCatalog();
+    const canCreate = checkPermission("Master");
+    const canDelete = checkPermission("Administrador");
+    if(procedureSeedPendingSave && canCreate){ procedureSeedPendingSave = false; saveState(); }
+    const all = state.procedureCatalog;
+    const q = normalizeText(root.dataset.procSearch || "");
+    const tipo = root.dataset.procTipo || "";
+    const sit = root.dataset.procSit || "";
+    const tipos = [...new Set(all.map(p => p.tipo || procedureTipoFromCode(p.codigo)))].sort((a,b)=>a.localeCompare(b,"pt-BR"));
+    const rows = all.filter(p => {
+      if(q && !normalizeText([p.codigo,p.titulo,p.revisao,p.observacoes].join(" ")).includes(q)) return false;
+      if(tipo && (p.tipo || procedureTipoFromCode(p.codigo)) !== tipo) return false;
+      if(sit && String(p.ativo !== false) !== sit) return false;
+      return true;
+    }).sort((a,b)=>String(a.codigo).localeCompare(String(b.codigo),"pt-BR",{numeric:true}));
+    const ativos = all.filter(p => p.ativo !== false).length;
+    root.innerHTML = `
+      <div class="page-head">
+        <div>
+          <h2>📑 Cadastro de Procedimentos</h2>
+          <div class="sub">Catálogo de procedimentos, manuais e normas internas utilizados na Matriz de Procedimento por Função.</div>
+        </div>
+        ${canCreate ? `<button class="btn" id="btn-new-procedure">+ Cadastrar Procedimento</button>` : ""}
+      </div>
+      <div class="panel annual-filter-panel" style="margin-bottom:14px;">
+        <div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${rows.length} de ${all.length} · ${ativos} ativo${ativos===1?'':'s'}</span></div>
+        <div class="annual-filter-row" style="grid-template-columns:minmax(220px,1.6fr) minmax(150px,.7fr) minmax(150px,.7fr) auto;align-items:end;">
+          <div><label>Pesquisar</label><input id="proc-search" type="search" value="${empEsc(root.dataset.procSearch||'')}" placeholder="Código, título ou observação..."></div>
+          <div><label>Tipo</label><select id="proc-tipo"><option value="">Todos os tipos</option>${tipos.map(t=>`<option ${tipo===t?'selected':''}>${empEsc(t)}</option>`).join('')}</select></div>
+          <div><label>Situação</label><select id="proc-sit"><option value="">Todas</option><option value="true" ${sit==='true'?'selected':''}>Ativos</option><option value="false" ${sit==='false'?'selected':''}>Inativos</option></select></div>
+          <div><button class="btn secondary" id="proc-clear">🧹 Limpar</button></div>
+        </div>
+      </div>
+      <div class="panel">
+        ${rows.length ? `<div style="overflow:auto"><table style="table-layout:auto"><thead><tr><th style="width:13%">Código</th><th style="width:47%">Título do procedimento</th><th style="width:8%">Tipo</th><th style="width:8%">Revisão</th><th style="width:9%">Situação</th>${canCreate||canDelete?'<th style="width:15%">Ações</th>':''}</tr></thead><tbody>${rows.map(p=>`<tr>
+          <td><strong>${empEsc(p.codigo)}</strong></td>
+          <td>${empEsc(p.titulo)}${p.observacoes?`<br><small style="color:var(--ink-dim)">${empEsc(p.observacoes)}</small>`:''}</td>
+          <td>${empEsc(p.tipo || procedureTipoFromCode(p.codigo))}</td>
+          <td>${empEsc(p.revisao||'—')}</td>
+          <td><span class="status-pill ${p.ativo!==false?'ok':'bad'}"><span class="dot"></span>${p.ativo!==false?'Ativo':'Inativo'}</span></td>
+          ${canCreate||canDelete?`<td style="white-space:nowrap">${canCreate?`<button class="action-link" data-edit-procedure="${p.id}">✏️ Editar</button>`:''}${canDelete?` <button class="action-link danger-link" data-del-procedure="${p.id}">🗑️ Remover</button>`:''}</td>`:''}
+        </tr>`).join('')}</tbody></table></div>` : `<div class="empty">Nenhum procedimento encontrado.</div>`}
+      </div>
+    `;
+    const refresh = () => renderProcedureCatalog(root);
+    root.querySelector('#proc-search')?.addEventListener('input', e => { root.dataset.procSearch = e.target.value; refresh(); const i = root.querySelector('#proc-search'); i?.focus(); i?.setSelectionRange(i.value.length, i.value.length); });
+    root.querySelector('#proc-tipo')?.addEventListener('change', e => { root.dataset.procTipo = e.target.value; refresh(); });
+    root.querySelector('#proc-sit')?.addEventListener('change', e => { root.dataset.procSit = e.target.value; refresh(); });
+    root.querySelector('#proc-clear')?.addEventListener('click', () => { root.dataset.procSearch = ''; root.dataset.procTipo = ''; root.dataset.procSit = ''; refresh(); });
+    root.querySelector('#btn-new-procedure')?.addEventListener('click', () => openProcedureModal());
+    root.querySelectorAll('[data-edit-procedure]').forEach(b => b.addEventListener('click', () => openProcedureModal(b.dataset.editProcedure)));
+    root.querySelectorAll('[data-del-procedure]').forEach(b => b.addEventListener('click', async () => {
+      const p = state.procedureCatalog.find(x => x.id === b.dataset.delProcedure);
+      if(!p || !confirm(`Remover o procedimento "${procedureLabel(p)}" do cadastro? Os vínculos já existentes na Matriz por Função serão mantidos.`)) return;
+      state.procedureCatalog = state.procedureCatalog.filter(x => x.id !== p.id);
+      await saveState(); render();
+    }));
+  }
+
+  function openProcedureModal(id=""){
+    ensureProcedureCatalog();
+    const current = state.procedureCatalog.find(p => p.id === id);
+    openModal(`
+      <h3>${current ? '✏️ Editar' : '📑 Cadastrar'} Procedimento</h3>
+      <form id="procedure-form">
+        <div class="field-row">
+          <div class="field"><label>Código *</label><input name="codigo" required value="${empEsc(current?.codigo||'')}" placeholder="Ex: PTO-AS-03"></div>
+          <div class="field"><label>Revisão</label><input name="revisao" value="${empEsc(current?.revisao||'')}" placeholder="Ex: Rev. 02"></div>
+        </div>
+        <div class="field"><label>Título do procedimento *</label><input name="titulo" required value="${empEsc(current?.titulo||'')}" placeholder="Ex: Operação de Aterro Sanitário"></div>
+        <div class="field-row">
+          <div class="field"><label>Tipo</label><input name="tipo" list="procedure-tipo-list" value="${empEsc(current?.tipo||'')}" placeholder="Definido pelo código se vazio"><datalist id="procedure-tipo-list">${[...new Set(state.procedureCatalog.map(p=>p.tipo).filter(Boolean))].map(t=>`<option value="${empEsc(t)}">`).join('')}</datalist></div>
+          <div class="field"><label>Situação</label><select name="ativo"><option value="true" ${current?.ativo!==false?'selected':''}>Ativo</option><option value="false" ${current?.ativo===false?'selected':''}>Inativo</option></select></div>
+        </div>
+        <div class="field"><label>Observações</label><textarea name="observacoes" rows="2">${empEsc(current?.observacoes||'')}</textarea></div>
+        <div class="modal-actions">
+          <button type="button" class="btn secondary" onclick="window.closeModal()">Cancelar</button>
+          <button type="submit" class="btn">💾 Salvar</button>
+        </div>
+      </form>
+    `, ov => ov.querySelector('#procedure-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const d = Object.fromEntries(new FormData(e.target));
+      const codigo = String(d.codigo||'').trim(), titulo = String(d.titulo||'').trim();
+      if(!codigo || !titulo){ alert('Informe o código e o título do procedimento.'); return; }
+      if(state.procedureCatalog.some(p => p.id !== current?.id && normalizeText(p.codigo) === normalizeText(codigo))){ alert(`Já existe um procedimento cadastrado com o código ${codigo}.`); return; }
+      const rec = { codigo, titulo, tipo: String(d.tipo||'').trim() || procedureTipoFromCode(codigo), revisao: String(d.revisao||'').trim(), ativo: d.ativo === 'true', observacoes: String(d.observacoes||'').trim(), updatedAt: new Date().toISOString() };
+      if(current) Object.assign(current, rec);
+      else state.procedureCatalog.push({ id: uid('proc'), ...rec, createdAt: new Date().toISOString() });
+      await saveState(); window.closeModal(); render();
+    }));
+  }
 
   function getAnnualPlanDates(plan){
     if(!plan) return [];
@@ -11930,7 +12057,8 @@ function renderPcmsoDash(root){
         <div class="field-row">
           <div class="field">
             <label>Procedimento / Norma / Treinamento Exigido</label>
-            <input required name="procedimento" value="${registro?.procedimento||''}" placeholder="Ex: NR-11 - Operador de Empilhadeira">
+            <input required name="procedimento" list="role-matrix-proc-list" value="${empEsc(registro?.procedimento||'')}" placeholder="Digite o código ou nome do procedimento cadastrado">
+            <datalist id="role-matrix-proc-list">${(ensureProcedureCatalog(),state.procedureCatalog).filter(p=>p.ativo!==false).map(p=>`<option value="${empEsc(procedureLabel(p))}">`).join("")}</datalist>
           </div>
           <div class="field">
             <label>Tipo de Requisito</label>
@@ -14936,6 +15064,7 @@ function renderPcmsoDash(root){
 
     if(currentModule === "trainings"){
       if(currentTab === "train-dash") renderTrainDash(main);
+      else if(currentTab === "proc-catalog") renderProcedureCatalog(main);
       else if(currentTab === "role-matrix") renderRoleMatrixList(main);
       else if(currentTab === "train-list") renderTrainList(main);
       else if(currentTab === "annual-plan") renderAnnualTrainingPlan(main);
