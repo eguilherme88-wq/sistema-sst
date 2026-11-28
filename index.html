@@ -3411,6 +3411,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
   function applyStateMigrations(){
     ensureProcedureCatalog();
     ensureRoleProcedureImport();
+    ensureRoleProcedureCargoUpdates();
     expandRoleProcLinks();
     // O Processo Eleitoral não é mais vinculado ao Plano de Ação: remove as
     // ações que eram geradas automaticamente para as etapas da eleição.
@@ -5542,6 +5543,30 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     state.roleProcLinks = links;
     state.roleMatrixImportDone = true;
     procedureSeedPendingSave = true;
+  }
+  // Atualização pontual da planilha (28/11/2026): inclui o cargo "Advogado III"
+  // com os mesmos 342 procedimentos do conjunto do Advogado II (conjunto 0).
+  function ensureRoleProcedureCargoUpdates(){
+    if(!Array.isArray(state.generalJobs)) state.generalJobs = [];
+    if(!Array.isArray(state.roleMatrix)) state.roleMatrix = [];
+    [["roleMatrixImportAdvogadoIII", "Advogado III", "c41", 0]].forEach(([flag, nome, k, setIdx]) => {
+      if(state[flag]) return;
+      let job = state.generalJobs.find(j => normalizeText(j.nome) === normalizeText(nome));
+      if(!job){ job = { id: uid("cargo"), nome, imported: true }; state.generalJobs.push(job); }
+      const cargo = job.nome;
+      const links = state.roleProcLinks && Array.isArray(state.roleProcLinks.cargos) ? state.roleProcLinks : (state.roleProcLinks = { v:1, sets: [], cargos: [] });
+      const existentes = state.roleMatrix.filter(r => normalizeText(r.cargo) === normalizeText(cargo)).map(r => normalizeText(r.procCodigo || String(r.procedimento||'').split(' - ')[0]));
+      links.cargos.filter(c => normalizeText(c[0]) === normalizeText(cargo)).forEach(c => String(links.sets[c[2]]||'').split(',').forEach(x => existentes.push(normalizeText(x))));
+      const codes = ROLE_PROC_IMPORT.sets[setIdx].split(',').filter(c => !existentes.includes(normalizeText(c)));
+      if(codes.length){
+        const str = codes.join(',');
+        let idx = links.sets.indexOf(str);
+        if(idx < 0){ links.sets.push(str); idx = links.sets.length - 1; }
+        links.cargos.push([cargo, k, idx]);
+      }
+      state[flag] = true;
+      procedureSeedPendingSave = true;
+    });
   }
   // Expande os vínculos compactos (gravados) em registros da matriz (memória).
   function expandRoleProcLinks(){
