@@ -8775,6 +8775,8 @@ function renderPcmsoDash(root){
   // ===================== Geral · Cadastro da Empresa (usado por todos os módulos) =====================
   const UF_LIST=["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"];
   function companyData(){return state.company&&typeof state.company==="object"&&!Array.isArray(state.company)?state.company:{}}
+  // Vínculo com o módulo PGR (Cadastro da Empresa). Padrão: Sim (comportamento anterior).
+  function companyUsesPgr(){ return String(companyData().vinculoPgr || "sim") !== "nao"; }
   function companyHasData(){return !!String(companyData().razaoSocial||"").trim()}
   function companyCityUf(c=companyData()){return [c.cidade,c.uf].filter(Boolean).join("/")}
   function companyAddress(c=companyData()){
@@ -8833,6 +8835,10 @@ function renderPcmsoDash(root){
             ${inp("cnaeCodigo","CNAE principal","","00.00-0-00")}
             ${inp("cnaeDescricao","Descrição da atividade principal")}
             <div class="field"><label>Grau de risco (NR-4)</label><select name="grauRisco" ${dis}>${["","1","2","3","4"].map(x=>`<option value="${x}" ${String(c.grauRisco||"")===x?"selected":""}>${x||"Selecione"}</option>`).join("")}</select></div>
+          </div>
+          <div style="display:grid;grid-template-columns:minmax(220px,1fr) 2fr;gap:12px;align-items:end">
+            <div class="field"><label>Vínculo com o módulo PGR</label><select name="vinculoPgr" ${dis}><option value="sim" ${companyUsesPgr()?"selected":""}>Sim — a empresa usa o PGR do sistema</option><option value="nao" ${companyUsesPgr()?"":"selected"}>Não — a empresa não usa o PGR do sistema</option></select></div>
+            <div class="sub" style="margin-bottom:14px">Quando <strong>Não</strong>, o módulo FDS deixa de exigir o vínculo com o PGR: some das pendências prioritárias, do checklist de conformidade e do painel.</div>
           </div>
         </div></div>
         <div class="panel" style="margin-bottom:14px"><div class="panel-head"><h3>📍 Endereço</h3>${canEdit?'<button type="button" class="btn secondary" id="company-cep-btn" style="padding:6px 12px">🔎 Buscar CEP</button>':""}</div><div style="padding:16px 18px">
@@ -15551,6 +15557,7 @@ function renderPcmsoDash(root){
     } else {
       navItems = tabsForCurrentMod
         .filter(t => availableTabs.includes(t.id))
+        .filter(t => t.id !== "fds-pgr" || companyUsesPgr())
         .map(t => (currentModule === "cipa" && CIPA_TAB_PICTO[t.id])
           ? `<button data-tab="${t.id}" class="${currentTab===t.id?'active':''}"><span class="nav-picto">${cipaPicto(CIPA_TAB_PICTO[t.id],17)}</span><span class="nav-label">${semEmojiInicial(t.name)}</span></button>`
           : `<button data-tab="${t.id}" class="${currentTab===t.id?'active':''}">${t.name}</button>`).join("");
@@ -16624,6 +16631,7 @@ function renderPcmsoDash(root){
   }
   function fdsPgrRisks(f){ return (state.pgrRisks||[]).filter(r=>r.fdsId===f.id||(f.pgrHazardId&&r.perigoId===f.pgrHazardId)); }
   function fdsPgrStatus(f){
+    if(!companyUsesPgr()) return {targets:[],risks:[],missing:[],semCargo:[],ok:true,cls:"ok",label:"Não exigido",naoExigido:true};
     const targets=fdsPgrTargets(f),risks=fdsPgrRisks(f),keys=new Set(risks.map(fdsRiskKey));
     const missing=targets.filter(t=>!keys.has(t.key));
     const semCargo=targets.filter(t=>t.semCargo);
@@ -16708,7 +16716,7 @@ function renderPcmsoDash(root){
       {id:"acesso",ok:!!(f.fdsNoLocal||(f.publicarPortal&&f.status!=="Inativo")),txt:"FDS acessível aos trabalhadores no local de uso"},
       {id:"treino",ok:!!f.treinamentoNr26,txt:"Trabalhadores treinados em rotulagem e FDS (NR-26)"},
       {id:"pgr",ok:pgr.ok,txt:"Risco químico registrado no Inventário do PGR (NR-1)"}
-    ];
+    ].filter(x => x.id !== "pgr" || !pgr.naoExigido);
   }
   function fdsConformidade(f){ const c=fdsChecklist(f); return Math.round(c.filter(x=>x.ok).length*100/c.length); }
   function fdsConfBar(p){ const cls=p>=90?"ok":p>=60?"warn":"bad"; return `<div class="fds-conf"><div class="fds-conf-bar"><span class="${cls}" style="width:${p}%"></span></div><strong>${p}%</strong></div>`; }
@@ -17575,7 +17583,7 @@ function renderPcmsoDash(root){
         ${fdsKpi("🧪","blue",ativos.length,"Produtos ativos",`${state.fdsList.length-ativos.length} inativo(s)`)}
         ${fdsKpi("📅",vencidas?"red":"green",vencidas,"Revisões vencidas","Verificar com o fornecedor")}
         ${fdsKpi("📑",antigas?"amber":"green",antigas,"Fora da NBR 14725:2023","Solicitar atualização")}
-        ${fdsKpi("🔗",semPgr?"red":"green",semPgr,"Sem vínculo completo no PGR",quimicosSemFds?`${quimicosSemFds} risco(s) químico(s) do PGR sem FDS`:"")}
+        ${companyUsesPgr()?fdsKpi("🔗",semPgr?"red":"green",semPgr,"Sem vínculo completo no PGR",quimicosSemFds?`${quimicosSemFds} risco(s) químico(s) do PGR sem FDS`:""):fdsKpi("🔗","green","—","Vínculo com o PGR","Não exigido (Cadastro da Empresa)")}
         ${fdsKpi("✅",media>=90?"green":media>=60?"amber":"red",media+"%","Conformidade média","Checklist NR-26")}
       </div>
       <div class="fds-dash-grid">
