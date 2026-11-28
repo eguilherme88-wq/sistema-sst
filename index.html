@@ -368,6 +368,8 @@
   .rm-tree details[open]>summary .rm-caret{transform:rotate(90deg)}
   .rm-tree .rm-count{margin-left:auto;font-size:12px;color:var(--ink-dim);white-space:nowrap}
   .rm-tree .rm-children{margin-left:15px;padding-left:14px;border-left:1px dashed var(--line)}
+  .rm-tree .rm-sector>summary{font-weight:800;font-size:15px}
+  .rm-tree .rm-sector{margin-bottom:2px}
   .rm-tree .rm-cargo>summary{font-weight:700}
   .rm-tree .rm-group>summary{font-weight:600}
   .rm-tree ul{list-style:none;margin:0;padding:0}
@@ -5503,7 +5505,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         ${qProc ? `<div class="note" style="margin:0 16px 14px">Mostrando os cargos que têm o procedimento pesquisado. A coluna "Procedimentos vinculados" continua mostrando o total do cargo.</div>` : ''}
       </div>
       <div class="panel">
-        ${view==='arvore' ? (listaFiltrada.length ? renderRoleMatrixTree(listaFiltrada, qProc, normalizeText) : '<div class="empty">Nenhum cargo encontrado para esta pesquisa.</div>') : listaFiltrada.length ? renderRoleMatrixTable(listaFiltrada, checkPermission("Administrador")) : (all.length ? '<div class="empty">Nenhum cargo encontrado para esta pesquisa.</div>' : renderRoleMatrixTable(all, false))}
+        ${view==='arvore' ? (listaFiltrada.length ? renderRoleMatrixTree(listaFiltrada, qProc, normalizeText, root.dataset.rmTreeBy || 'setor') : '<div class="empty">Nenhum cargo encontrado para esta pesquisa.</div>') : listaFiltrada.length ? renderRoleMatrixTable(listaFiltrada, checkPermission("Administrador")) : (all.length ? '<div class="empty">Nenhum cargo encontrado para esta pesquisa.</div>' : renderRoleMatrixTable(all, false))}
       </div>
     `;
     const refresh = (focusId) => {
@@ -5516,7 +5518,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     root.querySelector('#role-matrix-search-proc')?.addEventListener('input', onType('rmProc','role-matrix-search-proc'));
     root.querySelector('#role-matrix-clear')?.addEventListener('click', () => { root.dataset.rmCargo=''; root.dataset.rmProc=''; refresh(); });
     root.querySelectorAll('[data-rm-view]').forEach(b => b.addEventListener('click', () => { root.dataset.rmView = b.dataset.rmView; refresh(); }));
-    if(view === 'arvore') attachRoleMatrixTree(root, listaFiltrada, qProc, normalizeText);
+    if(view === 'arvore') attachRoleMatrixTree(root, listaFiltrada, qProc, normalizeText, root.dataset.rmTreeBy || 'setor');
     root.querySelectorAll('[data-role-emp-count]').forEach(b => b.addEventListener('click', () => openRoleEmployeeTrackingModal(decodeURIComponent(b.dataset.roleEmpCount))));
     // Seleção múltipla de cargos para remoção em lote.
     const selAll = root.querySelector('#rm-sel-all');
@@ -5556,22 +5558,67 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     lista.forEach(m => { const c = String(m.cargo||'').trim(); if(!c) return; if(!map.has(c)) map.set(c, []); map.get(c).push(m); });
     return [...map.entries()].sort((a,b) => a[0].localeCompare(b[0], 'pt-BR'));
   }
-  function renderRoleMatrixTree(lista, qProc, norm){
-    const cargos = roleMatrixTreeByCargo(lista);
+  // Agrupamento da árvore: "setor" (Setor → Cargo → Funcionários/Procedimentos)
+  // ou "cargo" (Cargo → Procedimentos). O setor vem do cadastro do funcionário.
+  const RM_SEM_SETOR = 'Sem setor informado';
+  const RM_SEM_FUNC = 'Cargos sem funcionários vinculados';
+  function roleMatrixSectorTree(lista){
+    const cargos = new Set(lista.map(m => String(m.cargo||'').trim()).filter(Boolean));
+    const setores = new Map(); // setor -> Map(cargo -> [funcionários])
+    const comFunc = new Set();
+    (state.employees || []).forEach(e => {
+      const c = String(e.cargo||'').trim();
+      if(!cargos.has(c)) return;
+      const st = String(e.setor||'').trim() || RM_SEM_SETOR;
+      if(!setores.has(st)) setores.set(st, new Map());
+      const m = setores.get(st); if(!m.has(c)) m.set(c, []); m.get(c).push(e);
+      comFunc.add(c);
+    });
+    const ordem = [...setores.keys()].sort((x,y) => x===RM_SEM_SETOR ? 1 : y===RM_SEM_SETOR ? -1 : x.localeCompare(y,'pt-BR'));
+    const out = ordem.map(st => [st, [...setores.get(st).entries()].sort((x,y)=>x[0].localeCompare(y[0],'pt-BR'))]);
+    const semFunc = [...cargos].filter(c => !comFunc.has(c)).sort((x,y)=>x.localeCompare(y,'pt-BR'));
+    if(semFunc.length) out.push([RM_SEM_FUNC, semFunc.map(c => [c, []])]);
+    return out;
+  }
+  function renderRoleMatrixTree(lista, qProc, norm, by){
+    by = by === 'cargo' ? 'cargo' : 'setor';
+    const porCargo = new Map(roleMatrixTreeByCargo(lista));
     const total = lista.length;
-    return `<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap;padding:14px 16px 0">
-        <div style="font-size:13px;color:var(--ink-dim)">🏢 Matriz · ${cargos.length} cargo${cargos.length===1?'':'s'} · ${total.toLocaleString('pt-BR')} vínculos${qProc?' (somente os procedimentos pesquisados aparecem na árvore)':''}</div>
-        <div style="display:flex;gap:8px"><button type="button" class="btn secondary" data-rm-tree-expand>➕ Expandir cargos</button><button type="button" class="btn secondary" data-rm-tree-collapse>➖ Recolher tudo</button></div>
-      </div>
-      <div class="rm-tree">${cargos.map(([cargo, itens]) => {
-        const shown = qProc ? itens.filter(m => norm([m.procCodigo, m.procedimento].join(' ')).includes(qProc)) : itens;
-        return `<details class="rm-cargo" data-rm-cargo="${encodeURIComponent(cargo)}" ${qProc?'open':''}>
-          <summary><span class="rm-caret">▶</span>👤 ${empEsc(cargo)}<span class="rm-count">${(() => { const n = (state.employees || []).filter(e => String(e.cargo || '').trim() === cargo).length; return `👥 ${n} funcionário${n===1?'':'s'} · `; })()}${qProc?`${shown.length} de `:''}${itens.length} procedimento${itens.length===1?'':'s'}</span></summary>
+    const countProc = cargo => {
+      const itens = porCargo.get(cargo) || [];
+      const shown = qProc ? itens.filter(m => norm([m.procCodigo, m.procedimento].join(' ')).includes(qProc)).length : itens.length;
+      return `${qProc?`${shown} de `:''}${itens.length} procedimento${itens.length===1?'':'s'}`;
+    };
+    const cargoNode = (cargo, setor, nFunc) => `<details class="rm-cargo" data-rm-cargo="${encodeURIComponent(cargo)}"${setor!=null?` data-rm-setor="${encodeURIComponent(setor)}"`:''} ${qProc?'open':''}>
+          <summary><span class="rm-caret">▶</span>👤 ${empEsc(cargo)}<span class="rm-count">👥 ${nFunc} funcionário${nFunc===1?'':'s'} · ${countProc(cargo)}</span></summary>
           <div class="rm-children" data-rm-body></div>
         </details>`;
-      }).join('')}</div>`;
+    const toggle = `<div class="rm-view-toggle" style="font-size:13px"><button type="button" data-rm-tree-by="setor" class="${by==='setor'?'active':''}">🏢 Por setor</button><button type="button" data-rm-tree-by="cargo" class="${by==='cargo'?'active':''}">👤 Por cargo</button></div>`;
+    let corpo, resumo;
+    if(by === 'setor'){
+      const arvore = roleMatrixSectorTree(lista);
+      const nSet = arvore.filter(([st]) => st !== RM_SEM_FUNC).length;
+      resumo = `🏢 ${nSet} setor${nSet===1?'':'es'} · ${porCargo.size} cargo${porCargo.size===1?'':'s'} · ${total.toLocaleString('pt-BR')} vínculos`;
+      corpo = arvore.map(([st, cargos]) => {
+        const nF = cargos.reduce((a,[,emps]) => a + emps.length, 0);
+        const icone = st === RM_SEM_FUNC ? '📭' : st === RM_SEM_SETOR ? '❔' : '🏢';
+        return `<details class="rm-sector" ${qProc?'open':''}>
+          <summary><span class="rm-caret">▶</span>${icone} ${empEsc(st)}<span class="rm-count">${cargos.length} cargo${cargos.length===1?'':'s'}${st===RM_SEM_FUNC?'':` · 👥 ${nF} funcionário${nF===1?'':'s'}`}</span></summary>
+          <div class="rm-children">${cargos.map(([c, emps]) => cargoNode(c, st===RM_SEM_FUNC ? null : st, emps.length)).join('')}</div>
+        </details>`;
+      }).join('');
+    } else {
+      resumo = `👤 ${porCargo.size} cargo${porCargo.size===1?'':'s'} · ${total.toLocaleString('pt-BR')} vínculos`;
+      corpo = [...porCargo.keys()].map(c => cargoNode(c, null, (state.employees || []).filter(e => String(e.cargo || '').trim() === c).length)).join('');
+    }
+    return `<div style="display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap;padding:14px 16px 0">
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${toggle}<span style="font-size:13px;color:var(--ink-dim)">${resumo}${qProc?' (somente os procedimentos pesquisados aparecem)':''}</span></div>
+        <div style="display:flex;gap:8px"><button type="button" class="btn secondary" data-rm-tree-expand>➕ Expandir ${by==='setor'?'setores':'cargos'}</button><button type="button" class="btn secondary" data-rm-tree-collapse>➖ Recolher tudo</button></div>
+      </div>
+      <div class="rm-tree">${corpo}</div>`;
   }
-  function attachRoleMatrixTree(root, lista, qProc, norm){
+  function attachRoleMatrixTree(root, lista, qProc, norm, by){
+    by = by === 'cargo' ? 'cargo' : 'setor';
     const porCargo = new Map(roleMatrixTreeByCargo(lista));
     const hl = txt => {
       const t = empEsc(txt);
@@ -5584,26 +5631,33 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
       const body = det.querySelector('[data-rm-body]');
       if(!body || body.dataset.filled) return;
       const cargo = decodeURIComponent(det.dataset.rmCargo);
+      const setor = det.dataset.rmSetor != null ? decodeURIComponent(det.dataset.rmSetor) : null;
+      const emps = (state.employees || []).filter(e => String(e.cargo||'').trim() === cargo && (setor == null || (String(e.setor||'').trim() || RM_SEM_SETOR) === setor))
+        .sort((a,b) => String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'));
       let itens = porCargo.get(cargo) || [];
       if(qProc) itens = itens.filter(m => norm([m.procCodigo, m.procedimento].join(' ')).includes(qProc));
       const grupos = new Map();
       itens.forEach(m => { const g = roleMatrixGroupOf(m); if(!grupos.has(g)) grupos.set(g, []); grupos.get(g).push(m); });
       const ordem = [...grupos.keys()].sort((a,b) => (a==='Manuais'?-1:b==='Manuais'?1:a.localeCompare(b,'pt-BR')));
-      body.innerHTML = ordem.length ? ordem.map(g => {
+      const funcNode = emps.length ? `<details class="rm-group rm-emps" ${by==='setor'&&!qProc?'open':''}><summary><span class="rm-caret">▶</span>👥 Funcionários<span class="rm-count">${emps.length}</span></summary>
+          <ul class="rm-children" style="border-left:0;padding-left:0">${emps.map(e => `<li>🧑 <span><strong>${empEsc(e.nome||'—')}</strong> <span style="color:var(--ink-dim)">· Matrícula ${empEsc(e.matricula||'—')}${setor==null && e.setor ? ' · ' + empEsc(e.setor) : ''}</span></span></li>`).join('')}</ul>
+          <div style="padding:4px 0 6px 22px"><button type="button" class="action-link" data-rm-tree-track="${encodeURIComponent(cargo)}">📋 Abrir acompanhamento deste cargo</button></div></details>` : '';
+      body.innerHTML = funcNode + (ordem.length ? ordem.map(g => {
         const arr = grupos.get(g).slice().sort((a,b) => String(a.procedimento||'').localeCompare(String(b.procedimento||''),'pt-BR',{numeric:true}));
         return `<details class="rm-group" ${qProc?'open':''}><summary><span class="rm-caret">▶</span>📂 ${empEsc(g)}<span class="rm-count">${arr.length}</span></summary>
           <ul class="rm-children" style="border-left:0;padding-left:0">${arr.map(m => `<li>📄 <span>${hl(m.procedimento || '—')}</span>${m.tipo && m.tipo!=='Obrigatório' ? `<span class="ca-tag">${empEsc(m.tipo)}</span>` : ''}${m.cargaHoraria?`<span class="rm-count" style="margin-left:6px">${empEsc(m.cargaHoraria)}</span>`:''}</li>`).join('')}</ul></details>`;
-      }).join('') : '<div class="empty" style="padding:10px">Nenhum procedimento.</div>';
+      }).join('') : '<div class="empty" style="padding:10px">Nenhum procedimento.</div>');
+      body.querySelector('[data-rm-tree-track]')?.addEventListener('click', ev => openRoleEmployeeTrackingModal(decodeURIComponent(ev.currentTarget.dataset.rmTreeTrack)));
       body.dataset.filled = '1';
     };
     root.querySelectorAll('.rm-cargo').forEach(det => {
       if(det.open) fill(det);
       det.addEventListener('toggle', () => { if(det.open) fill(det); });
     });
-    root.querySelector('[data-rm-tree-expand]')?.addEventListener('click', () => root.querySelectorAll('.rm-cargo').forEach(d => d.open = true));
+    root.querySelectorAll('[data-rm-tree-by]').forEach(b => b.addEventListener('click', () => { root.dataset.rmTreeBy = b.dataset.rmTreeBy; renderRoleMatrixList(root); attachMainListeners(root); }));
+    root.querySelector('[data-rm-tree-expand]')?.addEventListener('click', () => root.querySelectorAll(by==='setor' ? '.rm-sector' : '.rm-cargo').forEach(d => d.open = true));
     root.querySelector('[data-rm-tree-collapse]')?.addEventListener('click', () => root.querySelectorAll('.rm-tree details').forEach(d => d.open = false));
   }
-
 
   // ===== Cadastro de Procedimentos (módulo Treinamentos) =====
   // Catálogo de procedimentos/normas internas. A carga inicial vem da planilha
