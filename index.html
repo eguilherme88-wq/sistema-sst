@@ -5544,12 +5544,12 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     state.roleMatrixImportDone = true;
     procedureSeedPendingSave = true;
   }
-  // Atualizações pontuais da planilha (28/11/2026): inclui os cargos "Advogado III"
-  // e "Coordenador Administrativo Financeiro" com os 342 procedimentos do conjunto 0.
+  // Atualizações pontuais da planilha (28/11/2026): inclui os cargos "Advogado III",
+  // "Coordenador Administrativo Financeiro" e "Técnico de Segurança do Trabalho" com os 342 procedimentos do conjunto 0.
   function ensureRoleProcedureCargoUpdates(){
     if(!Array.isArray(state.generalJobs)) state.generalJobs = [];
     if(!Array.isArray(state.roleMatrix)) state.roleMatrix = [];
-    [["roleMatrixImportAdvogadoIII", "Advogado III", "c41", 0], ["roleMatrixImportCoordAdmFin", "Coordenador Administrativo Financeiro", "c42", 0]].forEach(([flag, nome, k, setIdx]) => {
+    [["roleMatrixImportAdvogadoIII", "Advogado III", "c41", 0], ["roleMatrixImportCoordAdmFin", "Coordenador Administrativo Financeiro", "c42", 0], ["roleMatrixImportTecSegTrab", "Técnico de Segurança do Trabalho", "c43", 0]].forEach(([flag, nome, k, setIdx]) => {
       if(state[flag]) return;
       let job = state.generalJobs.find(j => normalizeText(j.nome) === normalizeText(nome));
       if(!job){ job = { id: uid("cargo"), nome, imported: true }; state.generalJobs.push(job); }
