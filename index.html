@@ -5446,6 +5446,19 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
 
   function renderRoleMatrixList(root){
     if(procedureSeedPendingSave && checkPermission("Master")){ procedureSeedPendingSave = false; saveState(); }
+    const all = state.roleMatrix || [];
+    const normalizeText = v => String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLowerCase();
+    const qCargo = normalizeText(root.dataset.rmCargo || '');
+    // Aceita "CÓDIGO - Título" (da lista de sugestões), só o código ou parte do nome.
+    const qProc = normalizeText(root.dataset.rmProc || '');
+    const cargoDe = m => String(m.cargo || '').trim();
+    const cargosComProc = qProc ? new Set(all.filter(m => {
+      const txt = normalizeText([m.procCodigo, m.procedimento].join(' '));
+      return txt.includes(qProc) || normalizeText(m.procedimento) === qProc;
+    }).map(cargoDe)) : null;
+    const listaFiltrada = all.filter(m => (!qCargo || normalizeText(cargoDe(m)).includes(qCargo)) && (!cargosComProc || cargosComProc.has(cargoDe(m))));
+    const totalCargos = new Set(all.map(cargoDe).filter(Boolean)).size;
+    const totalCargosFiltrados = new Set(listaFiltrada.map(cargoDe).filter(Boolean)).size;
     root.innerHTML = `
       <div class="page-head">
         <div>
@@ -5454,10 +5467,28 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         </div>
         ${checkPermission("Master") ? `<button class="btn" id="btn-new-role-matrix">+ Associar Função / Procedimento</button>` : ""}
       </div>
+      <div class="panel annual-filter-panel" style="margin-bottom:14px;">
+        <div class="panel-head"><h3>🔎 Filtros de pesquisa</h3><span>${totalCargosFiltrados} de ${totalCargos} cargo${totalCargos===1?'':'s'}</span></div>
+        <div class="annual-filter-row" style="grid-template-columns:minmax(220px,1fr) minmax(260px,1.3fr) auto;align-items:end;">
+          <div><label>Cargo / Função</label><input id="role-matrix-search-cargo" type="search" value="${empEsc(root.dataset.rmCargo||'')}" placeholder="Pesquisar cargo..."></div>
+          <div><label>Procedimento</label><input id="role-matrix-search-proc" type="search" list="role-matrix-search-proc-list" value="${empEsc(root.dataset.rmProc||'')}" placeholder="Código ou nome do procedimento..."><datalist id="role-matrix-search-proc-list">${(state.procedureCatalog||[]).map(p=>`<option value="${empEsc(procedureLabel(p))}">`).join('')}</datalist></div>
+          <div><button class="btn secondary" id="role-matrix-clear">🧹 Limpar</button></div>
+        </div>
+        ${qProc ? `<div class="note" style="margin:0 16px 14px">Mostrando os cargos que têm o procedimento pesquisado. A coluna "Procedimentos vinculados" continua mostrando o total do cargo.</div>` : ''}
+      </div>
       <div class="panel">
-        ${renderRoleMatrixTable(state.roleMatrix, checkPermission("Administrador"))}
+        ${listaFiltrada.length ? renderRoleMatrixTable(listaFiltrada, checkPermission("Administrador")) : (all.length ? '<div class="empty">Nenhum cargo encontrado para esta pesquisa.</div>' : renderRoleMatrixTable(all, false))}
       </div>
     `;
+    const refresh = (focusId) => {
+      renderRoleMatrixList(root); attachMainListeners(root);
+      if(focusId){ const i = root.querySelector('#'+focusId); i?.focus(); i?.setSelectionRange(i.value.length, i.value.length); }
+    };
+    let timer = null;
+    const onType = (key, id) => e => { root.dataset[key] = e.target.value; clearTimeout(timer); timer = setTimeout(()=>refresh(id), 200); };
+    root.querySelector('#role-matrix-search-cargo')?.addEventListener('input', onType('rmCargo','role-matrix-search-cargo'));
+    root.querySelector('#role-matrix-search-proc')?.addEventListener('input', onType('rmProc','role-matrix-search-proc'));
+    root.querySelector('#role-matrix-clear')?.addEventListener('click', () => { root.dataset.rmCargo=''; root.dataset.rmProc=''; refresh(); });
   }
 
 
@@ -6091,7 +6122,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     openModal(`
       <h3>Procedimentos do cargo: ${cargo}</h3>
       <div style="font-size:12px;color:var(--ink-dim);margin-bottom:14px;">${procedimentos.length} procedimento${procedimentos.length === 1 ? '' : 's'} vinculado${procedimentos.length === 1 ? '' : 's'} · ${funcionarios.length} funcionário${funcionarios.length === 1 ? '' : 's'} com este cargo.</div>
-      <div class="role-procedure-toolbar"><button type="button" class="btn secondary" data-role-pdf>📄 Salvar em PDF</button><button type="button" class="btn" data-role-employees>👥 Vincular e acompanhar funcionários</button></div>
+      ${procedimentos.length > 8 ? `<div class="field" style="margin:0 0 10px"><label>Pesquisar procedimento neste cargo</label><input id="role-proc-modal-search" type="search" placeholder="Código ou nome do procedimento..."></div>` : ""}<div class="role-procedure-toolbar"><button type="button" class="btn secondary" data-role-pdf>📄 Salvar em PDF</button><button type="button" class="btn" data-role-employees>👥 Vincular e acompanhar funcionários</button></div>
       ${procedimentos.length ? `<div class="table-wrap"><table>
         <thead><tr><th>Procedimento / Treinamento</th><th>Tipo</th><th>Carga Horária</th><th>Periodicidade</th><th>Detalhamento</th>${allowActions ? '<th>Ações</th>' : ''}</tr></thead>
         <tbody>${procedimentos.map(m=>`<tr><td><strong>${m.procedimento || '—'}</strong></td><td><span class="ca-tag">${m.tipo || 'Obrigatório'}</span></td><td>${m.cargaHoraria || '—'}</td><td>${m.reciclagemMeses ? m.reciclagemMeses + ' meses' : 'Não se aplica'}</td><td style="font-size:12px;color:var(--ink-dim);">${m.descricao || '—'}</td>${allowActions ? `<td><div style="display:flex;gap:10px;flex-wrap:wrap;"><button type="button" class="action-link" data-modal-edit-matrix="${m.id}">Editar</button><button type="button" class="action-link danger-link" data-modal-del-matrix="${m.id}">Remover</button></div></td>` : ''}</tr>`).join('')}</tbody>
@@ -6099,6 +6130,11 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
       <div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Fechar</button></div>
     `, ov => {
       ov.querySelector('.modal')?.classList.add('role-procedures-modal');
+      ov.querySelector('#role-proc-modal-search')?.addEventListener('input', e => {
+        const semAcento = v => String(v||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim().toLowerCase();
+        const q = semAcento(e.target.value);
+        ov.querySelectorAll('.table-wrap tbody tr').forEach(tr => { tr.style.display = !q || semAcento(tr.cells[0]?.textContent).includes(q) ? '' : 'none'; });
+      });
       ov.querySelector('[data-role-pdf]')?.addEventListener('click',()=>printRoleProceduresPdf(cargo));
       ov.querySelector('[data-role-employees]')?.addEventListener('click',()=>openRoleEmployeeTrackingModal(cargo));
       ov.querySelectorAll('[data-modal-edit-matrix]').forEach(btn=>btn.addEventListener('click',()=>openRoleMatrixModal(btn.dataset.modalEditMatrix)));
