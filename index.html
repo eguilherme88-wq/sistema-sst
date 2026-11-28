@@ -17128,7 +17128,7 @@ function renderPcmsoDash(root){
     {k:'emitente',label:'Emitente'},
     {k:'aprovador',label:'Aprovador'},
     {k:'coemitente',label:'Co-emitente',opt:true},
-    {k:'contratada',label:'Responsável contratada',onlyContratada:true}
+    {k:'contratada',label:'Responsável contratada',opt:true,onlyContratada:true}
   ];
   const PTE_RECOMENDACOES=[
     'Siga rigorosamente as recomendações de segurança relativas às atividades/tarefas;',
@@ -17139,6 +17139,7 @@ function renderPcmsoDash(root){
   const PTE_TXT_APROV='Declaro que todas as exigências dessa PTE-APR foram tomadas e cumpridas, sendo assim aprovado e liberado o início da atividade.';
   const PTE_TXT_REVAL='Declaro que todas as exigências dessa PTE-APR foram tomadas e cumpridas, sendo assim aprovada e liberada a continuação da atividade.';
   const PTE_TXT_NAO='Caso seja assinalado NÃO em algum dos itens acima, medidas alternativas de segurança devem ser adotadas e anotadas no campo Observações.';
+  const PTE_REF='PTO-ST-09-IMP-01',PTE_MIN_FOTOS=2;
   const PTE_CONTENT=['uvs','dataEmissao','solicitante','setor','maoDeObra','empresa','empresaResponsavel','inicioData','inicioHora','terminoData','terminoHora','nFunc','tipos','instrumentos','descricao','simultaneas','impeditivas','emergencia','epis','episOutros','qualificacoes','qualifOutros','energias','isolamento','isolamentoQuais','condicoes','observacoes','apr'];
 
   const pteList=()=>Array.isArray(state.ptes)?state.ptes:[];
@@ -17189,6 +17190,7 @@ function renderPcmsoDash(root){
       const termo=(a.termo||[]).map(e=>{const o=oldById.get(e.id);return(!e.signature&&pteSigned(o)&&same(o.nome,e.nome))?{...e,signature:o.signature,signedAt:o.signedAt}:e});
       old.forEach(o=>{if(!formIds.has(o.id)&&!removed.has(o.id))termo.push(o)});
       p.termo=termo;
+      if(Array.isArray(a.fotos)){const fr=new Set(a.fotosRemoved||[]),ids=new Set(a.fotos.map(f=>f.id));p.fotos=[...a.fotos,...(Array.isArray(p.fotos)?p.fotos:[]).filter(f=>!ids.has(f.id)&&!fr.has(f.id))]}
       p.aprovacao=p.aprovacao&&typeof p.aprovacao==='object'?p.aprovacao:{};
       PTE_ROLES.forEach(r=>{const n=a.aprovacao?.[r.k];if(!n)return;const o=p.aprovacao[r.k];p.aprovacao[r.k]=(!n.signature&&pteSigned(o)&&same(o.nome,n.nome))?{...n,signature:o.signature,signedAt:o.signedAt}:n});
       if(a.emitir&&p.rascunho){p.rascunho=false;log(p,'PTE-APR emitida')}
@@ -17203,6 +17205,10 @@ function renderPcmsoDash(root){
       p.termo=Array.isArray(p.termo)?p.termo:[];
       if(!p.termo.some(x=>x.id===a.entry.id))p.termo.push({...a.entry,signedAt:a.entry.signature?now:''});
       log(p,`Termo de responsabilidade · ${a.entry.nome} incluído${a.entry.signature?' e assinado':''}`);
+    }else if(a.type==='fotosAdd'){
+      p.fotos=Array.isArray(p.fotos)?p.fotos:[];
+      const have=new Set(p.fotos.map(f=>f.id)),novas=(a.fotos||[]).filter(f=>!have.has(f.id));
+      p.fotos.push(...novas);log(p,`${novas.length} foto(s) adicionada(s)`);
     }else if(a.type==='termoSign'){
       const e=(p.termo||[]).find(x=>x.id===a.entryId);if(!e)throw new Error('Trabalhador não encontrado no termo desta PTE-APR.');
       e.signature=a.signature;e.signedAt=now;log(p,`Termo de responsabilidade · ${e.nome} assinou`);
@@ -17304,6 +17310,13 @@ function renderPcmsoDash(root){
     .pte-grau{display:inline-block;font-weight:700;font-size:12px;padding:2px 8px;border-radius:10px}
     .pte-grau.ok{background:#4E8B6233;color:var(--green)}.pte-grau.warn{background:#E08E3233;color:var(--amber)}.pte-grau.bad{background:#D6553D33;color:var(--red)}
     .pte-big{width:100%;padding:16px!important;font-size:17px!important}
+    .pte-fotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+    .pte-foto{position:relative;display:flex;flex-direction:column;gap:4px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:4px;color:var(--ink);text-decoration:none}
+    .pte-foto img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;background:#000}
+    .pte-foto button{position:absolute;top:8px;right:8px;width:30px;height:30px;border-radius:50%;border:0;background:rgba(0,0,0,.65);color:#fff;font-size:15px;cursor:pointer}
+    .pte-foto input{font-size:12px;padding:6px 8px}
+    .pte-foto small{font-size:11px;color:var(--ink-dim);padding:0 2px 2px}
+    @media(max-width:480px){.pte-fotos{grid-template-columns:1fr 1fr}}
     @media(max-width:480px){.pte-chips{grid-template-columns:1fr 1fr}.pte-chip{font-size:12px;padding:8px}.pte-tipos{grid-template-columns:repeat(3,1fr)}.pte-tipo{font-size:11.5px}}
   </style>`;
 
@@ -17330,6 +17343,21 @@ function renderPcmsoDash(root){
       drop(key){pads.delete(key)}
     };
   }
+
+
+  // ---------------- Fotos ----------------
+  function pteCompressPhoto(file){return new Promise((res,rej)=>{const url=URL.createObjectURL(file),img=new Image();img.onload=()=>{const k=Math.min(1,1280/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',0.72))};img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('Arquivo de imagem inválido.'))};img.src=url})}
+  function pteFotosBoxHtml(){return`<div class="pte-fotos" data-fotos-grid></div><div class="pte-actions" style="margin-top:8px"><label class="btn" style="text-align:center;cursor:pointer">📷 Tirar foto<input type="file" accept="image/*" capture="environment" data-foto-in style="display:none"></label><label class="btn secondary" style="text-align:center;cursor:pointer">🖼️ Escolher da galeria<input type="file" accept="image/*" multiple data-foto-in style="display:none"></label></div><div class="sub" data-fotos-count style="font-size:12px;margin-top:8px"></div>`}
+  // Controla a lista de fotos dentro de "root". list é alterada no lugar.
+  function pteMountFotos(root,list,opts={}){
+    const grid=root.querySelector('[data-fotos-grid]'),count=root.querySelector('[data-fotos-count]'),min=opts.min||0;
+    const draw=()=>{grid.innerHTML=list.map(f=>`<div class="pte-foto"><img src="${empEsc(f.src)}" alt="Foto"><button type="button" data-foto-rm="${empEsc(f.id)}" title="Remover">✕</button><input data-foto-leg="${empEsc(f.id)}" value="${empEsc(f.legenda||'')}" placeholder="Legenda (opcional)"></div>`).join('');count.innerHTML=min?(list.length>=min?`<span style="color:var(--green)">✔ ${list.length} foto(s)</span>`:`<span style="color:var(--amber)">${list.length} de no mínimo ${min} fotos</span>`):`${list.length} foto(s) selecionada(s)`};
+    root.querySelectorAll('[data-foto-in]').forEach(inp=>inp.addEventListener('change',async()=>{const files=[...(inp.files||[])];inp.value='';if(!files.length)return;count.textContent='Processando foto...';for(const file of files){try{list.push({id:uid('ptf'),src:await pteCompressPhoto(file),legenda:'',at:new Date().toISOString(),by:pteActorName()})}catch(e){alert('Não foi possível usar esta foto: '+pteErr(e))}}draw();opts.onChange&&opts.onChange()}));
+    grid.addEventListener('click',e=>{const b=e.target.closest('[data-foto-rm]');if(!b)return;const i=list.findIndex(f=>f.id===b.dataset.fotoRm);if(i<0||!confirm('Remover esta foto?'))return;opts.onRemove&&opts.onRemove(list[i]);list.splice(i,1);draw();opts.onChange&&opts.onChange()});
+    grid.addEventListener('input',e=>{const id=e.target.dataset?.fotoLeg;if(!id)return;const f=list.find(x=>x.id===id);if(f)f.legenda=e.target.value});
+    draw();
+  }
+  function pteFotosViewHtml(list){return`<div class="pte-fotos view">${(list||[]).map(f=>`<a class="pte-foto" href="${empEsc(f.src)}" target="_blank" rel="noopener" data-foto-open><img src="${empEsc(f.src)}" alt="Foto"><small>${empEsc(f.legenda||pteStampIso(f.at))}</small></a>`).join('')}</div>`}
 
   // ---------------- Formulário (emissão / preenchimento) ----------------
   function ptePeopleDatalists(){
@@ -17410,18 +17438,22 @@ function renderPcmsoDash(root){
         <div id="pte-apr-rows"></div>
         <button type="button" class="btn secondary" id="pte-add-apr" style="width:100%">+ Adicionar etapa</button>
       </div>
-      <div class="mobile-card">${step(9,'Termo de responsabilidade para execução')}
+      <div class="mobile-card" id="pte-fotos-card">${step(9,`Registro fotográfico * (mínimo ${PTE_MIN_FOTOS} fotos)`)}
+        <div class="sub" style="font-size:12px;margin:-4px 0 10px">Fotografe o local, o isolamento/sinalização e os equipamentos antes de iniciar.</div>
+        ${pteFotosBoxHtml()}
+      </div>
+      <div class="mobile-card">${step(10,'Termo de responsabilidade para execução')}
         <div class="pte-note ok">${PTE_TXT_TERMO}</div>
         <div id="pte-termo-rows"></div>
         <button type="button" class="btn secondary" id="pte-add-termo" style="width:100%">+ Adicionar trabalhador</button>
         <div class="sub" style="font-size:12px;margin-top:8px">As assinaturas podem ser coletadas agora ou depois, abrindo a PTE-APR.</div>
       </div>
-      <div class="mobile-card">${step(10,'Controle de aprovação da PTE-APR')}
+      <div class="mobile-card">${step(11,'Controle de aprovação da PTE-APR')}
         <div class="pte-note ok">${PTE_TXT_APROV}</div>
         ${PTE_ROLES.map(r=>{const a=aprov[r.k]||{};return`<div class="pte-row pte-role-row" data-role="${r.k}" style="${r.onlyContratada&&!contr?'display:none':''}"><div class="pte-row-head"><span>${r.label}${r.opt?' <small style="font-weight:400;color:var(--ink-dim)">(opcional)</small>':''}</span></div>
           <div class="field-row"><div class="field"><label>Nome</label><input data-f="nome" list="pte-dl-pessoas" autocomplete="off" value="${empEsc(a.nome||(r.k==='solicitante'?p.solicitante||'':''))}"></div><div class="field"><label>Função</label><input data-f="funcao" value="${empEsc(a.funcao||'')}"></div></div>
           <div class="field"><label>Assinatura</label>${pteSigBox('role_'+r.k,a)}</div></div>`}).join('')}
-        <div class="sub" style="font-size:12px">A PTE-APR é liberada automaticamente quando Solicitante, Emitente, Aprovador${contr?' e Responsável da contratada':''} assinarem.</div>
+        <div class="sub" style="font-size:12px">A PTE-APR é liberada automaticamente quando Solicitante, Emitente e Aprovador assinarem.</div>
       </div>
       <div class="mobile-card pte-rec"><div class="ecp-step"><i>!</i>Recomendações gerais</div><ol>${PTE_RECOMENDACOES.map(x=>`<li>${empEsc(x)}</li>`).join('')}</ol></div>
       <div class="pte-foot">
@@ -17440,6 +17472,8 @@ function renderPcmsoDash(root){
     const renum=()=>{aprBox.querySelectorAll('.pte-apr-row').forEach((r,i,all)=>{r.querySelector('.pte-apr-num').textContent=`Etapa ${i+1}`;r.querySelector('[data-rm-row]').style.visibility=all.length>1?'visible':'hidden'});termoBox.querySelectorAll('.pte-termo-row').forEach((r,i)=>r.querySelector('.pte-termo-num').textContent=`👷 Trabalhador ${i+1}`)};
     const addApr=r=>{aprBox.insertAdjacentHTML('beforeend',pteAprRowHtml(r));renum()};
     const addTermo=t=>{termoBox.insertAdjacentHTML('beforeend',pteTermoRowHtml(t||{id:uid('ptt')}));renum()};
+    const fotos=(Array.isArray(p.fotos)?p.fotos:[]).map(f=>({...f})),fotosRemoved=new Set();
+    pteMountFotos(form.querySelector('#pte-fotos-card'),fotos,{min:PTE_MIN_FOTOS,onRemove:f=>fotosRemoved.add(f.id)});
     (Array.isArray(p.apr)&&p.apr.length?p.apr:[{}]).forEach(addApr);
     (Array.isArray(p.termo)?p.termo:[]).forEach(addTermo);
     if(isNew&&!termoBox.children.length)addTermo();
@@ -17475,7 +17509,7 @@ function renderPcmsoDash(root){
       const termo=[...termoBox.querySelectorAll('.pte-termo-row')].map(r=>{const id=r.dataset.id,nome=r.querySelector('[data-f="nome"]').value.trim(),o=oldTermo.get(id),ns=sigs.get('termo_'+id),keep=!ns&&pteSigned(o)&&normalizeText(o.nome)===normalizeText(nome);return{id,nome,matricula:r.querySelector('[data-f="matricula"]').value.trim(),obs:r.querySelector('[data-f="obs"]').value.trim(),signature:ns||(keep?o.signature:''),signedAt:ns?stamp:(keep?o.signedAt:'')}}).filter(t=>t.nome||t.signature);
       const aprovacao={};
       form.querySelectorAll('.pte-role-row').forEach(r=>{const k=r.dataset.role;if(k==='contratada'&&!contr)return;const nome=r.querySelector('[data-f="nome"]').value.trim(),o=p.aprovacao?.[k],ns=sigs.get('role_'+k),keep=!ns&&pteSigned(o)&&normalizeText(o.nome)===normalizeText(nome);aprovacao[k]={nome,funcao:r.querySelector('[data-f="funcao"]').value.trim(),signature:ns||(keep?o.signature:''),signedAt:ns?stamp:(keep?o.signedAt:'')}});
-      return{fields,termo,aprovacao};
+      return{fields,termo,aprovacao,fotos:fotos.map(f=>({...f}))};
     };
     const validate=d=>{
       const f=d.fields,e=[];
@@ -17496,6 +17530,7 @@ function renderPcmsoDash(root){
       if(f.condicoes.some(c=>c.resposta==='Não')&&!f.observacoes)e.push('Observações: descreva as medidas alternativas de segurança (há item marcado "Não")');
       if(!f.apr.length)e.push('APR: preencha ao menos uma etapa');
       else if(f.apr.some(r=>!r.etapa||!r.perigo||!r.medidas||!r.grau))e.push('APR: todas as etapas precisam de etapa, perigo/risco, medidas de controle e grau de risco');
+      if(d.fotos.length<PTE_MIN_FOTOS)e.push(`Registro fotográfico: tire no mínimo ${PTE_MIN_FOTOS} fotos (há ${d.fotos.length})`);
       if(d.termo.some(t=>!t.nome))e.push('Termo de responsabilidade: informe o nome de todos os trabalhadores');
       PTE_ROLES.forEach(r=>{const a=d.aprovacao[r.k];if(a&&a.signature&&!a.nome)e.push(`Aprovação: informe o nome do ${r.label.toLowerCase()} que assinou`)});
       return e;
@@ -17511,8 +17546,8 @@ function renderPcmsoDash(root){
       buttons().forEach(b=>b.disabled=true);const main=form.querySelector('#pte-submit'),label=main.textContent;main.textContent='Salvando...';
       try{
         let saved;
-        if(isNew)saved=await pteRun({type:'create',pte:{id:uid('pte'),rascunho:!emitir,...d.fields,termo:d.termo,aprovacao:d.aprovacao,origem:ptePortalActor?'Portal celular':'Sistema'}});
-        else saved=await pteRun({type:'save',id:p.id,fields:d.fields,termo:d.termo,termoRemoved:[...termoRemoved],aprovacao:d.aprovacao,emitir,force:st==='Liberada'&&pteCanForceEdit()});
+        if(isNew)saved=await pteRun({type:'create',pte:{id:uid('pte'),rascunho:!emitir,...d.fields,termo:d.termo,aprovacao:d.aprovacao,fotos:d.fotos,origem:ptePortalActor?'Portal celular':'Sistema'}});
+        else saved=await pteRun({type:'save',id:p.id,fields:d.fields,termo:d.termo,termoRemoved:[...termoRemoved],aprovacao:d.aprovacao,fotos:d.fotos,fotosRemoved:[...fotosRemoved],emitir,force:st==='Liberada'&&pteCanForceEdit()});
         opts.onSaved&&opts.onSaved(saved);
       }catch(err){console.error('Falha ao salvar PTE-APR:',err);alert('Não foi possível salvar a PTE-APR. Nada foi perdido nesta tela; confira a conexão e tente de novo.\n\nErro: '+pteErr(err));buttons().forEach(b=>b.disabled=false);main.textContent=label}
     };
@@ -17558,16 +17593,24 @@ function renderPcmsoDash(root){
   function pteEncerrarModal(p,done){
     const contr=pteContratada(p),sol=p.aprovacao?.solicitante||{},ct=p.aprovacao?.contratada||{};
     const nowLocal=new Date(Date.now()-new Date().getTimezoneOffset()*60000).toISOString().slice(0,16);
-    openModal(`${ptePeopleDatalists()}<h2>🏁 Encerrar ${empEsc(p.numero)}</h2><form id="pte-enc-form"><div class="field"><label>O serviço desta PTE-APR foi *</label><div class="ecp-seg pte-seg2 pte-seg-y"><label><input type="radio" name="resultado" value="Concluído">Concluído</label><label><input type="radio" name="resultado" value="Não concluído">Não concluído</label></div></div><div class="field"><label>PTE-APR finalizada em *</label><input type="datetime-local" name="finalizadaEm" value="${nowLocal}"></div><div class="field"><label>Observações finais</label><textarea name="obsFinais" rows="3"></textarea></div><h3 style="margin:14px 0 6px">Solicitante *</h3>${pteSignerFields('so_',sol.nome||p.solicitante||'',sol.funcao||'')}<div class="field"><label>Assinatura do solicitante *</label>${pteSigBox('so',null,false)}</div>${contr?`<h3 style="margin:14px 0 6px">Responsável contratada *</h3>${pteSignerFields('ct_',ct.nome||p.empresaResponsavel||'',ct.funcao||'')}<div class="field"><label>Assinatura do responsável *</label>${pteSigBox('ct',null,false)}</div>`:''}<div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">🏁 Encerrar PTE-APR</button></div></form>`,ov=>{
+    openModal(`${ptePeopleDatalists()}<h2>🏁 Encerrar ${empEsc(p.numero)}</h2><form id="pte-enc-form"><div class="field"><label>O serviço desta PTE-APR foi *</label><div class="ecp-seg pte-seg2 pte-seg-y"><label><input type="radio" name="resultado" value="Concluído">Concluído</label><label><input type="radio" name="resultado" value="Não concluído">Não concluído</label></div></div><div class="field"><label>PTE-APR finalizada em *</label><input type="datetime-local" name="finalizadaEm" value="${nowLocal}"></div><div class="field"><label>Observações finais</label><textarea name="obsFinais" rows="3"></textarea></div><h3 style="margin:14px 0 6px">Solicitante *</h3>${pteSignerFields('so_',sol.nome||p.solicitante||'',sol.funcao||'')}<div class="field"><label>Assinatura do solicitante *</label>${pteSigBox('so',null,false)}</div>${contr?`<h3 style="margin:14px 0 6px">Responsável contratada (opcional)</h3>${pteSignerFields('ct_',ct.nome||p.empresaResponsavel||'',ct.funcao||'')}<div class="field"><label>Assinatura do responsável</label>${pteSigBox('ct',null,false)}</div>`:''}<div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">🏁 Encerrar PTE-APR</button></div></form>`,ov=>{
       const f=ov.querySelector('#pte-enc-form'),sig=pteSigController(f);pteModalPersonAutofill(ov);f.querySelector('[data-sig="so"] [data-sig-open]').click();
       f.addEventListener('submit',async e=>{e.preventDefault();const d=Object.fromEntries(new FormData(f)),ss=sig.get('so'),sc=sig.get('ct');
         if(!d.resultado){alert('Informe se o serviço foi concluído ou não.');return}
         if(!d.finalizadaEm){alert('Informe a data e hora de finalização.');return}
         if(!String(d.so_nome||'').trim()||!ss){alert('Nome e assinatura do solicitante são obrigatórios.');return}
-        if(contr&&(!String(d.ct_nome||'').trim()||!sc)){alert('Nome e assinatura do responsável da contratada são obrigatórios.');return}
+        if(sc&&!String(d.ct_nome||'').trim()){alert('Informe o nome do responsável da contratada que assinou.');return}
         if(d.resultado==='Não concluído'&&!String(d.obsFinais||'').trim()){alert('Descreva nas observações finais por que o serviço não foi concluído.');return}
         const b=f.querySelector('button.btn:not(.secondary)');b.disabled=true;b.textContent='Salvando...';
-        try{const saved=await pteRun({type:'encerrar',id:p.id,encerramento:{resultado:d.resultado,finalizadaEm:d.finalizadaEm,obsFinais:String(d.obsFinais||'').trim(),solicitante:{nome:d.so_nome.trim(),funcao:String(d.so_funcao||'').trim(),signature:ss},contratada:contr?{nome:d.ct_nome.trim(),funcao:String(d.ct_funcao||'').trim(),signature:sc}:null}});closeModal();done(saved)}catch(err){alert('Não foi possível encerrar: '+pteErr(err));b.disabled=false;b.textContent='🏁 Encerrar PTE-APR'}});
+        try{const saved=await pteRun({type:'encerrar',id:p.id,encerramento:{resultado:d.resultado,finalizadaEm:d.finalizadaEm,obsFinais:String(d.obsFinais||'').trim(),solicitante:{nome:d.so_nome.trim(),funcao:String(d.so_funcao||'').trim(),signature:ss},contratada:contr&&sc?{nome:d.ct_nome.trim(),funcao:String(d.ct_funcao||'').trim(),signature:sc}:null}});closeModal();done(saved)}catch(err){alert('Não foi possível encerrar: '+pteErr(err));b.disabled=false;b.textContent='🏁 Encerrar PTE-APR'}});
+    });
+  }
+  function pteFotosModal(p,done){
+    const novas=[];
+    openModal(`<h2>📷 Adicionar fotos · ${empEsc(p.numero)}</h2><form id="pte-fotos-form">${pteFotosBoxHtml()}<div class="modal-actions"><button type="button" class="btn secondary" onclick="closeModal()">Cancelar</button><button class="btn">💾 Salvar fotos</button></div></form>`,ov=>{
+      const f=ov.querySelector('#pte-fotos-form');pteMountFotos(f,novas);
+      f.addEventListener('submit',async e=>{e.preventDefault();if(!novas.length){alert('Tire ou escolha ao menos uma foto.');return}const b=f.querySelector('button.btn:not(.secondary)');b.disabled=true;b.textContent='Enviando...';
+        try{const saved=await pteRun({type:'fotosAdd',id:p.id,fotos:novas});closeModal();done(saved)}catch(err){alert('Não foi possível salvar as fotos: '+pteErr(err));b.disabled=false;b.textContent='💾 Salvar fotos'}});
     });
   }
   function pteCancelarModal(p,done){
@@ -17595,6 +17638,11 @@ function renderPcmsoDash(root){
         <div class="ecp-blk risk"><b>Descrição da atividade</b>${ecTxt(p.descricao)}</div>
         ${(p.apr||[]).length?`<div class="ecp-blk eq"><b>APR · ${p.apr.length} etapa(s)</b>${p.apr.map((r,i)=>`${i+1}. ${empEsc(r.etapa)} <span class="pte-grau ${PTE_GRAUS.find(g=>g.v===r.grau)?.c||'warn'}">${empEsc(r.grau||'—')}</span>`).join('<br>')}</div>`:''}
         <div class="pte-actions"><button class="btn secondary" data-pte-act="pdf">📄 Ver / imprimir PDF</button>${canEdit?`<button class="btn ${s==='Rascunho'?'':'secondary'}" data-pte-act="edit">✏️ ${s==='Rascunho'?'Continuar preenchimento':'Editar campos'}</button>`:''}</div>
+      </div>
+      <div class="mobile-card"><div class="ecp-step"><i>📷</i>Registro fotográfico (${(p.fotos||[]).length})</div>
+        ${(p.fotos||[]).length?pteFotosViewHtml(p.fotos):'<div class="sub">Nenhuma foto registrada.</div>'}
+        ${(p.fotos||[]).length<PTE_MIN_FOTOS&&open?`<div class="pte-note">É necessário no mínimo ${PTE_MIN_FOTOS} fotos.</div>`:''}
+        ${open?'<button class="btn secondary" data-pte-act="fotos" style="width:100%;margin-top:10px">📷 Adicionar fotos</button>':''}
       </div>
       <div class="mobile-card"><div class="ecp-step"><i>✍</i>Controle de aprovação</div>
         ${pteVisibleRoles(p).map(r=>sigRow(r.label+(r.opt?' (opcional)':''),p.aprovacao?.[r.k],open?`<button class="btn" data-pte-sign="${r.k}">✍️ Assinar</button>`:'<span class="pend">—</span>')).join('')}
@@ -17626,6 +17674,7 @@ function renderPcmsoDash(root){
       if(act==='pdf')ptePrint(p);
       else if(act==='edit')nav.edit(p);
       else if(act==='termoAdd')pteTermoModal(p,null,again);
+      else if(act==='fotos')pteFotosModal(p,again);
       else if(act==='revalidar')pteRevalidarModal(p,again);
       else if(act==='encerrar')pteEncerrarModal(p,again);
       else if(act==='cancelar')pteCancelarModal(p,again);
@@ -17641,7 +17690,7 @@ function renderPcmsoDash(root){
 
   // ---------------- PDF ----------------
   const PTE_PDF_CSS=`
-    @page{size:A4;margin:8mm 8mm 10mm}
+    @page{size:A4;margin:8mm 8mm 13mm;@bottom-left{content:'${PTE_REF}';font:700 8.5px Arial;color:#111}@bottom-right{content:'PÁGINA ' counter(page) '/' counter(pages);font:700 8.5px Arial;color:#111}}
     *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     body{font:9.3px/1.32 Arial,Helvetica,sans-serif;color:#111;margin:0;background:#fff}
     .wrap{max-width:194mm;margin:0 auto;position:relative}
@@ -17662,6 +17711,11 @@ function renderPcmsoDash(root){
     .c{text-align:center}.mut{color:#666}
     .rec{font-size:8.8px}.rec div{margin:1px 0}
     .wm{position:fixed;top:38%;left:0;right:0;text-align:center;font:900 64px Arial;color:rgba(200,40,30,.13);transform:rotate(-26deg);z-index:0;pointer-events:none;white-space:nowrap}
+    .fotos{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:4px}
+    .fotos figure{margin:0;break-inside:avoid;border:1px solid #bbb;padding:3px}
+    .fotos img{width:100%;height:62mm;object-fit:contain;background:#f3f3f3;display:block}
+    .fotos figcaption{font-size:8px;color:#444;margin-top:2px}
+    .ref{font-weight:700}
     .auth{margin-top:6px;border-top:1px dashed #999;padding-top:4px;font-size:8px;color:#555;display:flex;justify-content:space-between;gap:10px}
     @media screen{body{background:#e9ecef}.wrap{background:#fff;padding:9mm;margin:10px auto;box-shadow:0 2px 12px rgba(0,0,0,.15)}}
     @media print{.wrap{padding:0;max-width:none}}
@@ -17702,7 +17756,8 @@ function renderPcmsoDash(root){
     <table><tr class="sh"><td colspan="5">Controle de aprovação da PTE-APR</td></tr><tr><td colspan="5" style="font-size:8.6px">${E(PTE_TXT_APROV)}</td></tr><tr><td class="l" style="width:22%"></td><td class="l">Nome</td><td class="l" style="width:17%">Função</td><td class="l" style="width:21%">Assinatura</td><td class="l" style="width:14%">Data</td></tr>${PTE_ROLES.map(r=>{const a=p.aprovacao?.[r.k]||{};return`<tr><td class="l">${E(r.label.toUpperCase())}${r.onlyContratada?' (SE APLICÁVEL)':''}</td><td>${txt(a.nome)}</td><td>${txt(a.funcao)}</td><td class="sig">${sigImg(a)}</td><td>${E(dt(a.signedAt))}</td></tr>`}).join('')}</table>
     <table><tr class="sh"><td colspan="5">Controle de revalidação da PTE-APR</td></tr><tr><td colspan="5" style="font-size:8.6px">${E(PTE_TXT_REVAL)}</td></tr><tr><td class="l" style="width:22%"></td><td class="l">Nome</td><td class="l" style="width:17%">Função</td><td class="l" style="width:21%">Assinatura</td><td class="l" style="width:14%">Data</td></tr>${(revs.length?revs:[{}]).map((r,i)=>`${revs.length?`<tr><td colspan="5" class="mut">${i+1}ª revalidação${r.novoTermino?` · novo término: ${E(pteDT(r.novoTermino.data,r.novoTermino.hora))}`:''}</td></tr>`:''}<tr><td class="l">EMITENTE</td><td>${txt(r.emitente?.nome)}</td><td>${txt(r.emitente?.funcao)}</td><td class="sig">${sigImg(r.emitente)}</td><td>${E(dt(r.emitente?.signedAt))}</td></tr><tr><td class="l">CO-EMITENTE</td><td>${txt(r.coemitente?.nome)}</td><td>${txt(r.coemitente?.funcao)}</td><td class="sig">${sigImg(r.coemitente)}</td><td>${E(dt(r.coemitente?.signedAt))}</td></tr>`).join('')}</table>
     <table><tr class="sh"><td colspan="5">Controle de encerramento da PTE-APR</td></tr><tr><td class="l" style="width:22%"></td><td class="l">Nome</td><td class="l" style="width:17%">Função</td><td class="l" style="width:21%">Assinatura</td><td class="l" style="width:14%">Data</td></tr><tr><td class="l">SOLICITANTE</td><td>${txt(enc.solicitante?.nome)}</td><td>${txt(enc.solicitante?.funcao)}</td><td class="sig">${sigImg(enc.solicitante)}</td><td>${E(dt(enc.solicitante?.signedAt))}</td></tr><tr><td class="l">RESPONSÁVEL CONTRATADA (SE APLICÁVEL)</td><td>${txt(enc.contratada?.nome)}</td><td>${txt(enc.contratada?.funcao)}</td><td class="sig">${sigImg(enc.contratada)}</td><td>${E(dt(enc.contratada?.signedAt))}</td></tr><tr><td colspan="5"><b>OBSERVAÇÕES FINAIS:</b> ${txt(enc.obsFinais)}</td></tr><tr><td colspan="5"><b>PTE-APR FINALIZADA EM:</b> ${E(enc.finalizadaEm?ecStamp(new Date(enc.finalizadaEm)):'____/____/____ ____h____')} &nbsp;&nbsp;&nbsp; <b>O SERVIÇO DESTA PTE-APR FOI:</b> ${cb(enc.resultado==='Concluído')}CONCLUÍDO &nbsp; ${cb(enc.resultado==='Não concluído')}NÃO CONCLUÍDO</td></tr></table>
-    <div class="auth"><span>Emitida por ${E(p.emitidoPor||'—')} (${E(p.origem||'Sistema')}) em ${E(dt(p.createdAt))}${p.liberadaEm?` · Liberada em ${E(dt(p.liberadaEm))}`:''}</span><span>Verificação: ${verif} · Gerado em ${E(ecStamp())}</span></div>`;
+    ${(p.fotos||[]).length?`<table style="break-inside:auto"><tr class="sh"><td>Registro fotográfico (${p.fotos.length})</td></tr><tr><td style="padding:0"><div class="fotos">${p.fotos.map((f,i)=>`<figure><img src="${E(f.src)}" alt=""><figcaption>Foto ${i+1}${f.legenda?` · ${E(f.legenda)}`:''} · ${E(dt(f.at))}</figcaption></figure>`).join('')}</div></td></tr></table>`:''}
+    <div class="auth"><span class="ref">${PTE_REF}</span><span>Emitida por ${E(p.emitidoPor||'—')} (${E(p.origem||'Sistema')}) em ${E(dt(p.createdAt))}${p.liberadaEm?` · Liberada em ${E(dt(p.liberadaEm))}`:''}</span><span>Verificação: ${verif} · Gerado em ${E(ecStamp())}</span></div>`;
   }
   function ptePrint(p){
     if(!p)return;
