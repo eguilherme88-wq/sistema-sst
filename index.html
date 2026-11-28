@@ -5740,6 +5740,24 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         if(!ids.has(e.id)){ ids.add(e.id); state.roleMatrix.push(e); }
       });
     });
+    // Acompanhamento compactado (ver stateForSave).
+    if(Array.isArray(links.comp) && links.comp.length){
+      if(!Array.isArray(state.roleTrainingCompliance)) state.roleTrainingCompliance = [];
+      const have = new Set(state.roleTrainingCompliance.map(r => r.employeeId + '|' + r.matrixId));
+      links.comp.forEach(([emp, k, d, sIdx, mask]) => {
+        const codes = String(links.sets[sIdx] || '').split(',').filter(Boolean);
+        let bytes = null;
+        if(mask !== '*'){ try { const bin = atob(mask); bytes = Uint8Array.from(bin, ch => ch.charCodeAt(0)); } catch(_) { return; } }
+        codes.forEach((code, i) => {
+          if(bytes && !(bytes[i>>3] & (1 << (i & 7)))) return;
+          const matrixId = `rmi_${k}_${String(code).replace(/[^A-Za-z0-9]+/g,'-')}`;
+          const key = emp + '|' + matrixId;
+          if(have.has(key)) return;
+          have.add(key);
+          state.roleTrainingCompliance.push({ id: `rtc_${emp}_${matrixId}`, employeeId: emp, matrixId, realizado: true, dataRealizacao: d, proximaRealizacao: '' });
+        });
+      });
+    }
   }
   // Monta a versão gravável do estado: vínculos sem personalização voltam ao
   // formato compacto; os demais seguem como registros completos.
@@ -5753,13 +5771,47 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
       porCargo.get(key).codes.push(m.procCodigo);
     });
     const sets = [], cargos = [];
+    const posByMatrixId = new Map(); // id do vínculo compacto -> [k, conjunto, posição]
     porCargo.forEach(g => {
       const s = g.codes.join(',');
       let idx = sets.indexOf(s);
       if(idx < 0){ sets.push(s); idx = sets.length - 1; }
       cargos.push([g.cargo, g.k, idx]);
     });
-    return { ...state, ...(extra||{}), roleMatrix: full, roleProcLinks: { v:1, sets, cargos } };
+    (state.roleMatrix || []).forEach(m => {
+      if(!m._c || !m._k || !m.procCodigo) return;
+      const c = cargos.find(x => x[1] === m._k && x[0] === m.cargo);
+      if(!c) return;
+      const pos = sets[c[2]].split(',').indexOf(m.procCodigo);
+      if(pos >= 0) posByMatrixId.set(m.id, [m._k, c[2], pos, m.cargo]);
+    });
+    // Acompanhamento dos funcionários: linhas "não realizado" sem data equivalem a
+    // não ter registro e não são gravadas; as realizadas de vínculos compactos são
+    // agrupadas por funcionário + cargo + data num mapa de bits.
+    const compFull = [], compGroups = new Map();
+    (state.roleTrainingCompliance || []).forEach(r => {
+      if(!r) return;
+      if(!r.realizado && !r.dataRealizacao) return;
+      const pos = posByMatrixId.get(r.matrixId);
+      if(!pos || !r.realizado || r.proximaRealizacao){ compFull.push(r); return; }
+      const key = [r.employeeId, pos[0], r.dataRealizacao || '', pos[1]].join('\u0000');
+      if(!compGroups.has(key)) compGroups.set(key, { e: r.employeeId, k: pos[0], d: r.dataRealizacao || '', s: pos[1], p: [] });
+      compGroups.get(key).p.push(pos[2]);
+    });
+    const comp = [];
+    compGroups.forEach(g => {
+      const n = sets[g.s].split(',').length;
+      const uniq = new Set(g.p);
+      let mask = '*';
+      if(uniq.size < n){
+        const bytes = new Uint8Array(Math.ceil(n/8));
+        uniq.forEach(i => { bytes[i>>3] |= (1 << (i & 7)); });
+        let bin = ''; bytes.forEach(b => { bin += String.fromCharCode(b); });
+        mask = btoa(bin);
+      }
+      comp.push([g.e, g.k, g.d, g.s, mask]);
+    });
+    return { ...state, ...(extra||{}), roleMatrix: full, roleProcLinks: { v:1, sets, cargos, comp }, roleTrainingCompliance: compFull };
   }
 
   function renderProcedureCatalog(root){
@@ -6135,8 +6187,15 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     `;
   }
 
+  let roleComplianceIndexCache = { arr: null, len: -1, map: null };
   function roleComplianceRecord(employeeId, matrixId){
-    return (state.roleTrainingCompliance || []).find(r => r.employeeId === employeeId && r.matrixId === matrixId);
+    const arr = state.roleTrainingCompliance || [];
+    const c = roleComplianceIndexCache;
+    if(c.arr !== arr || c.len !== arr.length){
+      c.map = new Map(); arr.forEach(r => { if(r) c.map.set(r.employeeId + '|' + r.matrixId, r); });
+      c.arr = arr; c.len = arr.length;
+    }
+    return c.map.get(employeeId + '|' + matrixId);
   }
 
   function roleNextTrainingDate(procedure, completionDate){
@@ -6178,7 +6237,12 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         <button type="button" class="btn secondary" id="role-compliance-pdf">📄 Gerar relatório PDF</button>
       </div>` : ''}
       <form id="role-compliance-form">
-        ${funcionarios.length && procedimentos.length ? `<div class="table-wrap"><table style="min-width:1000px;">
+        ${funcionarios.length && procedimentos.length ? `<div class="role-bulk-bar" style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;padding:12px 14px;margin:0 0 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);">
+          <label style="display:flex;align-items:center;gap:8px;font-weight:600;color:var(--ink);margin:0 auto 9px 0;cursor:pointer;"><input type="checkbox" id="compliance-check-all" style="width:auto;"> Marcar todos como realizados <span class="muted" id="compliance-check-count" style="font-weight:400"></span></label>
+          <div class="field" style="margin:0;min-width:180px;"><label>Data para todos os marcados</label><input type="date" id="compliance-bulk-date"></div>
+          <button type="button" class="btn secondary" id="compliance-bulk-apply">📅 Aplicar data</button>
+        </div>
+        <div class="table-wrap"><table style="min-width:1000px;">
           <thead><tr><th>Funcionário</th><th>Matrícula</th><th>Procedimento</th><th>Realizado?</th><th>Data da realização</th><th>Próxima realização</th></tr></thead><tbody>
           ${funcionarios.flatMap(emp=>procedimentos.map(proc=>{
             const rec=roleComplianceRecord(emp.id,proc.id);
@@ -6204,8 +6268,37 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         const next=done&&date.value&&months>0?addMonths(date.value,months):'';
         row.querySelector('.compliance-next').textContent=done?(next?fmtDate(next):months>0?'Informe a data':'Não se aplica'):'Pendente';
       };
+      // Marcação em lote: vale para as linhas visíveis (respeita o filtro de funcionário).
+      const visibleRows=()=>[...ov.querySelectorAll('[data-compliance-row]')].filter(r=>r.style.display!=='none');
+      const checkAll=ov.querySelector('#compliance-check-all');
+      const syncCheckAll=()=>{
+        if(!checkAll) return;
+        const rows=visibleRows(), marcados=rows.filter(r=>r.querySelector('.compliance-done').checked).length;
+        checkAll.checked=rows.length>0&&marcados===rows.length;
+        checkAll.indeterminate=marcados>0&&marcados<rows.length;
+        const c=ov.querySelector('#compliance-check-count'); if(c) c.textContent=`(${marcados} de ${rows.length})`;
+      };
+      checkAll?.addEventListener('change',()=>{
+        const bulkDate=ov.querySelector('#compliance-bulk-date')?.value||'';
+        visibleRows().forEach(row=>{
+          const cb=row.querySelector('.compliance-done');
+          if(cb.checked===checkAll.checked) return;
+          cb.checked=checkAll.checked;
+          const d=row.querySelector('.compliance-date');
+          if(cb.checked&&bulkDate&&!d.value) d.value=bulkDate;
+          syncRow(row);
+        });
+        syncCheckAll();
+      });
+      ov.querySelector('#compliance-bulk-apply')?.addEventListener('click',()=>{
+        const bulkDate=ov.querySelector('#compliance-bulk-date')?.value||'';
+        if(!bulkDate){ alert('Informe a data que será aplicada.'); ov.querySelector('#compliance-bulk-date')?.focus(); return; }
+        const alvo=visibleRows().filter(r=>r.querySelector('.compliance-done').checked);
+        if(!alvo.length){ alert('Marque os procedimentos realizados (ou use "Marcar todos") antes de aplicar a data.'); return; }
+        alvo.forEach(row=>{ row.querySelector('.compliance-date').value=bulkDate; syncRow(row); });
+      });
       ov.querySelectorAll('[data-compliance-row]').forEach(row=>{
-        row.querySelector('.compliance-done').addEventListener('change',()=>syncRow(row));
+        row.querySelector('.compliance-done').addEventListener('change',()=>{ syncRow(row); syncCheckAll(); });
         row.querySelector('.compliance-date').addEventListener('change',()=>syncRow(row));
       });
       const employeeFilter=ov.querySelector('#role-employee-filter');
@@ -6219,6 +6312,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
         });
         const empty=ov.querySelector('#role-filter-empty');
         if(empty) empty.style.display=visible?'none':'block';
+        syncCheckAll();
       };
       employeeFilter?.addEventListener('change',applyEmployeeFilter);
       ov.querySelector('#role-compliance-pdf')?.addEventListener('click',()=>printRoleProceduresPdf(cargo,employeeFilter?.value||''));
