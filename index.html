@@ -8518,6 +8518,47 @@ function renderPcmsoDash(root){
   // Retorna a tag <img> da logomarca da empresa (cadastrada em Administração ·
   // Logomarca) para ser usada no cabeçalho de qualquer relatório/PDF do
   // sistema. Retorna string vazia se nenhuma logomarca foi cadastrada.
+  // Relatório PDF do Cadastro de Funcionários (respeita filtros e ordenação da tela).
+  function printEmployeesPdf(list, filtros, total){
+    const w = window.open('', '_blank');
+    if(!w){ alert('O navegador bloqueou a janela do PDF. Permita pop-ups e tente novamente.'); return; }
+    const esc = v => empEsc(String(v ?? ''));
+    const porSetor = new Map();
+    list.forEach(e => { const k = String(e.setor||'').trim() || 'Sem setor'; porSetor.set(k, (porSetor.get(k)||0) + 1); });
+    const resumo = [...porSetor.entries()].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0],'pt-BR'));
+    const rows = list.map((e,i) => `<tr>
+        <td class="c">${i+1}</td>
+        <td><strong>${esc(e.nome||'—')}</strong></td>
+        <td>${esc(e.matricula||'—')}</td>
+        <td>${esc(e.cargo||'—')}</td>
+        <td>${esc(e.setor||'—')}</td>
+        <td>${esc(e.telefone||'—')}</td>
+        <td>${esc(e.email||'—')}</td>
+        <td class="c">${e.admissao ? fmtDate(e.admissao) : '—'}</td>
+      </tr>`).join('');
+    const agora = new Date();
+    w.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Cadastro de Funcionários</title><style>
+      @page{size:A4 landscape;margin:12mm}
+      body{font-family:Arial,sans-serif;color:#202124;margin:24px}
+      h1{font-size:20px;margin:6px 0 4px}h2{font-size:14px;margin:20px 0 8px}
+      .meta{color:#555;font-size:11px;margin-bottom:14px;line-height:1.5}
+      table{width:100%;border-collapse:collapse;font-size:10px}
+      th,td{border:1px solid #bbb;padding:5px 6px;text-align:left;vertical-align:top}
+      th{background:#eee}td.c,th.c{text-align:center;white-space:nowrap}
+      tr{break-inside:avoid;page-break-inside:avoid}thead{display:table-header-group}
+      .resumo{display:flex;flex-wrap:wrap;gap:6px;font-size:10px}.resumo span{border:1px solid #ccc;border-radius:12px;padding:3px 9px}
+      .foot{margin-top:18px;font-size:9px;color:#777}
+      @media print{body{margin:0}}
+    </style></head><body>${reportLogoImgTag(70)}
+      <h1>Cadastro de Funcionários</h1>
+      <div class="meta">Total listado: <strong>${list.length}</strong> de ${total} colaborador${total===1?'':'es'}${filtros.length ? ` · Filtros: <strong>${filtros.map(esc).join(' · ')}</strong>` : ' · Sem filtros'}<br>Emitido em ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+      <table><thead><tr><th class="c">Nº</th><th>Colaborador</th><th>Matrícula</th><th>Cargo</th><th>Setor</th><th>Telefone</th><th>E-mail</th><th class="c">Admissão</th></tr></thead>
+      <tbody>${rows || '<tr><td colspan="8">Nenhum colaborador encontrado.</td></tr>'}</tbody></table>
+      ${resumo.length ? `<h2>Resumo por setor</h2><div class="resumo">${resumo.map(([k,n])=>`<span>${esc(k)}: <strong>${n}</strong></span>`).join('')}</div>` : ''}
+      <div class="foot">Relatório gerado pelo Sistema Modular de SST.</div>
+      <script>window.onload=()=>setTimeout(()=>window.print(),250);<\/script></body></html>`);
+    w.document.close();
+  }
   function reportLogoImgTag(maxHeight){
     const h = maxHeight || 84;
     const img = state.companyLogo ? `<img src="${state.companyLogo}" alt="Logomarca da empresa" style="display:block;max-height:${h}px;max-width:${Math.round(h*3.2)}px;object-fit:contain;margin-bottom:10px;">` : '';
@@ -8801,7 +8842,10 @@ function renderPcmsoDash(root){
     root.innerHTML = `
       <div class="page-head">
         <div><h2>👥 Cadastro de Funcionários</h2><div class="sub">Base de colaboradores da empresa.</div></div>
-        ${checkPermission("Master") ? `<button class="btn" id="btn-new-emp">+ Novo Colaborador</button>` : ""}
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <button type="button" class="btn secondary" id="btn-emp-pdf" title="Gera o PDF da lista conforme os filtros aplicados">📄 Gerar PDF</button>
+          ${checkPermission("Master") ? `<button class="btn" id="btn-new-emp">+ Novo Colaborador</button>` : ""}
+        </div>
       </div>
 
       <div class="emp-kpis">
@@ -8860,6 +8904,15 @@ function renderPcmsoDash(root){
     });
     [["#emp-setor","empSetor"],["#emp-cargo","empCargo"],["#emp-foto","empFoto"],["#emp-sort","empSort"]].forEach(([sel,key]) => {
       root.querySelector(sel)?.addEventListener("change", ev => { root.dataset[key] = ev.target.value; refresh(); });
+    });
+    root.querySelector("#btn-emp-pdf")?.addEventListener("click", () => {
+      const filtros = [
+        fSearch ? `Pesquisa: "${fSearch}"` : "",
+        fSetor ? `Setor: ${fSetor}` : "",
+        fCargo ? `Cargo: ${fCargo}` : "",
+        fFoto === "com" ? "Somente com foto" : fFoto === "sem" ? "Somente sem foto" : ""
+      ].filter(Boolean);
+      printEmployeesPdf(list, filtros, all.length);
     });
     root.querySelector("#emp-clear")?.addEventListener("click", () => {
       ["empSearch","empSetor","empCargo","empFoto","empSort"].forEach(k => delete root.dataset[k]);
