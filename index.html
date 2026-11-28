@@ -5664,11 +5664,12 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
   // Atualizações pontuais da planilha (28/11/2026): inclui os cargos "Advogado III",
   // "Coordenador Administrativo Financeiro" "Técnico de Segurança do Trabalho" (conjunto 0, 342 procedimentos)
   // "Consultor Comercial SR" (conjunto 3, 338 procedimentos) "Analista Comercial I" e
-  // "Analista Comercial III", "Eletromecânico" e "Operador Balança" (conjunto 0).
+  // "Analista Comercial III", "Eletromecânico", "Operador Balança",
+  // "Coordenador(a) QSMA" e "Analista QSMA" (conjunto 0).
   function ensureRoleProcedureCargoUpdates(){
     if(!Array.isArray(state.generalJobs)) state.generalJobs = [];
     if(!Array.isArray(state.roleMatrix)) state.roleMatrix = [];
-    [["roleMatrixImportAdvogadoIII", "Advogado III", "c41", 0], ["roleMatrixImportCoordAdmFin", "Coordenador Administrativo Financeiro", "c42", 0], ["roleMatrixImportTecSegTrab", "Técnico de Segurança do Trabalho", "c43", 0], ["roleMatrixImportConsComSR", "Consultor Comercial SR", "c44", 3], ["roleMatrixImportAnaComI", "Analista Comercial I", "c45", 0], ["roleMatrixImportAnaComIII", "Analista Comercial III", "c46", 0], ["roleMatrixImportEletromec", "Eletromecânico", "c47", 0], ["roleMatrixImportOpBalanca", "Operador Balança", "c48", 0]].forEach(([flag, nome, k, setIdx]) => {
+    [["roleMatrixImportAdvogadoIII", "Advogado III", "c41", 0], ["roleMatrixImportCoordAdmFin", "Coordenador Administrativo Financeiro", "c42", 0], ["roleMatrixImportTecSegTrab", "Técnico de Segurança do Trabalho", "c43", 0], ["roleMatrixImportConsComSR", "Consultor Comercial SR", "c44", 3], ["roleMatrixImportAnaComI", "Analista Comercial I", "c45", 0], ["roleMatrixImportAnaComIII", "Analista Comercial III", "c46", 0], ["roleMatrixImportEletromec", "Eletromecânico", "c47", 0], ["roleMatrixImportOpBalanca", "Operador Balança", "c48", 0], ["roleMatrixImportCoordQSMA", "Coordenador(a) QSMA", "c49", 0], ["roleMatrixImportAnaQSMA", "Analista QSMA", "c50", 0]].forEach(([flag, nome, k, setIdx]) => {
       if(state[flag]) return;
       let job = state.generalJobs.find(j => normalizeText(j.nome) === normalizeText(nome));
       if(!job){ job = { id: uid("cargo"), nome, imported: true }; state.generalJobs.push(job); }
