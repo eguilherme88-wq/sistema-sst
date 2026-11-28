@@ -5515,6 +5515,30 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     root.querySelector('#role-matrix-clear')?.addEventListener('click', () => { root.dataset.rmCargo=''; root.dataset.rmProc=''; refresh(); });
     root.querySelectorAll('[data-rm-view]').forEach(b => b.addEventListener('click', () => { root.dataset.rmView = b.dataset.rmView; refresh(); }));
     if(view === 'arvore') attachRoleMatrixTree(root, listaFiltrada, qProc, normalizeText);
+    // Seleção múltipla de cargos para remoção em lote.
+    const selAll = root.querySelector('#rm-sel-all');
+    { const h = document.querySelector('header'); const pos = h ? getComputedStyle(h).position : ''; root.style.setProperty('--rm-sticky-top', (h && (pos==='sticky'||pos==='fixed')) ? h.offsetHeight + 'px' : '0px'); }
+    const selBoxes = () => [...root.querySelectorAll('.rm-sel')];
+    const syncSel = () => {
+      const boxes = selBoxes(), marcados = boxes.filter(b => b.checked);
+      if(selAll){ selAll.checked = boxes.length > 0 && marcados.length === boxes.length; selAll.indeterminate = marcados.length > 0 && marcados.length < boxes.length; }
+      const btn = root.querySelector('#rm-remove-selected'); if(btn){ btn.disabled = !marcados.length; btn.textContent = marcados.length ? `🗑️ Remover selecionados (${marcados.length})` : '🗑️ Remover selecionados'; }
+      const info = root.querySelector('#rm-sel-info'); if(info) info.textContent = marcados.length ? `${marcados.length} cargo${marcados.length===1?'':'s'} selecionado${marcados.length===1?'':'s'}` : 'Marque os cargos para remover vários de uma vez.';
+      boxes.forEach(b => { const tr = b.closest('tr'); if(tr) tr.style.background = b.checked ? 'var(--panel-2)' : ''; });
+    };
+    selAll?.addEventListener('change', () => { selBoxes().forEach(b => b.checked = selAll.checked); syncSel(); });
+    selBoxes().forEach(b => b.addEventListener('change', syncSel));
+    root.querySelector('#rm-remove-selected')?.addEventListener('click', async () => {
+      const cargosSel = selBoxes().filter(b => b.checked).map(b => decodeURIComponent(b.dataset.rmSel));
+      if(!cargosSel.length) return;
+      const alvo = new Set(cargosSel);
+      const ids = new Set((state.roleMatrix || []).filter(x => alvo.has(String(x.cargo || '').trim())).map(x => x.id));
+      const lista = cargosSel.length <= 12 ? '\n\n• ' + cargosSel.join('\n• ') : `\n\n• ${cargosSel.slice(0,12).join('\n• ')}\n… e mais ${cargosSel.length-12}`;
+      if(!confirm(`Remover ${cargosSel.length} cargo${cargosSel.length===1?'':'s'} da matriz e todos os ${ids.size} procedimentos vinculados?${lista}\n\nO acompanhamento dos funcionários nesses cargos também será removido.`)) return;
+      state.roleMatrix = (state.roleMatrix || []).filter(x => !ids.has(x.id));
+      state.roleTrainingCompliance = (state.roleTrainingCompliance || []).filter(x => !ids.has(x.matrixId));
+      await saveState(); render();
+    });
   }
 
   // ===== Árvore da Matriz: Cargo → Grupo (prefixo do código) → Procedimentos =====
@@ -6168,14 +6192,21 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     if(!list || list.length === 0) return `<div class="empty">Nenhum procedimento por função mapeado na matriz.</div>`;
     const cargos = [...new Set(list.map(m => String(m.cargo || '').trim()).filter(Boolean))]
       .sort((a,b) => a.localeCompare(b, 'pt-BR'));
+    const totais = new Map();
+    list.forEach(m => { const c = String(m.cargo || '').trim(); totais.set(c, (totais.get(c) || 0) + 1); });
     return `
+      ${allowActions ? `<div class="rm-bulk-bar" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line);position:sticky;top:var(--rm-sticky-top,0px);z-index:5;background:var(--panel);border-radius:12px 12px 0 0;">
+        <span id="rm-sel-info" style="font-size:13px;color:var(--ink-dim);">Marque os cargos para remover vários de uma vez.</span>
+        <button type="button" class="btn secondary" id="rm-remove-selected" style="margin-left:auto;" disabled>🗑️ Remover selecionados</button>
+      </div>` : ''}
       <table>
-        <thead><tr><th>Cargo / Função</th><th>Procedimentos vinculados</th><th>Procedimentos</th>${allowActions?'<th>Ações</th>':''}</tr></thead>
+        <thead><tr>${allowActions?'<th style="width:44px"><input type="checkbox" id="rm-sel-all" title="Selecionar todos os cargos listados" style="width:auto;cursor:pointer"></th>':''}<th>Cargo / Função</th><th>Procedimentos vinculados</th><th>Procedimentos</th>${allowActions?'<th>Ações</th>':''}</tr></thead>
         <tbody>
           ${cargos.map(cargo=>{
-            const total = list.filter(m => String(m.cargo || '').trim() === cargo).length;
+            const total = totais.get(cargo) || 0;
             return `
             <tr>
+              ${allowActions?`<td><input type="checkbox" class="rm-sel" data-rm-sel="${encodeURIComponent(cargo)}" style="width:auto;cursor:pointer" aria-label="Selecionar ${empEsc(cargo)}"></td>`:''}
               <td><strong>${cargo}</strong></td>
               <td>${total} procedimento${total === 1 ? '' : 's'}</td>
               <td><button type="button" class="btn secondary" data-view-role-procedures="${encodeURIComponent(cargo)}">👁️ Ver procedimentos</button></td>
