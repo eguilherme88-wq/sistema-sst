@@ -5580,7 +5580,8 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
 
   function renderRoleMatrixList(root){
     if(procedureSeedPendingSave && checkPermission("Master")){ procedureSeedPendingSave = false; saveState(); }
-    const all = state.roleMatrix || [];
+    const all = roleMatrixVisible();
+    const inativosOcultos = (state.roleMatrix || []).length - all.length;
     const normalizeText = v => String(v||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").trim().toLowerCase();
     const qCargo = normalizeText(root.dataset.rmCargo || '');
     // Aceita "CÓDIGO - Título" (da lista de sugestões), só o código ou parte do nome.
@@ -5614,6 +5615,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
           <div><label>Procedimento</label><input id="role-matrix-search-proc" type="search" list="role-matrix-search-proc-list" value="${empEsc(root.dataset.rmProc||'')}" placeholder="Código ou nome do procedimento..."><datalist id="role-matrix-search-proc-list">${(state.procedureCatalog||[]).map(p=>`<option value="${empEsc(procedureLabel(p))}">`).join('')}</datalist></div>
           <div><button class="btn secondary" id="role-matrix-clear">🧹 Limpar</button></div>
         </div>
+        ${inativosOcultos ? `<div class="note" style="margin:0 16px 14px">🚫 ${roleMatrixInactiveCodes().size} procedimento${roleMatrixInactiveCodes().size===1?'':'s'} inativo${roleMatrixInactiveCodes().size===1?'':'s'} no Cadastro de Procedimentos não ${roleMatrixInactiveCodes().size===1?'aparece':'aparecem'} na matriz (${inativosOcultos.toLocaleString('pt-BR')} vínculo${inativosOcultos===1?'':'s'} oculto${inativosOcultos===1?'':'s'}). Reative o procedimento para voltar a exibi-lo.</div>` : ''}
         ${qProc ? `<div class="note" style="margin:0 16px 14px">Mostrando os cargos que têm o procedimento pesquisado. A coluna "Procedimentos vinculados" continua mostrando o total do cargo.</div>` : ''}
       </div>
       <div class="panel">
@@ -6025,6 +6027,20 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     return { ...state, ...(extra||{}), roleMatrix: full, roleProcLinks: { v:1, sets, cargos, comp }, roleTrainingCompliance: compFull };
   }
 
+  // Procedimentos marcados como Inativos no Cadastro de Procedimentos não aparecem na
+  // Matriz por Função (tabela, árvore, modais, acompanhamento e PDF). Os vínculos são
+  // mantidos: ao reativar o procedimento ele volta a aparecer nos mesmos cargos.
+  function roleMatrixInactiveCodes(){
+    const set = new Set();
+    (state.procedureCatalog || []).forEach(p => { if(p && p.ativo === false) set.add(normalizeText(p.codigo)); });
+    return set;
+  }
+  function roleMatrixEntryCode(m){ return normalizeText(m.procCodigo || String(m.procedimento || '').split(' - ')[0]); }
+  function roleMatrixVisible(){
+    const inativos = roleMatrixInactiveCodes();
+    const all = state.roleMatrix || [];
+    return inativos.size ? all.filter(m => !inativos.has(roleMatrixEntryCode(m))) : all;
+  }
   function renderProcedureCatalog(root){
     ensureProcedureCatalog();
     const canCreate = checkPermission("Master");
@@ -6426,7 +6442,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
   }
 
   function printRoleProceduresPdf(cargo, employeeId=''){
-    const procedimentos = (state.roleMatrix || []).filter(m => String(m.cargo || '').trim() === cargo);
+    const procedimentos = roleMatrixVisible().filter(m => String(m.cargo || '').trim() === cargo);
     const funcionarios = (state.employees || []).filter(e => String(e.cargo || '').trim() === cargo && (!employeeId || e.id === employeeId));
     const funcionarioSelecionado = employeeId ? funcionarios[0] : null;
     const w = window.open('', '_blank');
@@ -6448,7 +6464,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
   }
 
   function openRoleEmployeeTrackingModal(cargo){
-    const procedimentos = (state.roleMatrix || []).filter(m => String(m.cargo || '').trim() === cargo);
+    const procedimentos = roleMatrixVisible().filter(m => String(m.cargo || '').trim() === cargo);
     const funcionarios = (state.employees || []).filter(e => String(e.cargo || '').trim() === cargo)
       .sort((a,b)=>String(a.nome||'').localeCompare(String(b.nome||''),'pt-BR'));
     openModal(`
@@ -6558,7 +6574,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
   }
 
   function openRoleProceduresModal(cargo){
-    const procedimentos = (state.roleMatrix || []).filter(m => String(m.cargo || '').trim() === cargo);
+    const procedimentos = roleMatrixVisible().filter(m => String(m.cargo || '').trim() === cargo);
     const funcionarios = (state.employees || []).filter(e => String(e.cargo || '').trim() === cargo);
     const allowActions = checkPermission("Administrador");
     openModal(`
@@ -15810,7 +15826,7 @@ function renderPcmsoDash(root){
     }));
     root.querySelectorAll("[data-edit-role-cargo]").forEach(b=>b.addEventListener("click",e=>{
       const cargo=decodeURIComponent(e.currentTarget.dataset.editRoleCargo);
-      const registros=(state.roleMatrix||[]).filter(x=>String(x.cargo||'').trim()===cargo);
+      const registros=roleMatrixVisible().filter(x=>String(x.cargo||'').trim()===cargo);
       if(registros.length===1) openRoleMatrixModal(registros[0].id);
       else openRoleProceduresModal(cargo);
     }));
