@@ -15382,6 +15382,7 @@ function renderPcmsoDash(root){
         <div class="modal-actions"><button class="btn" type="button" onclick="closeModal()">Fechar</button></div>
       </div>`,ov=>ov.querySelector(".modal").classList.add("sst-about-modal"));
   }
+  function isAdminRole(u){ return !!u && ["Administrador", "Master"].includes(u.role); }
   function renderShell(){
     document.body.classList.remove("cipa-terminal-mode");
     if(!currentUser) {
@@ -15406,6 +15407,9 @@ function renderPcmsoDash(root){
 
     if(currentModule === "inicio"){
       navItems = `<button data-tab="inicio" class="active">🏠 Início</button>`;
+    } else if(currentModule === "admin-perms" && !isAdminRole(currentUser)){
+      // Demais perfis: no módulo Administração só "Alterar Minha Senha".
+      navItems = `<button data-tab="my-account-tab" class="active">🔑 Alterar Minha Senha</button>`;
     } else if(currentModule === "admin-perms"){
       navItems = `
         <button data-tab="admin-users-tab" class="${currentTab==="admin-users-tab"?'active':''}">👥 Gerenciar Usuários</button>
@@ -15435,7 +15439,7 @@ function renderPcmsoDash(root){
             <select id="sst-module-select" aria-label="Selecionar módulo do sistema">
               <option value="inicio" ${currentModule==='inicio'?'selected':''}>🏠 Início</option>
               ${ALL_MODULES.map(m=>`<option value="${empEsc(m.id)}" ${currentModule===m.id?'selected':''} ${availableMods.includes(m.id)?'':'disabled'}>${empEsc(m.name)}${availableMods.includes(m.id)?'':' — Sem acesso'}</option>`).join('')}
-              ${currentUser.role==='Administrador'||currentUser.role==='Master'?`<option value="admin-perms" ${currentModule==='admin-perms'?'selected':''}>⚙️ Administração</option>`:''}
+              <option value="admin-perms" ${currentModule==='admin-perms'?'selected':''}>⚙️ Administração</option>
             </select>
           </div>
           ${trialHeaderNotice()}
@@ -15465,9 +15469,7 @@ function renderPcmsoDash(root){
             return `<button class="header-btn ${currentModule===m.id?'active':''} ${!isAllowed?'disabled':''}" data-mod="${m.id}">${m.name}</button>`;
           }).join("")}
 
-          ${currentUser.role === 'Administrador' || currentUser.role === 'Master' ? `
-            <button class="header-btn ${currentModule==='admin-perms'?'active':''}" data-mod="admin-perms">⚙️ Administração</button>
-          ` : ''}
+          <button class="header-btn ${currentModule==='admin-perms'?'active':''}" data-mod="admin-perms">⚙️ Administração</button>
           <div class="sst-drawer-foot">
             <button type="button" class="sst-drawer-opt" id="btn-theme-toggle-m">🌓 Usar tema ${currentTheme === "dark" ? "claro" : "escuro"}</button>
             <button type="button" class="sst-drawer-opt" id="btn-table-mode-m">${(window.sstTableMode && window.sstTableMode()) === "table" ? "▤ Mostrar listas como cartões" : "▦ Mostrar tabelas completas"}</button>
@@ -15537,7 +15539,7 @@ function renderPcmsoDash(root){
         window.scrollTo(0, 0);
         currentModule = mod;
         if(mod === "admin-perms") {
-          currentTab = "admin-users-tab";
+          currentTab = isAdminRole(currentUser) ? "admin-users-tab" : "my-account-tab";
         } else if(mod === "inicio") {
           currentTab = "inicio";
         } else {
@@ -15551,7 +15553,7 @@ function renderPcmsoDash(root){
 
     document.getElementById("sst-module-select").addEventListener("change", event => {
       const mod = event.target.value;
-      const allowed = mod === "inicio" || availableMods.includes(mod) || (mod === "admin-perms" && ["Administrador", "Master"].includes(currentUser.role));
+      const allowed = mod === "inicio" || availableMods.includes(mod) || mod === "admin-perms";
       if(!allowed){ event.target.value=currentModule; return; }
       const target = Array.from(app.querySelectorAll("[data-mod]")).find(button => button.dataset.mod === mod);
       if(target) target.click();
@@ -15590,6 +15592,7 @@ function renderPcmsoDash(root){
     }
 
     if(currentModule === "admin-perms"){
+      if(!isAdminRole(currentUser)){ currentTab = "my-account-tab"; renderChangeMyPasswordCard(main); return; }
       if(currentTab === "admin-users-tab") renderAdminUsers(main);
       else if(currentTab === "admin-access-tab") renderAdminPermissions(main);
       else if(currentTab === "admin-install-tab") renderAdminInstall(main);
