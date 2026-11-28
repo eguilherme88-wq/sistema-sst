@@ -6210,7 +6210,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
               <td><strong>${cargo}</strong></td>
               <td>${total} procedimento${total === 1 ? '' : 's'}</td>
               <td><button type="button" class="btn secondary" data-view-role-procedures="${encodeURIComponent(cargo)}">👁️ Ver procedimentos</button></td>
-              ${allowActions?`<td><div style="display:flex;gap:8px;flex-wrap:wrap;"><button type="button" class="btn secondary" data-edit-role-cargo="${encodeURIComponent(cargo)}">✏️ Editar</button><button type="button" class="btn secondary" data-remove-role-cargo="${encodeURIComponent(cargo)}">🗑️ Remover</button></div></td>`:''}
+              ${allowActions?`<td><div style="display:flex;gap:8px;flex-wrap:wrap;"><button type="button" class="btn secondary" data-edit-role-cargo="${encodeURIComponent(cargo)}">✏️ Editar</button></div></td>`:''}
             </tr>
           `;}).join("")}
         </tbody>
