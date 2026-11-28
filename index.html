@@ -17139,7 +17139,7 @@ function renderPcmsoDash(root){
   const PTE_TXT_APROV='Declaro que todas as exigências dessa PTE-APR foram tomadas e cumpridas, sendo assim aprovado e liberado o início da atividade.';
   const PTE_TXT_REVAL='Declaro que todas as exigências dessa PTE-APR foram tomadas e cumpridas, sendo assim aprovada e liberada a continuação da atividade.';
   const PTE_TXT_NAO='Caso seja assinalado NÃO em algum dos itens acima, medidas alternativas de segurança devem ser adotadas e anotadas no campo Observações.';
-  const PTE_REF='PTO-ST-09-IMP-01',PTE_MIN_FOTOS=2;
+  const PTE_REF='PTO-ST-09-IMP-01';
   const PTE_CONTENT=['uvs','dataEmissao','solicitante','setor','maoDeObra','empresa','empresaResponsavel','inicioData','inicioHora','terminoData','terminoHora','nFunc','tipos','instrumentos','descricao','simultaneas','impeditivas','emergencia','epis','episOutros','qualificacoes','qualifOutros','energias','isolamento','isolamentoQuais','condicoes','observacoes','apr'];
 
   const pteList=()=>Array.isArray(state.ptes)?state.ptes:[];
@@ -17438,8 +17438,8 @@ function renderPcmsoDash(root){
         <div id="pte-apr-rows"></div>
         <button type="button" class="btn secondary" id="pte-add-apr" style="width:100%">+ Adicionar etapa</button>
       </div>
-      <div class="mobile-card" id="pte-fotos-card">${step(9,`Registro fotográfico * (mínimo ${PTE_MIN_FOTOS} fotos)`)}
-        <div class="sub" style="font-size:12px;margin:-4px 0 10px">Fotografe o local, o isolamento/sinalização e os equipamentos antes de iniciar.</div>
+      <div class="mobile-card" id="pte-fotos-card">${step(9,'Registro fotográfico (opcional)')}
+        <div class="sub" style="font-size:12px;margin:-4px 0 10px">Se quiser, fotografe o local, o isolamento/sinalização e os equipamentos. Pode tirar quantas fotos precisar.</div>
         ${pteFotosBoxHtml()}
       </div>
       <div class="mobile-card">${step(10,'Termo de responsabilidade para execução')}
@@ -17473,7 +17473,7 @@ function renderPcmsoDash(root){
     const addApr=r=>{aprBox.insertAdjacentHTML('beforeend',pteAprRowHtml(r));renum()};
     const addTermo=t=>{termoBox.insertAdjacentHTML('beforeend',pteTermoRowHtml(t||{id:uid('ptt')}));renum()};
     const fotos=(Array.isArray(p.fotos)?p.fotos:[]).map(f=>({...f})),fotosRemoved=new Set();
-    pteMountFotos(form.querySelector('#pte-fotos-card'),fotos,{min:PTE_MIN_FOTOS,onRemove:f=>fotosRemoved.add(f.id)});
+    pteMountFotos(form.querySelector('#pte-fotos-card'),fotos,{onRemove:f=>fotosRemoved.add(f.id)});
     (Array.isArray(p.apr)&&p.apr.length?p.apr:[{}]).forEach(addApr);
     (Array.isArray(p.termo)?p.termo:[]).forEach(addTermo);
     if(isNew&&!termoBox.children.length)addTermo();
@@ -17530,7 +17530,6 @@ function renderPcmsoDash(root){
       if(f.condicoes.some(c=>c.resposta==='Não')&&!f.observacoes)e.push('Observações: descreva as medidas alternativas de segurança (há item marcado "Não")');
       if(!f.apr.length)e.push('APR: preencha ao menos uma etapa');
       else if(f.apr.some(r=>!r.etapa||!r.perigo||!r.medidas||!r.grau))e.push('APR: todas as etapas precisam de etapa, perigo/risco, medidas de controle e grau de risco');
-      if(d.fotos.length<PTE_MIN_FOTOS)e.push(`Registro fotográfico: tire no mínimo ${PTE_MIN_FOTOS} fotos (há ${d.fotos.length})`);
       if(d.termo.some(t=>!t.nome))e.push('Termo de responsabilidade: informe o nome de todos os trabalhadores');
       PTE_ROLES.forEach(r=>{const a=d.aprovacao[r.k];if(a&&a.signature&&!a.nome)e.push(`Aprovação: informe o nome do ${r.label.toLowerCase()} que assinou`)});
       return e;
@@ -17641,7 +17640,6 @@ function renderPcmsoDash(root){
       </div>
       <div class="mobile-card"><div class="ecp-step"><i>📷</i>Registro fotográfico (${(p.fotos||[]).length})</div>
         ${(p.fotos||[]).length?pteFotosViewHtml(p.fotos):'<div class="sub">Nenhuma foto registrada.</div>'}
-        ${(p.fotos||[]).length<PTE_MIN_FOTOS&&open?`<div class="pte-note">É necessário no mínimo ${PTE_MIN_FOTOS} fotos.</div>`:''}
         ${open?'<button class="btn secondary" data-pte-act="fotos" style="width:100%;margin-top:10px">📷 Adicionar fotos</button>':''}
       </div>
       <div class="mobile-card"><div class="ecp-step"><i>✍</i>Controle de aprovação</div>
