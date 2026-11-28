@@ -3412,6 +3412,7 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
     ensureProcedureCatalog();
     ensureRoleProcedureImport();
     ensureRoleProcedureCargoUpdates();
+    ensureProcedureTitleCase();
     expandRoleProcLinks();
     // O Processo Eleitoral não é mais vinculado ao Plano de Ação: remove as
     // ações que eram geradas automaticamente para as etapas da eleição.
@@ -5600,6 +5601,44 @@ main img,main video,main canvas,.modal img{max-width:100%;height:auto}
       procedureSeedPendingSave = true;
     });
   }
+  // Títulos importados em CAIXA ALTA passam para "Primeira Letra Maiúscula",
+  // com conectivos em minúsculas e siglas preservadas.
+  const PROC_TITLE_SMALL = new Set(["a","à","ao","aos","as","às","o","os","e","de","da","das","do","dos","em","na","nas","no","nos","para","por","pela","pelas","pelo","pelos","com","sem","sob","ou"]);
+  const PROC_TITLE_ACRONYMS = new Set(["ETE","PPR","PCA","DDS","DDE","OPS","IOPS","ASAS","SGI","SGAS","SAP","TI","RH","EPI","EPC","NR","PEAD","EMM","CAPEX","OPEX","PCD","II","III","IV"]);
+  function procTitleCase(titulo){
+    let first = true;
+    return String(titulo||"").split(/(\s+)/).map(tok => {
+      if(/^\s+$/.test(tok) || !tok) return tok;
+      const m = tok.match(/^([^\p{L}]*)(\p{L}+)(.*)$/u);
+      if(!m) return tok;
+      const [, pre, core, post] = m;
+      let out;
+      if(PROC_TITLE_ACRONYMS.has(core.toUpperCase())) out = core.toUpperCase();
+      else if(!first && !pre && PROC_TITLE_SMALL.has(core.toLowerCase())) out = core.toLowerCase();
+      else out = core.charAt(0).toUpperCase() + core.slice(1).toLowerCase();
+      first = false;
+      return pre + out + post.toLowerCase();
+    }).join("");
+  }
+  function ensureProcedureTitleCase(){
+    if(state.procedureTitleCaseDone || !Array.isArray(state.procedureCatalog)) return;
+    const trocas = new Map();
+    state.procedureCatalog.forEach(p => {
+      const t = String(p.titulo||"");
+      if(/\p{L}/u.test(t) && t === t.toUpperCase()){
+        const novo = procTitleCase(t);
+        if(novo !== t){ trocas.set(`${p.codigo} - ${t}`, `${p.codigo} - ${novo}`); p.titulo = novo; }
+      }
+    });
+    // Vínculos da matriz gravados por extenso (editados) acompanham o novo título.
+    (state.roleMatrix || []).forEach(r => {
+      if(trocas.has(r.procedimento)) r.procedimento = trocas.get(r.procedimento);
+      if(trocas.has(r._lbl)) r._lbl = trocas.get(r._lbl);
+    });
+    state.procedureTitleCaseDone = true;
+    if(trocas.size) procedureSeedPendingSave = true;
+  }
+
   // Expande os vínculos compactos (gravados) em registros da matriz (memória).
   function expandRoleProcLinks(){
     const links = state.roleProcLinks;
